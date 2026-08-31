@@ -1,12 +1,11 @@
 import { test, expect } from 'vitest';
-import { ScriptedModel } from '../../src/run/scripted-model.js';
-import { callStep, finishStep } from '../fixtures/scripted-model.js';
+import { callStep, finishStep, payingDesk } from '../fixtures/scripted-model.js';
 import { testEngine } from '../fixtures/compiled-agents.js';
 
 // P12 · R8.3 — two concurrent chat calls on one session serialize; the second turn
 // sees the first's sealed record, never a torn draft.
 test('two concurrent chats on one session serialize in arrival order', async () => {
-  const model = new ScriptedModel([
+  const model = payingDesk([
     callStep('getBooking', { id: 'bk_1001' }),
     finishStep('First done.'),
     { calls: [], text: '' },
@@ -22,8 +21,8 @@ test('two concurrent chats on one session serialize in arrival order', async () 
 
   expect(r1.turn).toBe(1);
   expect(r2.turn).toBe(2);
-  expect(r1.finish?.message).toBe('First done.');
-  expect(r2.finish?.message).toBe('Second done.');
+  expect(r1.finish?.message.startsWith('First done.')).toBe(true);
+  expect(r2.finish?.message.startsWith('Second done.')).toBe(true);
   const lastInput = model.seen.at(-1);
   if (!lastInput) throw new Error('the model never served turn 2');
   expect(lastInput.messages.some(m => m.role === 'assistant' && m.text.startsWith(r1.text))).toBe(true);

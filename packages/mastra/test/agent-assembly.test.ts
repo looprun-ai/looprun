@@ -64,7 +64,8 @@ test('the ungoverned twin compiles byte-identical prompt parts with nothing arme
     spec: SPEC, world: BOOKING,
     model: { scripted: { steps: [
       callStep('cancelBooking', { id: 'bk_9' }),
-      finishStep('Cancelled.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'done' }]),
+      finishStep('Cancelled bk_9.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'done' }],
+        ['F1']),
       { calls: [], text: '' },
       { calls: [], text: '' }
     ] } }

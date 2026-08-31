@@ -1,12 +1,11 @@
 import { test, expect } from 'vitest';
-import { ScriptedModel } from '../../src/run/scripted-model.js';
-import { callStep, finishStep } from '../fixtures/scripted-model.js';
+import { callStep, finishStep, payingDesk } from '../fixtures/scripted-model.js';
 import { caseRig } from '../fixtures/case-rig.js';
 
 // The engine never composes tool results as prose: what a call did rides the
 // StepInput as a typed acts message, and the seat decides how to render it.
 test('tool results ride as a typed acts message, never as user-role text', async () => {
-  const model = new ScriptedModel([
+  const model = payingDesk([
     callStep('getBooking', { id: 'bk_9' }),
     finishStep('bk_9 is confirmed for Tuesday.', [])
   ]);
@@ -27,7 +26,7 @@ test('tool results ride as a typed acts message, never as user-role text', async
 // The licensed execution that runs BEFORE the model loop reaches the model the
 // same typed way: the approval turn's first StepInput already carries the act.
 test('a licensed execution arrives typed in the approval turn', async () => {
-  const model = new ScriptedModel([
+  const model = payingDesk([
     callStep('cancelBooking', { id: 'bk_9' }),
     finishStep('I need your approval to cancel bk_9.',
       [{ tool: 'cancelBooking', target: 'bk_9', word: 'held' }]),

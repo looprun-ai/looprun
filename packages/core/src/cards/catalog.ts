@@ -164,26 +164,46 @@ export function argFormat(tool: string, arg: string, pattern: string): SeedGuard
  *  engine-minted provenance the routed door carries — never scraped from
  *  text). Id-shaped = lowercase prefix, underscore, alnum suffix with a digit —
  *  enum words like a policy topic carry no digit and stay untouched. */
-/** Every id-shaped token a text carries, in the grounding floor's own shape — the
- *  walk the routed door uses to mint provenance from a sealed record's results. */
+/** Every id-shaped token a text carries — the walk the routed door uses to mint
+ *  provenance from a sealed record's results, and the walk that takes identifiers out
+ *  of a text before its digit runs are read as amounts.
+ *
+ *  ID-SHAPED = a stem of letters, ONE separator, a tail of letters and digits holding
+ *  at least one digit. The case of the letters does not matter and the separator is an
+ *  underscore or a hyphen, so `bk_9`, `ast_excv01`, `A-05` and `BK-4402` are all one
+ *  identifier: a berth painted on a finger is a record's name for a thing, and the
+ *  digits inside it are no more an amount than the digits inside `mo_1`.
+ *
+ *  What stays outside: an amount wearing a unit or a currency mark (`364m`, `R$364`)
+ *  has no separator, a hyphenated word (`out-of-service`) has no digit in its tail,
+ *  and a date (`2026-09-05`) has no letters in its stem — each keeps its digit runs
+ *  and is walked. */
+const ID_SEPARATORS = ['_', '-'] as const;
+
 export function carriedIds(text: string): readonly string[] {
+  const isDigit = (ch: string): boolean => ch >= '0' && ch <= '9';
+  const isLetter = (ch: string): boolean => (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z');
   const found = new Set<string>();
   let start = -1;
   const flush = (end: number): void => {
     if (start === -1) return;
     const token = text.slice(start, end);
-    const at = token.indexOf('_');
+    let at = -1;
+    for (const separator of ID_SEPARATORS) {
+      const seen = token.indexOf(separator);
+      if (seen >= 0 && (at === -1 || seen < at)) at = seen;
+    }
     if (at > 0 && at < token.length - 1
-        && [...token.slice(0, at)].every(ch => ch >= 'a' && ch <= 'z')
-        && [...token.slice(at + 1)].some(ch => ch >= '0' && ch <= '9')
-        && [...token.slice(at + 1)].every(ch => (ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9'))) {
+        && [...token.slice(0, at)].every(isLetter)
+        && [...token.slice(at + 1)].some(isDigit)
+        && [...token.slice(at + 1)].every(ch => isLetter(ch) || isDigit(ch))) {
       found.add(token);
     }
     start = -1;
   };
   for (let i = 0; i < text.length; i++) {
     const ch = text[i];
-    const inToken = (ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') || ch === '_';
+    const inToken = isLetter(ch) || isDigit(ch) || ch === '_' || ch === '-';
     if (inToken && start === -1) start = i;
     if (!inToken) flush(i);
   }

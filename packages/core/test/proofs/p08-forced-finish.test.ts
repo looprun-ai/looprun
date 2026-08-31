@@ -31,7 +31,7 @@ test('a finish beside domain calls defers with earlyFinish — the call runs, th
   const model = new ScriptedModel([
     { calls: [
       { tool: 'getBooking', args: { id: 'bk_1' } },
-      { tool: 'finish', args: { message: 'Done early.', report: [] } }
+      { tool: 'finish', args: { message: 'Done early.', report: [], facts: [] } }
     ], text: '' },
     finishStep('bk_1 read — now truly done.')
   ]);

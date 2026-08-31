@@ -61,6 +61,8 @@ export type Correction =
   | { readonly kind: 'proseReader';                                // the composed words failed the
       readonly check: 'wallEcho' | 'language';                     // reader at the seal
       readonly detail: string }
+  | { readonly kind: 'deliveryFigure'; readonly detail: string }   // the words the operator would read
+                                                                   //   stated a figure no record carries
   | { readonly kind: 'returnRefused'; readonly detail: string };   // the return door was tried
                                                                    //   after work began
 export interface Act {
@@ -83,7 +85,10 @@ export interface Act {
   readonly guard: string | null;              // the guard whose verdict shaped this act; null = none
 }
 export interface ReportLine { readonly tool: string; readonly target: string; readonly word: ReportWord }
-export interface FinishPayload { readonly message: string; readonly report: readonly ReportLine[] }
+export interface FinishPayload { readonly message: string; readonly report: readonly ReportLine[];
+                                 /** The id of every owed fact the message expresses — the
+                                  *  engine's own labels, F1, F2 …, never words the operator reads */
+                                 readonly facts: readonly string[] }
 export interface RawCall { readonly tool: string; readonly args: Readonly<Record<string, unknown>> }
 export interface ToolCard { readonly name: string; readonly does: string; readonly schema: Json }
                                               // does = the declared does + the tool's contract-guard

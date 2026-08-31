@@ -6,6 +6,7 @@
 import type { Question, StateSnapshot, ToolCard } from '../contract/vocabulary.js';
 import type { CompiledAgent } from '../cards/cards.js';
 import { deepFreeze } from '../contract/freeze.js';
+import { numberedFactLines, type DeliveryFact } from './delivery-facts.js';
 
 /** The model reads a schema to fill arguments. The draft-07 url, the validator's own
  *  flag and the id patterns the guards enforce answer nothing it must decide. */
@@ -72,12 +73,23 @@ export class PromptWriter {
     return this.frozenCards;
   }
 
-  /** Only the tail varies across turns. */
-  tail(userText: string, state: StateSnapshot | string | null, open: readonly Question[]): string {
+  /** Only the tail varies across turns. The owed facts ride last, numbered: the desk
+   *  reads them before it writes, and the ids are the engine's labels — a reply that
+   *  prints one has bolted an internal token onto the operator's words. */
+  tail(userText: string, state: StateSnapshot | string | null, open: readonly Question[],
+       owed: readonly DeliveryFact[]): string {
     const parts: string[] = [];
     if (typeof state === 'string') { if (state !== '') parts.push(`STATE: ${state}`); }
     else if (state !== null) parts.push(`STATE: ${JSON.stringify(state)}`);
     for (const q of open) parts.push(`OPEN QUESTION [${q.code}]: ${q.sentence}`);
+    if (owed.length > 0) {
+      parts.push('OWED FACTS — the records of what this turn did, each one numbered. Every one '
+        + 'of them must be expressed in your closing message, in the operator\'s own language '
+        + 'and in your own words; identifiers and figures stay exactly as written. Name the id '
+        + 'of every fact your message expresses in the finish, and never an id whose content '
+        + 'your message does not state. The ids are labels of this prompt and never appear in '
+        + `the message.\n${numberedFactLines(owed)}`);
+    }
     return parts.join('\n');
   }
 

@@ -1,10 +1,9 @@
 import { test, expect } from 'vitest';
-import { ScriptedModel } from '../../src/run/scripted-model.js';
-import { callStep, finishStep } from '../fixtures/scripted-model.js';
+import { callStep, finishStep, payingDesk } from '../fixtures/scripted-model.js';
 import { testEngine } from '../fixtures/compiled-agents.js';
 
 test('a whitespace-only required arg counts as MISSING and refuses loudly', async () => {
-  const model = new ScriptedModel([
+  const model = payingDesk([
     callStep('sendEmail', { to: '   ' }),
     finishStep('I could not send the email.',
       [{ tool: 'sendEmail', target: 'unknown', word: 'refused' }]),
@@ -21,7 +20,7 @@ test('a whitespace-only required arg counts as MISSING and refuses loudly', asyn
 });
 
 test('a non-coercible value refuses loudly, naming the arg — never a silent drop', async () => {
-  const model = new ScriptedModel([
+  const model = payingDesk([
     callStep('getBooking', { id: { nested: true } }),
     finishStep('I could not read that booking.')
   ]);

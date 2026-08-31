@@ -12,8 +12,9 @@ import { concierge, frontDesk, hotelContract } from '../hotel/cards.js';
 const call = (tool: string, args: Record<string, unknown>): ModelStep =>
   ({ calls: [{ tool, args }], text: '' });
 const finish = (message: string,
-  report: readonly { tool: string; target: string; word: string }[] = []): ModelStep =>
-  ({ calls: [{ tool: 'finish', args: { message, report } }], text: '' });
+  report: readonly { tool: string; target: string; word: string }[] = [],
+  facts: readonly string[] = []): ModelStep =>
+  ({ calls: [{ tool: 'finish', args: { message, report, facts } }], text: '' });
 
 test('lesson 2 — a destructive tool is held, and the question carries a code', async () => {
   const agent = new LoopRunAgent({
@@ -42,8 +43,8 @@ test('lesson 2 — the typed approval releases exactly that call', async () => {
       { calls: [], text: '' },
       { calls: [], text: '' },
       { calls: [], text: '' },
-      finish('Cancelled the Blue Room on Friday.',
-        [{ tool: 'cancelBooking', target: 'bk_1', word: 'done' }]),
+      finish('Cancelled booking bk_1 — the Blue Room on Friday.',
+        [{ tool: 'cancelBooking', target: 'bk_1', word: 'done' }], ['F1']),
       // The done write mints its receipt, and the composer's delivery pass reads it.
       { calls: [], text: '' },
       { calls: [], text: '' }

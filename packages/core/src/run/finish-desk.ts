@@ -22,6 +22,9 @@ const WORD_LEGEND: Readonly<Record<(typeof REPORT_WORDS)[number], string>> = {
 const FIELD_LEGEND: Readonly<Record<string, string>> = {
   message: 'the user-facing closing message',
   report: 'one line per act you claim; a turn with no acts on the record sends an EMPTY list',
+  facts: 'the id of every OWED FACT your message expresses, as the prompt numbers them '
+    + '(F1, F2 …); never an id whose content your message does not state; empty when the '
+    + 'prompt owes none',
   tool: 'the tool the line is about — called, or deliberately not called',
   target: 'the record id the line is about, exactly as the records name it; empty when none',
   word: 'what happened, per the legend'
@@ -33,7 +36,8 @@ const finishSchema = z.strictObject({
     tool: z.string(),
     target: z.string(),
     word: z.enum(REPORT_WORDS)
-  }))
+  })),
+  facts: z.array(z.string())
 });
 
 export const FINISH_TOOL = 'finish';
@@ -44,19 +48,22 @@ export class FinishDesk {
     const reportShape = finishSchema.shape.report.element.shape;
     const properties: Record<string, Json> = {};
     for (const key of Object.keys(finishSchema.shape)) {
-      properties[key] = key === 'report'
+      const base: Record<string, Json> = key === 'report'
         ? { type: 'array', items: { type: 'object', properties: Object.fromEntries(
             Object.keys(reportShape).map(k => [k, {
               type: 'string',
               ...(FIELD_LEGEND[k] !== undefined ? { description: FIELD_LEGEND[k] } : {}),
               ...(k === 'word' ? { enum: [...REPORT_WORDS] } : {})
             }])) } }
-        : { type: 'string',
-            ...(FIELD_LEGEND[key] !== undefined ? { description: FIELD_LEGEND[key] } : {}) };
+        : key === 'facts' ? { type: 'array', items: { type: 'string' } }
+        : { type: 'string' };
+      properties[key] = FIELD_LEGEND[key] === undefined ? base
+        : { ...base, description: FIELD_LEGEND[key] };
     }
     return {
       name: FINISH_TOOL,
-      does: `Close the turn: a user-facing message plus one report line per claimed act. Words: `
+      does: `Close the turn: a user-facing message, one report line per claimed act, and the `
+        + `ids of the owed facts the message expresses. Words: `
         + REPORT_WORDS.map(w => `${w} = ${WORD_LEGEND[w]}`).join('; ') + '.',
       schema: { type: 'object', properties, required: Object.keys(finishSchema.shape) }
     };

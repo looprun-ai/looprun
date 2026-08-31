@@ -1,6 +1,5 @@
 import { test, expect } from 'vitest';
-import { ScriptedModel } from '../../src/run/scripted-model.js';
-import { callStep, finishStep } from '../fixtures/scripted-model.js';
+import { callStep, finishStep, payingDesk } from '../fixtures/scripted-model.js';
 import { caseRig } from '../fixtures/case-rig.js';
 
 // The owed word: an act carries the words the OPERATOR is owed, minted where its
@@ -8,7 +7,7 @@ import { caseRig } from '../fixtures/case-rig.js';
 // reason frame-free; a licensed done write owes its filled after tense.
 
 test('a read owes nothing, and a held act owes nothing — the ask lives on the question', async () => {
-  const model = new ScriptedModel([
+  const model = payingDesk([
     callStep('getBooking', { id: 'bk_9' }),
     callStep('cancelBooking', { id: 'bk_9' }),
     { calls: [], text: '' },
@@ -24,7 +23,7 @@ test('a read owes nothing, and a held act owes nothing — the ask lives on the 
 });
 
 test('a world-refused hold owes the refusal in words, frame-free', async () => {
-  const model = new ScriptedModel([
+  const model = payingDesk([
     callStep('cancelBooking', { id: 'bk_66' }),
     finishStep('That booking is under maintenance and cannot be cancelled.',
       [{ tool: 'cancelBooking', target: 'bk_66', word: 'refused' }]),
@@ -41,7 +40,7 @@ test('a world-refused hold owes the refusal in words, frame-free', async () => {
 });
 
 test('a licensed done write owes its filled after tense; a done write with no tense owes nothing', async () => {
-  const model = new ScriptedModel([
+  const model = payingDesk([
     callStep('cancelBooking', { id: 'bk_9' }),
     { calls: [], text: '' },
     { calls: [], text: '' },

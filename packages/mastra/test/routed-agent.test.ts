@@ -6,7 +6,7 @@ import { ModelSeat, ScriptedModel, TurnFailure, WorldBuilder, mcpWorld,
 import { RoutedAgent, type RoutedSubjectCfg } from '../src/routed-agent.js';
 import { LoopRunAgent, type GovernedResult } from '../src/loop-run-agent.js';
 import { assemble } from '../src/agent-assembly.js';
-import { BOOKING, callStep, finishStep } from './fixtures/booking-world.js';
+import { BOOKING, callStep, finishStep, payingDesk } from './fixtures/booking-world.js';
 
 const DESCRIPTIONS = { yard: 'job schedules and hand-overs', billing: 'invoices and refunds' };
 
@@ -68,8 +68,8 @@ class Desk extends LoopRunAgent {
  *  window, its tool cards and the foreign text it was handed. Desk replies carry no
  *  figures: a figure no record grounds redrives the turn. */
 function desk(name: string, steps: readonly ModelStep[], card: DeclaredWorld = BOOKING):
-    { agent: Desk; model: ScriptedModel } {
-  const model = new ScriptedModel(steps);
+    { agent: Desk; model: ReturnType<typeof payingDesk> } {
+  const model = payingDesk(steps);
   const agent = new Desk(
     { spec: { name, persona: 'You are the desk.' }, world: card,
       model: { scripted: { steps: [] } } },
@@ -361,7 +361,8 @@ test('every desk of the house acts on ONE world — what the yard writes, billin
   const turn: readonly ModelStep[] = [
     callStep('getJob', { id: 'jb_a' }),
     callStep('setCrew', { id: 'jb_a', set: { crew: 'Bruno' } }),
-    finishStep('The crew is assigned.', [{ tool: 'setCrew', target: 'jb_a', word: 'done' }]),
+    finishStep('The crew is assigned on jb_a.', [{ tool: 'setCrew', target: 'jb_a', word: 'done' }],
+      ['F1']),
     { calls: [], text: '' },
     { calls: [], text: '' }];
   const agent = RoutedAgent.fromSubject(

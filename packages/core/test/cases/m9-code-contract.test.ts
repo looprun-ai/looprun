@@ -1,6 +1,5 @@
 import { test, expect } from 'vitest';
-import { ScriptedModel } from '../../src/run/scripted-model.js';
-import { callStep, finishStep } from '../fixtures/scripted-model.js';
+import { callStep, finishStep, payingDesk } from '../fixtures/scripted-model.js';
 import { caseRig } from '../fixtures/case-rig.js';
 
 // M9 — the code contract end to end: alone it licenses, wrapped it teaches,
@@ -9,7 +8,7 @@ import { caseRig } from '../fixtures/case-rig.js';
 const FLOOR2 = [{ calls: [], text: '' }, { calls: [], text: '' }];
 
 test('M9 — CONFIRM plus the code is a wrapped code: nothing licenses, the notice delivers', async () => {
-  const model = new ScriptedModel([
+  const model = payingDesk([
     callStep('cancelBooking', { id: 'bk_9' }), ...FLOOR2,
     { calls: [], text: '' }, finishStep('Waiting on you.', []), ...FLOOR2
   ]);
@@ -27,7 +26,7 @@ test('M9 — CONFIRM plus the code is a wrapped code: nothing licenses, the noti
 });
 
 test('M9 — the code inside a sentence licenses nothing either', async () => {
-  const model = new ScriptedModel([
+  const model = payingDesk([
     callStep('cancelBooking', { id: 'bk_9' }), ...FLOOR2,
     { calls: [], text: '' }, finishStep('Still waiting on you.', []), ...FLOOR2
   ]);
@@ -44,7 +43,7 @@ test('M9 — the code inside a sentence licenses nothing either', async () => {
 
 test('M9 — a code older than five minutes expires, the closure delivers, and the late code is inert', async () => {
   let clock = 1_000_000;
-  const model = new ScriptedModel([
+  const model = payingDesk([
     callStep('cancelBooking', { id: 'bk_9' }), ...FLOOR2,
     { calls: [], text: '' }, finishStep('That approval has lapsed.', []), ...FLOOR2
   ]);

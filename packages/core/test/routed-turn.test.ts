@@ -1,6 +1,6 @@
+import { payingDesk } from './fixtures/scripted-model.js';
 import { test, expect } from 'vitest';
 import type { TurnRecord } from '../src/contract/vocabulary.js';
-import { ScriptedModel } from '../src/run/scripted-model.js';
 import { callStep, finishStep } from './fixtures/scripted-model.js';
 import { fact, testEngine } from './fixtures/compiled-agents.js';
 
@@ -13,7 +13,7 @@ const CONSENT_FACTS = { tools: {
 } } as const;
 
 test('before exchanges ride the window as plain text between history and the new message', async () => {
-  const model = new ScriptedModel([finishStep('Nothing to do here.')]);
+  const model = payingDesk([finishStep('Nothing to do here.')]);
   const { engine } = testEngine({ model });
 
   await engine.chat('s1', 'now raise the invoice',
@@ -27,7 +27,7 @@ test('before exchanges ride the window as plain text between history and the new
 });
 
 test('a returnable turn offers notMine and a first-call notMine returns without sealing', async () => {
-  const model = new ScriptedModel([
+  const model = payingDesk([
     callStep('notMine', { reason: 'not mine' }),
     finishStep('Nothing to do here.')
   ]);
@@ -54,7 +54,7 @@ test('a returnable turn offers notMine and a first-call notMine returns without 
 });
 
 test('the return carries the tokens the desk spent, frozen like every boundary value', async () => {
-  const model = new ScriptedModel([{ calls: [{ tool: 'notMine', args: { reason: 'not mine' } }],
+  const model = payingDesk([{ calls: [{ tool: 'notMine', args: { reason: 'not mine' } }],
     text: '', usage: { inputTokens: 120, outputTokens: 4, cachedInputTokens: 0,
                        reasoningTokens: 0 } }]);
   const { engine } = testEngine({ model });
@@ -70,7 +70,7 @@ test('the return carries the tokens the desk spent, frozen like every boundary v
 });
 
 test('notMine after an act is refused and the turn continues', async () => {
-  const model = new ScriptedModel([
+  const model = payingDesk([
     callStep('getBooking', { id: 'bk_1001' }),
     callStep('notMine', { reason: 'wrong desk' }),
     finishStep('Your booking bk_1001 is on the record.')
@@ -88,7 +88,7 @@ test('notMine after an act is refused and the turn continues', async () => {
 });
 
 test('an answer the engine already read shuts the return door', async () => {
-  const model = new ScriptedModel([
+  const model = payingDesk([
     callStep('cancelBooking', { id: 'bk_9' }),
     { calls: [], text: '' },
     { calls: [], text: '' },
@@ -118,7 +118,7 @@ test('an answer the engine already read shuts the return door', async () => {
 });
 
 test('grounded ids the door carries pass the floor; the same call without them is refused', async () => {
-  const script = () => new ScriptedModel([
+  const script = () => payingDesk([
     callStep('getBooking', { id: 'bk_9001' }),
     finishStep('The booking is on the record.'),
     { calls: [], text: '' },
@@ -143,7 +143,7 @@ test('grounded ids the door carries pass the floor; the same call without them i
 });
 
 test('a non-returnable turn never carries the notMine card', async () => {
-  const model = new ScriptedModel([finishStep('Nothing to do here.')]);
+  const model = payingDesk([finishStep('Nothing to do here.')]);
   const { engine } = testEngine({ model });
 
   await engine.chat('s1', 'raise the invoice', { before: [] });

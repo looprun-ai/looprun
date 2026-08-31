@@ -5,7 +5,7 @@ import { toEnvelope, toSse } from '../src/wire.js';
 const RECORD: TurnRecord = {
   turn: 1, servedBy: 'scripted', userText: 'is bk_9 confirmed?',
   acts: [], questions: { issued: [], consumed: [], closed: [] },
-  finish: { message: 'bk_9 is confirmed for Tuesday.', report: [] },
+  finish: { message: 'bk_9 is confirmed for Tuesday.', report: [], facts: [] },
   corrections: [], text: 'bk_9 is confirmed for Tuesday.', closedBy: 'model',
   delivery: { by: 'floor' as const, retried: false, facts: [] },
   usage: { inputTokens: 0, outputTokens: 0, cachedInputTokens: 0, reasoningTokens: 0, modelCalls: 1 }

@@ -8,7 +8,7 @@
 import type { LlmParams, StepInput } from '../contract/vocabulary.js';
 import type { ModelPort } from '../contract/ports.js';
 import { canonicalAmount, carriedIds, figureRuns } from '../cards/catalog.js';
-import type { DeliveryFact } from './delivery-facts.js';
+import { STATE_TAG, type DeliveryFact } from './delivery-facts.js';
 
 export interface ComposedDelivery {
   readonly text: string;
@@ -27,14 +27,6 @@ export function isCodeShaped(text: string): boolean {
 
 const SYSTEM = 'You are the delivery desk of a governed records house. '
   + 'You write the single reply the operator reads.';
-
-const STATE_TAG: Readonly<Record<'ran' | 'refused' | 'held', string>> = {
-  ran: 'THIS RAN and took effect this turn',
-  refused: 'this did NOT run — the records refuse it',
-  held: 'this has NOT run — it stands held awaiting the operator\'s code. '
-    + 'Use NO past tense about this act in any wording: not done, not processed, '
-    + 'not recorded, not started, not "as requested" — it is waiting, nothing more'
-};
 
 function template(operatorText: string, facts: readonly DeliveryFact[],
                   draftProse: string, material: readonly string[] = []): string {

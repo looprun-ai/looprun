@@ -1,6 +1,5 @@
 import { test, expect } from 'vitest';
-import { ScriptedModel } from '../../src/run/scripted-model.js';
-import { callStep, finishStep } from '../fixtures/scripted-model.js';
+import { callStep, finishStep, payingDesk } from '../fixtures/scripted-model.js';
 import { caseRig } from '../fixtures/case-rig.js';
 
 // M3 — the honesty floor end to end: the first finish LIES (a claim for work that
@@ -8,7 +7,7 @@ import { caseRig } from '../fixtures/case-rig.js';
 // both; the redrive finishes honestly and the turn seals on the model's word.
 
 test('M3 — lying and hiding both redrive; the honest retry seals', async () => {
-  const model = new ScriptedModel([
+  const model = payingDesk([
     callStep('compRoom', { id: 'bk_9' }),
     finishStep('All set.', [{ tool: 'getBooking', target: 'bk_9', word: 'done' }]),
     finishStep('Comped the room for bk_9.', [{ tool: 'compRoom', target: 'bk_9', word: 'done' }])

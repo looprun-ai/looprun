@@ -14,7 +14,8 @@ function smartPort(steps: ReturnType<typeof callStep>[]): ModelPort {
       const last = input.messages[input.messages.length - 1];
       const t = 'text' in last ? last.text : '';
       const facts = t.slice(t.indexOf('PROVEN FACTS'), t.indexOf('\n\nDESK DRAFT'));
-      return { calls: [], text: `Composed. ${facts.split('\n').join(' ')}` };
+      return { calls: [], text: `Composed. ${
+        facts.split('\n').map(l => l.replace(/^\d+\. /u, '')).join(' ')}` };
     }
     return scripted.step(input);
   } };

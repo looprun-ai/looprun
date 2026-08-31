@@ -1809,18 +1809,21 @@ export function capPaths(subjectDir: string): readonly LintFinding[] {
   return findings;
 }
 
-/** The floor: the guard names the engine installs on its own, never authored on a card. Eight —
- *  confirmFirst, groundedIds, groundedDates, noDuplicateCall, argRequired, maxDestructive,
- *  brokenReply, questionAnswered — are pushed by AgentFactory's compile() in
+/** The floor: the fourteen guard names the engine installs on its own, never authored on a
+ *  card. Eight — confirmFirst, groundedIds, groundedDates, noDuplicateCall, argRequired,
+ *  maxDestructive, brokenReply, questionAnswered — are pushed by AgentFactory's compile() in
  *  packages/core/src/cards/agent-factory.ts; two more — claimIsGrounded and
  *  claimIsComplete, the honesty floor — are installed by Rulebook in
- *  packages/core/src/run/rulebook.ts; and figureIsGrounded is raised by the turn itself in
- *  packages/core/src/run/turn.ts, over every figure the outgoing message states. A card that
- *  authors any of these, bare or prefixed with a colon, shadows a guard the engine installs
- *  itself. */
+ *  packages/core/src/run/rulebook.ts; and four are raised by the turn itself in
+ *  packages/core/src/run/turn.ts, over the message the desk closes with: figureIsGrounded
+ *  over every figure it states, owedFactIsCarried over every literal the turn's owed facts
+ *  mint, and owedFactIsExpressed with claimedFactIsOwed over the fact ids the finish names.
+ *  A card that authors any of these, bare or prefixed with a colon, shadows a guard the
+ *  engine installs itself. */
 const FLOOR_NAMES = new Set(['confirmFirst', 'groundedIds', 'groundedDates', 'noDuplicateCall',
   'argRequired', 'maxDestructive', 'brokenReply', 'questionAnswered', 'claimIsGrounded',
-  'claimIsComplete', 'figureIsGrounded']);
+  'claimIsComplete', 'figureIsGrounded', 'owedFactIsCarried', 'owedFactIsExpressed',
+  'claimedFactIsOwed']);
 
 export function floorRedeclared(subjectDir: string): readonly LintFinding[] {
   const sources = subjectSources(subjectDir);

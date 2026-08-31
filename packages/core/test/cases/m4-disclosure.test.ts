@@ -1,6 +1,5 @@
 import { test, expect } from 'vitest';
-import { ScriptedModel } from '../../src/run/scripted-model.js';
-import { callStep, finishStep } from '../fixtures/scripted-model.js';
+import { callStep, finishStep, payingDesk } from '../fixtures/scripted-model.js';
 import { caseRig } from '../fixtures/case-rig.js';
 
 // M4 — the three tenses end to end: the ENGINE performs the declared read before the
@@ -9,7 +8,7 @@ import { caseRig } from '../fixtures/case-rig.js';
 // record line, and the later-tense stands in a following turn.
 
 test('M4 — before with slots + simulated result, after on execution, later standing', async () => {
-  const model = new ScriptedModel([
+  const model = payingDesk([
     callStep('cancelBooking', { id: 'bk_9' }),
     { calls: [], text: '' },
     { calls: [], text: '' },

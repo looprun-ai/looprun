@@ -5,8 +5,7 @@ import { factsFromWorld } from '../../src/cards/facts.js';
 import { AgentFactory } from '../../src/cards/agent-factory.js';
 import { ModelSeat } from '../../src/run/model-seat.js';
 import { Engine } from '../../src/run/engine.js';
-import { ScriptedModel } from '../../src/run/scripted-model.js';
-import { callStep, finishStep } from '../fixtures/scripted-model.js';
+import { callStep, finishStep, payingDesk } from '../fixtures/scripted-model.js';
 import { scriptedTargets } from '../fixtures/compiled-agents.js';
 
 // A tool destructive ONLY on some of its calls declares the branch as DATA on its
@@ -23,13 +22,13 @@ const LOCKS = world({
   }
 }, { lockArea: ctx => ({ result: { locked: ctx.args.scope }, patches: [] }) });
 
-function rig(steps: Parameters<typeof ScriptedModel.prototype.step>[0][] | ReturnType<typeof callStep>[]) {
+function rig(steps: ReturnType<typeof callStep>[]) {
   const built = new WorldBuilder().build(LOCKS);
   const compiled = new AgentFactory().governed(
     { name: 'frontdesk', persona: 'You are the front desk.' }, undefined,
     factsFromWorld(LOCKS));
   const targets = scriptedTargets(1);
-  const seat = ModelSeat.create(targets, targets[0].id, () => new ScriptedModel(steps as never));
+  const seat = ModelSeat.create(targets, targets[0].id, () => payingDesk(steps));
   return Engine.create({ compiled, toolPort: built, recordsPort: built, seat });
 }
 

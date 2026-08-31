@@ -16,7 +16,8 @@ test('G6 — UngovernedAgent: same prompt bytes, nothing held', async () => {
     spec: SPEC, world: BOOKING,
     model: { scripted: { steps: [
       callStep('cancelBooking', { id: 'bk_9' }),
-      finishStep('Cancelled.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'done' }]),
+      finishStep('Cancelled bk_9.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'done' }],
+        ['F1']),
       { calls: [], text: '' },
       { calls: [], text: '' }
     ] } }

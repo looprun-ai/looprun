@@ -1,6 +1,5 @@
 import { test, expect } from 'vitest';
-import { ScriptedModel } from '../../src/run/scripted-model.js';
-import { callStep, finishStep } from '../fixtures/scripted-model.js';
+import { callStep, finishStep, payingDesk } from '../fixtures/scripted-model.js';
 import { caseRig } from '../fixtures/case-rig.js';
 
 // M1 — the consent lifecycle end to end through the author door: a destructive call
@@ -8,7 +7,7 @@ import { caseRig } from '../fixtures/case-rig.js';
 // executes the held call itself, and an executed act closes every open sibling.
 
 test('M1 — hold, approve by code, licensed execution', async () => {
-  const model = new ScriptedModel([
+  const model = payingDesk([
     callStep('cancelBooking', { id: 'bk_9' }),
     { calls: [], text: '' },
     { calls: [], text: '' },
@@ -36,7 +35,7 @@ test('M1 — hold, approve by code, licensed execution', async () => {
 });
 
 test('M1 — an identical re-proposal returns the SAME question; a sibling call births its own; the executed act supersedes the sibling', async () => {
-  const model = new ScriptedModel([
+  const model = payingDesk([
     callStep('cancelBooking', { id: 'bk_9' }),
     { calls: [], text: '' },
     { calls: [], text: '' },

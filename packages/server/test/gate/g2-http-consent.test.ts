@@ -4,6 +4,7 @@ import { world } from '@looprun-ai/core';
 import { LoopRunAgent } from '@looprun-ai/mastra';
 import { Server } from '../../src/server.js';
 
+
 // G2 — the same consent case as G1, through HTTP: the code rides the envelope's
 // typed record, the approval turn executes engine-side, all over the real wire.
 const BOOKING = world({
@@ -14,8 +15,9 @@ const SPEC: AgentSpec = { name: 'hotel', persona: 'You are the hotel desk.' };
 
 const step = (calls: { tool: string; args: Record<string, unknown> }[], text = ''): ModelStep =>
   ({ calls, text });
-const finish = (message: string, report: { tool: string; target: string; word: string }[] = []) =>
-  step([{ tool: 'finish', args: { message, report } }]);
+const finish = (message: string, report: { tool: string; target: string; word: string }[] = [],
+                facts: readonly string[] = []) =>
+  step([{ tool: 'finish', args: { message, report, facts } }]);
 
 test('G2 — hold and approve over POST /v1/chat/completions', async () => {
   const agent = new LoopRunAgent({
@@ -25,7 +27,7 @@ test('G2 — hold and approve over POST /v1/chat/completions', async () => {
       finish('I need your approval to cancel bk_9.',
         [{ tool: 'cancelBooking', target: 'bk_9', word: 'held' }]),
       step([]),
-      finish('Cancelled bk_9.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'done' }]),
+      finish('Cancelled bk_9.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'done' }], ['F1']),
       // The done write mints its receipt, and the composer's delivery pass reads it.
       step([]),
       step([])

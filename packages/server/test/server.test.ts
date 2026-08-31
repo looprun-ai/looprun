@@ -4,14 +4,15 @@ import { world } from '@looprun-ai/core';
 import { LoopRunAgent } from '@looprun-ai/mastra';
 import { Server } from '../src/server.js';
 
+
 const BOOKING = world({
   records: { bookings: { bk_9: { status: 'CONFIRMED', day: 'Tuesday' } } },
   reads: { getBooking: { form: 'get', entity: 'bookings', label: 'Look up the booking' } }
 });
 const SPEC: AgentSpec = { name: 'hotel', persona: 'You are the hotel desk.' };
 
-const finishStep = (message: string): ModelStep =>
-  ({ calls: [{ tool: 'finish', args: { message, report: [] } }], text: '' });
+const finishStep = (message: string, facts: readonly string[] = []): ModelStep =>
+  ({ calls: [{ tool: 'finish', args: { message, report: [], facts } }], text: '' });
 
 function agentWith(steps: readonly ModelStep[]): LoopRunAgent {
   return new LoopRunAgent({ spec: SPEC, model: { scripted: { steps } }, world: BOOKING });

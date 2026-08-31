@@ -4,8 +4,7 @@ import { TurnFailure } from '../../src/contract/vocabulary.js';
 import { StatusClerk } from '../../src/run/status-clerk.js';
 import type { TurnDraft } from '../../src/run/session.js';
 import { RecordsPortStub } from '../fixtures/records-port-stub.js';
-import { ScriptedModel } from '../../src/run/scripted-model.js';
-import { callStep, finishStep } from '../fixtures/scripted-model.js';
+import { callStep, finishStep, payingDesk } from '../fixtures/scripted-model.js';
 import { testEngine } from '../fixtures/compiled-agents.js';
 
 // P5 · R3.6 — the whole grading table: the engine derives the user-facing word and
@@ -71,7 +70,7 @@ test("an unchanged state under done:'no' stays not-done/refused", () => {
 test('the sealed act carries the diff correction end to end', async () => {
   const records = new RecordsPortStub();
   records.set('bookings', 'bk_1', { status: 'CONFIRMED' });
-  const model = new ScriptedModel([
+  const model = payingDesk([
     callStep('cancelBooking', { id: 'bk_1' }),
     finishStep('Cancelled.', [{ tool: 'cancelBooking', target: 'bk_1', word: 'done' }])
   ,

@@ -1,6 +1,5 @@
 import { test, expect } from 'vitest';
-import { ScriptedModel } from '../../src/run/scripted-model.js';
-import { callStep, finishStep } from '../fixtures/scripted-model.js';
+import { callStep, finishStep, payingDesk } from '../fixtures/scripted-model.js';
 import { precondition } from '../../src/cards/catalog.js';
 import { caseRig } from '../fixtures/case-rig.js';
 
@@ -10,7 +9,7 @@ import { caseRig } from '../fixtures/case-rig.js';
 // audited patches.
 
 test('M7 — the world refuses a MAINTENANCE cancel at the rehearsal; the ask is never born', async () => {
-  const model = new ScriptedModel([
+  const model = payingDesk([
     callStep('cancelBooking', { id: 'bk_66' }),
     finishStep('The hotel refused it.', [{ tool: 'cancelBooking', target: 'bk_66', word: 'refused' }]),
     { calls: [], text: '' },
@@ -26,7 +25,7 @@ test('M7 — the world refuses a MAINTENANCE cancel at the rehearsal; the ask is
 });
 
 test('M7 — a contract precondition vetoes before consent even asks', async () => {
-  const model = new ScriptedModel([
+  const model = payingDesk([
     callStep('cancelBooking', { id: 'bk_9' }),
     finishStep('The invoice is unpaid, so I cannot cancel.',
       [{ tool: 'cancelBooking', target: 'bk_9', word: 'refused' }]),
@@ -46,7 +45,7 @@ test('M7 — a contract precondition vetoes before consent even asks', async () 
 });
 
 test('M7 — the custom executor lands audited patches through the shared path', async () => {
-  const model = new ScriptedModel([
+  const model = payingDesk([
     callStep('compRoom', { id: 'bk_9' }),
     finishStep('Comped.', [{ tool: 'compRoom', target: 'bk_9', word: 'done' }])
   ,

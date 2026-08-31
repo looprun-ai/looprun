@@ -1,8 +1,7 @@
 import { test, expect } from 'vitest';
 import { onlyAfter } from '../../src/cards/catalog.js';
 import { fact } from '../fixtures/compiled-agents.js';
-import { ScriptedModel } from '../../src/run/scripted-model.js';
-import { callStep, finishStep } from '../fixtures/scripted-model.js';
+import { callStep, finishStep, payingDesk } from '../fixtures/scripted-model.js';
 import { testEngine } from '../fixtures/compiled-agents.js';
 
 // A gated call pays EVERY owed read this turn, one micro-step per debt, bounded by
@@ -38,7 +37,7 @@ const guards = () => [
 ];
 
 test('every prerequisite is paid in one turn — one micro-step per debt, then the call runs', async () => {
-  const model = new ScriptedModel([
+  const model = payingDesk([
     callStep('cancelBooking', { id: 'bk_9' }),
     callStep('getBooking', { bookingRef: 'bk_9' }),
     callStep('getPolicy', { policyId: 'bk_9' }),
@@ -61,7 +60,7 @@ test('every prerequisite is paid in one turn — one micro-step per debt, then t
 });
 
 test('an unpayable second debt refuses with the guard that raised it, never a sibling rule', async () => {
-  const model = new ScriptedModel([
+  const model = payingDesk([
     callStep('cancelBooking', { id: 'bk_9' }),
     callStep('getBooking', { bookingRef: 'bk_9' }),
     { calls: [], text: 'I am not sure which policy.' },

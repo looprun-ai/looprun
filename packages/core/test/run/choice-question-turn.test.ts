@@ -3,8 +3,7 @@
  *  act run. The code the operator echoes is the one the engine minted — never a constant, and
  *  never one the operator was not shown. */
 import { test, expect } from 'vitest';
-import { ScriptedModel } from '../../src/run/scripted-model.js';
-import { callStep, finishStep } from '../fixtures/scripted-model.js';
+import { callStep, finishStep, payingDesk } from '../fixtures/scripted-model.js';
 import { testEngine, BOOKING_SURFACE, fact } from '../fixtures/compiled-agents.js';
 import { choiceFromUser } from '../../src/cards/catalog.js';
 
@@ -21,7 +20,7 @@ const SURFACE = { tools: { ...BOOKING_SURFACE.tools,
 const GUARD = choiceFromUser('refund', 'route', ROUTE, RULE).compile('contract', SURFACE);
 
 /** The engine under one choice-gated act. `done` is what the executor answers with. */
-function rig(model: ScriptedModel, done: 'yes' | 'unknown' = 'yes') {
+function rig(model: ReturnType<typeof payingDesk>, done: 'yes' | 'unknown' = 'yes') {
   return testEngine({ model, facts: SURFACE, guards: [GUARD],
     behaviors: { refund: () => ({ result: { refunded: true }, done }) } });
 }
@@ -35,7 +34,7 @@ function mintedCode(sentence: string): string {
 }
 
 test('the engine asks, the operator answers, and only then does the act run', async () => {
-  const model = new ScriptedModel([
+  const model = payingDesk([
     callStep('refund', { id: 'bk_1', route: 'toTheCard' }),
     finishStep('Which refund route should I use?',
       [{ tool: 'refund', target: 'bk_1', word: 'refused' }]),
@@ -63,7 +62,7 @@ test('the engine asks, the operator answers, and only then does the act run', as
 });
 
 test('the answer licenses the act ONCE — the next record is asked again, under a new code', async () => {
-  const model = new ScriptedModel([
+  const model = payingDesk([
     callStep('refund', { id: 'bk_1', route: 'toTheCard' }),
     finishStep('Which route?', [{ tool: 'refund', target: 'bk_1', word: 'refused' }]),
     { calls: [], text: '' }, { calls: [], text: '' },
@@ -92,7 +91,7 @@ test('the answer licenses the act ONCE — the next record is asked again, under
 });
 
 test('an act that comes back UNKNOWN spends the answer too — the next record is asked again', async () => {
-  const model = new ScriptedModel([
+  const model = payingDesk([
     callStep('refund', { id: 'bk_1', route: 'toTheCard' }),
     finishStep('Which route?', [{ tool: 'refund', target: 'bk_1', word: 'refused' }]),
     { calls: [], text: '' }, { calls: [], text: '' },
@@ -119,7 +118,7 @@ test('an act that comes back UNKNOWN spends the answer too — the next record i
 });
 
 test('an echo arriving before the engine ever asked licenses nothing', async () => {
-  const model = new ScriptedModel([
+  const model = payingDesk([
     callStep('refund', { id: 'bk_1', route: 'toTheCard' }),
     finishStep('Which route?', [{ tool: 'refund', target: 'bk_1', word: 'refused' }]),
     { calls: [], text: '' }, { calls: [], text: '' }

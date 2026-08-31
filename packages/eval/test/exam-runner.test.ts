@@ -9,12 +9,14 @@ import { SubjectLoader, type Subject } from '../src/subject-loader.js';
 import { ExamRunner } from '../src/exam-runner.js';
 import { readDump } from '../src/run-dir.js';
 
+
 const MINI = join(fileURLToPath(import.meta.url), '../fixtures/mini-subject');
 
 const call = (tool: string, args: Record<string, unknown>): ModelStep =>
   ({ calls: [{ tool, args }], text: '' });
-const finish = (message: string, report: { tool: string; target: string; word: string }[] = []):
-  ModelStep => ({ calls: [{ tool: 'finish', args: { message, report } }], text: '' });
+const finish = (message: string, report: { tool: string; target: string; word: string }[] = [],
+                facts: readonly string[] = []):
+  ModelStep => ({ calls: [{ tool: 'finish', args: { message, report, facts } }], text: '' });
 const routeStep = (desk: string): ModelStep =>
   ({ calls: [{ tool: 'route', args: { desk } }], text: '' });
 
@@ -39,7 +41,7 @@ test('a consent case plays the public door: typed approval resolves the open cod
     call('cancelBooking', { id: 'bk_9' }),
     finish('I need your approval.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'held' }]),
     { calls: [], text: '' },
-    finish('Cancelled bk_9.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'done' }]),
+    finish('Cancelled bk_9.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'done' }], ['F1']),
     { calls: [], text: '' },
     { calls: [], text: '' },
     finish('Anything else?')
@@ -64,7 +66,10 @@ test('a decline turn types NO plus the code — inert by contract: the question 
     call('cancelBooking', { id: 'bk_9' }),
     { calls: [], text: '' },
     { calls: [], text: '' },
-    finish('Understood — nothing was cancelled.'),
+    // The desk says nothing on the decline turn: the standing ask and its code are
+    // owed words no static script can spell, so the engine closes the turn.
+    { calls: [], text: '' },
+    { calls: [], text: '' },
     { calls: [], text: '' },
     { calls: [], text: '' }
   ] } }, runDir);
@@ -118,7 +123,7 @@ test('the ungoverned variant runs the twin — the destructive call executes unh
   const runDir = mkdtempSync(join(tmpdir(), 'run-'));
   const dump = await new ExamRunner().runCase(subject, c, 'ungoverned', { scripted: { steps: [
     call('cancelBooking', { id: 'bk_9' }),
-    finish('Cancelled.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'done' }]),
+    finish('Cancelled bk_9.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'done' }], ['F1']),
     { calls: [], text: '' },
     { calls: [], text: '' }
   ] } }, runDir);

@@ -1,7 +1,6 @@
 import { test, expect } from 'vitest';
 import { maxCalls } from '../../src/cards/catalog.js';
-import { ScriptedModel } from '../../src/run/scripted-model.js';
-import { callStep, finishStep } from '../fixtures/scripted-model.js';
+import { callStep, finishStep, payingDesk } from '../fixtures/scripted-model.js';
 import { BOOKING_SURFACE, testEngine } from '../fixtures/compiled-agents.js';
 
 // P3 · R5.6 — refuse: the act records not-done/blocked with the guard's sentence in
@@ -9,7 +8,7 @@ import { BOOKING_SURFACE, testEngine } from '../fixtures/compiled-agents.js';
 test('a refused call seals blocked with the rule in the delivery; the turn still closes by model', async () => {
   const guard = maxCalls('sendEmail', 1, { scope: 'conversation', reason: 'One email per person, ever.' })
     .compile('contract', BOOKING_SURFACE);
-  const model = new ScriptedModel([
+  const model = payingDesk([
     callStep('sendEmail', { to: 'ana@example.com' }),
     finishStep('Email sent.', [{ tool: 'sendEmail', target: 'ana@example.com', word: 'done' }]),
     { calls: [], text: '' },

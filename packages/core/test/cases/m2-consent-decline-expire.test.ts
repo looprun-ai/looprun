@@ -1,6 +1,5 @@
 import { test, expect } from 'vitest';
-import { ScriptedModel } from '../../src/run/scripted-model.js';
-import { callStep, finishStep } from '../fixtures/scripted-model.js';
+import { callStep, finishStep, payingDesk } from '../fixtures/scripted-model.js';
 import { caseRig } from '../fixtures/case-rig.js';
 
 // M2 — the closed half of the lifecycle: NO plus the code has no effect — the
@@ -9,7 +8,7 @@ import { caseRig } from '../fixtures/case-rig.js';
 // is delivered; a stale code consumes nothing.
 
 test('M2 — NO plus the code has no effect: the question stands, the notice is delivered', async () => {
-  const model = new ScriptedModel([
+  const model = payingDesk([
     callStep('cancelBooking', { id: 'bk_9' }),
     { calls: [], text: '' },
     { calls: [], text: '' },
@@ -33,7 +32,7 @@ test('M2 — NO plus the code has no effect: the question stands, the notice is 
 });
 
 test('M2 — an ignored question expires by the sweep, delivered; a stale code consumes nothing', async () => {
-  const model = new ScriptedModel([
+  const model = payingDesk([
     callStep('cancelBooking', { id: 'bk_9' }),
     { calls: [], text: '' },
     { calls: [], text: '' },

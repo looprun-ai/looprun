@@ -2,20 +2,25 @@
  *  guards over the arrived text (a deny answers the turn with the guard's own
  *  sentence — no model call) → model loop (serial per-call execution in emission
  *  order, engine-enforced) → finish checks and bounded redrives → compose → the
- *  prose reader over the COMPOSED words (both close paths; the floor is literal
- *  and exempt) → seal. All mutation goes to the TurnDraft; Session.seal commits
- *  atomically; a TurnFailure discards the draft so a retry starts clean. */
-import type { Act, ChatOpts, Msg, Question, RawCall, ReportLine, ToolCard, TurnRecord,
-              TurnReturned } from '../contract/vocabulary.js';
+ *  figure walk and the prose reader over the DELIVERED words (both close paths; the
+ *  floor is literal and exempt) → seal. All mutation goes to the TurnDraft;
+ *  Session.seal commits atomically; a TurnFailure discards the draft so a retry
+ *  starts clean.
+ *
+ *  The turn's OWED FACTS gate the desk's own message: they ride numbered in the
+ *  prompt tail, the finish names the ids its message expresses, and a miss redrives
+ *  the same model on the same prefix with the record's own sentence quoted back. */
+import type { Act, ChatOpts, Correction, Msg, Question, RawCall, ReportLine, ToolCard,
+              TurnRecord, TurnReturned } from '../contract/vocabulary.js';
 import { deepFreeze } from '../contract/freeze.js';
 import type { ModelPort, ToolPort, RecordsPort } from '../contract/ports.js';
 import type { CompiledAgent } from '../cards/cards.js';
 import { CallRunner } from './call-runner.js';
 import { canonicalAmount, carriedIds, figureRuns } from '../cards/catalog.js';
-import { assembleFacts } from './delivery-facts.js';
+import { assembleFacts, factIdMisses, unowedFactIds } from './delivery-facts.js';
 import type { DeliveryFact } from './delivery-facts.js';
 import { readProse } from './prose-reader.js';
-import { ReplyComposer } from './reply-composer.js';
+import { gateMisses, ReplyComposer } from './reply-composer.js';
 import { DisclosureDesk } from './disclosure-desk.js';
 import { Judge } from './judge.js';
 import type { Masker } from './masker.js';
@@ -59,6 +64,45 @@ export function contradictedLine(report: readonly ReportLine[], acts: readonly A
       && (line.target === '' || JSON.stringify(a.call.args).includes(line.target)));
     return matching.length > 0 && !matching.some(a => wordOf(a) === line.word);
   });
+}
+
+/** Every canonical amount the records carry: the OPERATOR'S own messages, the turn's
+ *  and the history's args, results and sentences, the open questions and the notes.
+ *  The engine's own corrections are not records and never ground anything — a figure
+ *  named in a redrive stays as ungrounded as it was. */
+export function groundedAmounts(operatorTexts: readonly string[], acts: readonly Act[],
+                                open: readonly Question[], notes: readonly string[]):
+    ReadonlySet<string> {
+  const grounded = new Set<string>();
+  const feed = (t: string): void => {
+    for (const run of figureRuns(t)) grounded.add(canonicalAmount(run));
+  };
+  for (const t of operatorTexts) feed(t);
+  for (const a of acts) {
+    feed(JSON.stringify(a.call.args));
+    feed(JSON.stringify(a.result ?? null));
+    feed(a.sentence);
+  }
+  for (const q of open) feed(`${q.code} ${q.sentence}`);
+  for (const n of notes) feed(n);
+  return grounded;
+}
+
+/** Every canonical amount a text states that the records do not carry. A figure
+ *  worked out at the desk — a product, a sum — grounds on nothing. Identifiers leave
+ *  the text first, so the digits inside a record id are never read as an amount. */
+export function ungroundedAmounts(text: string, grounded: ReadonlySet<string>): readonly string[] {
+  let bare = text;
+  for (const id of carriedIds(text)) bare = bare.split(id).join(' ');
+  return [...new Set(figureRuns(bare).map(canonicalAmount))].filter(x => !grounded.has(x));
+}
+
+/** The one sentence both walks send back — the desk's draft and the delivered words
+ *  answer to the same law. */
+export function ungroundedSentence(subject: string, ungrounded: readonly string[]): string {
+  return `${subject} states ${ungrounded.join(', ')} and no record this turn carries `
+    + `${ungrounded.length > 1 ? 'them' : 'it'} — state only figures the records show, `
+    + `written as the records write them`;
 }
 
 export function readMaterial(acts: readonly Act[]): readonly string[] {
@@ -161,6 +205,17 @@ export class Turn {
       ...foreign,
       { role: 'user', text: userText }
     ];
+    // What the OPERATOR wrote — this turn's message and every earlier one. The
+    // figure walks ground on these and never on the engine's own corrections.
+    const operatorTexts = [...sealed.map(r => r.userText),
+      ...(opts.before ?? []).map(x => x.userText), userText];
+    // The turn's owed words, as they stand right now: what the desk must express and
+    // what the engine charges it against, one assembly serving both.
+    const notesNow = (): readonly string[] => [
+      ...desk.staleAnswers(userText, draft.turn), ...desk.laterTexts(draft.turn),
+      ...desk.codeNotices(userText)];
+    const owedNow = (): readonly DeliveryFact[] =>
+      assembleFacts(draft.acts, desk.open(), draft.closed, notesNow());
 
     // The owed-read micro-step: same frozen system prefix, the same state tail the
     // main steps carry, the conversation so far, and a SINGLE tool on the surface —
@@ -180,7 +235,8 @@ export class Turn {
         : Object.fromEntries(Object.entries(microRaw).filter(([e]) => microVisible.includes(e)));
       const microState = microRaw !== null && microNote !== null ? microNote(microRaw)
         : microShown === null ? null : masker.maskState(microShown);
-      const microTail = pw.tail(userText, microState, desk.open());
+      // The micro-step writes no reply, so it is owed no facts: one read, nothing else.
+      const microTail = pw.tail(userText, microState, desk.open(), []);
       const step = await port.step(deepFreeze({
         system: microTail === '' ? pw.system() : `${pw.system()}\n${microTail}`,
         messages: [...messages, { role: 'user' as const, text: instruction }],
@@ -240,7 +296,8 @@ export class Turn {
         : Object.fromEntries(Object.entries(raw).filter(([entity]) => visible.includes(entity)));
       const state = raw !== null && note !== null ? note(raw)
         : shown === null ? null : masker.maskState(shown);
-      const tail = pw.tail(userText, state, desk.open());
+      const owed = owedNow();
+      const tail = pw.tail(userText, state, desk.open(), owed);
       const stepInput = deepFreeze({
         system: tail === '' ? pw.system() : `${pw.system()}\n${tail}`,
         messages: [...messages],
@@ -297,21 +354,22 @@ export class Turn {
       // IS the turn's outcome, and every further model step would be spent
       // re-proposing the very call the question already carries.
       if (draft.acts.slice(actsBefore).some(a => a.reason === 'held' && a.questionId !== null)) {
-        return await this.engineClose(session, draft);
+        return await this.engineClose(session, draft, operatorTexts);
       }
 
       if (finish !== null) {
         const judge = new Judge(port, seat.llmParams({}));
-        const closed = await this.tryFinish(finish, draft, messages, history.pastActs(),
-          desk.open(), [...desk.staleAnswers(userText, draft.turn), ...desk.laterTexts(draft.turn),
-            ...desk.codeNotices(userText)], judge);
+        const closed = await this.tryFinish(finish, draft, messages, operatorTexts,
+          history.pastActs(), desk.open(), notesNow(), owed, judge);
         if (closed === 'sealed') return session.seal(draft);
         retriesUsed += 1;
-        if (retriesUsed > compiled.limits.retries) return await this.engineClose(session, draft);
+        if (retriesUsed > compiled.limits.retries) {
+          return await this.engineClose(session, draft, operatorTexts);
+        }
         continue;
       }
 
-      if (forced) return await this.engineClose(session, draft);
+      if (forced) return await this.engineClose(session, draft, operatorTexts);
       if (callsUsed >= compiled.limits.calls || domain.length === 0) {
         forced = true;
         messages.push({ role: 'user', text: fd.force() });
@@ -320,11 +378,12 @@ export class Turn {
   }
 
   /** 'sealed' = the finish landed clean · 'redrive' = correction sent. The reply
-   *  pipe: deterministic checks (honesty included) → the judged pass on the
-   *  session's own seat → rewrites → prose scrub → compose. */
+   *  pipe: deterministic checks (the owed facts and honesty included) → the judged
+   *  pass on the session's own seat → compose → the delivered walk → seal. */
   private async tryFinish(finish: RawCall, draft: TurnDraft, messages: Msg[],
+                          operatorTexts: readonly string[],
                           pastActs: readonly Act[], open: readonly Question[],
-                          notes: readonly string[],
+                          notes: readonly string[], facts: readonly DeliveryFact[],
                           judge: Judge): Promise<'sealed' | 'redrive'> {
     const { compiled, rulebook, finishDesk: fd, deliveryWriter: dw, promptWriter: pw } = this.deps;
     const parsed = fd.parse(finish.args);
@@ -337,29 +396,37 @@ export class Turn {
       userText: draft.userText, turnActs: [...draft.acts], pastActs
     });
     const violations = [...rulebook.checkReply(replyCtx)];
-    // Every figure the message states is one the records carry: the user's words,
-    // the turn's and the history's args, results and sentences, the open questions
-    // and the notes. A figure worked out at the desk grounds on nothing.
-    const evidence = new Set<string>();
-    const feed = (t: string): void => {
-      for (const run of figureRuns(t)) evidence.add(canonicalAmount(run));
-    };
-    feed(draft.userText);
-    for (const m of messages) if (m.role === 'user') feed(m.text);
-    for (const a of [...draft.acts, ...pastActs]) {
-      feed(JSON.stringify(a.call.args));
-      feed(JSON.stringify(a.result ?? null));
-      feed(a.sentence);
+    // THE OWED FACTS CHARGE THE DESK'S OWN MESSAGE. Every literal the records mint —
+    // an id, a figure, a code — must ride in it exactly.
+    const owedMisses = gateMisses(facts, parsed.finish.message);
+    if (owedMisses.length > 0) {
+      violations.push({ guardName: 'owedFactIsCarried',
+        detail: `your message does not carry ${owedMisses.join(', ')} — write ${
+          owedMisses.length > 1 ? 'them' : 'it'} as the records write ${
+          owedMisses.length > 1 ? 'them' : 'it'}; digits stay digits` });
     }
-    for (const q of open) feed(`${q.code} ${q.sentence}`);
-    for (const n of notes) feed(n);
-    const ungrounded = [...new Set(figureRuns(parsed.finish.message).map(canonicalAmount))]
-      .filter(x => !evidence.has(x));
+    // And every owed fact must be EXPRESSED: the finish names the ids its message
+    // states, and a missing id is sent back with the record's own sentence quoted.
+    for (const id of factIdMisses(parsed.finish.facts, facts)) {
+      const fact = facts[Number(id.slice(1)) - 1];
+      violations.push({ guardName: 'owedFactIsExpressed',
+        detail: `your finish does not name ${id} among the facts your message expresses. `
+          + `Its record line: ${fact.text} — state it in your own words and name ${id}` });
+    }
+    // The list is read in both directions. An id this turn owes no fact for names a
+    // record line that does not exist, and a list that can name anything says nothing.
+    const unowed = unowedFactIds(parsed.finish.facts, facts);
+    if (unowed.length > 0) {
+      violations.push({ guardName: 'claimedFactIsOwed',
+        detail: `your finish names ${unowed.join(', ')} and this turn owes no such fact — `
+          + `${facts.length === 0 ? 'nothing is numbered for you this turn'
+            : `the ids numbered for you are ${facts.map((_, i) => `F${i + 1}`).join(', ')}`}` });
+    }
+    const grounded = groundedAmounts(operatorTexts, [...draft.acts, ...pastActs], open, notes);
+    const ungrounded = ungroundedAmounts(parsed.finish.message, grounded);
     if (ungrounded.length > 0) {
       violations.push({ guardName: 'figureIsGrounded',
-        detail: `the message states ${ungrounded.join(', ')} and no record this turn carries `
-          + `${ungrounded.length > 1 ? 'them' : 'it'} — state only figures the records show, `
-          + `written as the records write them` });
+        detail: ungroundedSentence('the message', ungrounded) });
     }
     // A report line the settled record contradicts is known to disagree with what
     // happened: corrected, never delivered.
@@ -405,7 +472,6 @@ export class Turn {
     // unless it dropped every identifier its reads returned, which pays one
     // composer call with the material. Anything on the table: one composer call,
     // gated, floored on failure.
-    const facts = assembleFacts(draft.acts, open, draft.closed, notes);
     const floor = (): string => dw.compose(parsed.finish.message, draft.acts, open,
       draft.closed, notes);
     const material = readMaterial(draft.acts);
@@ -417,21 +483,39 @@ export class Turn {
       : await this.composer.deliver(draft.userText, facts, parsed.finish.message, floor,
         material);
     const delivered = await this.readDelivery(composed, draft, facts,
-      parsed.finish.message, floor, material);
+      parsed.finish.message, floor, material, grounded);
     draft.delivery = { by: delivered.by, retried: delivered.retried, facts };
     draft.text = this.deps.masker.maskProse(delivered.text);
     return 'sealed';
   }
 
-  /** The prose reader at the seal, on every path that composes prose: the floor's
-   *  record lines are literal and are never read. A refusal pays ONE redrive
-   *  through the composer with the reader's sentence as the correction; a second
-   *  refusal delivers the floor. Rewrites apply to every candidate the operator
-   *  could receive. */
+  /** What the words the operator would receive are read for: the figure walk first —
+   *  the SAME law the desk's own draft answered to, one stage later — then the prose
+   *  reader. Returns the correction to send and the mark it leaves, or null. */
+  private deliveryRefusal(text: string, draft: TurnDraft, grounded: ReadonlySet<string>):
+    { readonly sentence: string; readonly mark: Correction } | null {
+    const ungrounded = ungroundedAmounts(text, grounded);
+    if (ungrounded.length > 0) {
+      const sentence = ungroundedSentence('your reply', ungrounded);
+      return { sentence, mark: { kind: 'deliveryFigure', detail: sentence } };
+    }
+    const rules = [...this.deps.rulebook.guards().guards.map(g => g.rule),
+      ...this.deps.compiled.judged.map(g => g.rule)];
+    const found = readProse({ text, userText: draft.userText, acts: draft.acts, rules });
+    if (found === null) return null;
+    return { sentence: found.sentence,
+      mark: { kind: 'proseReader', check: found.check, detail: found.sentence } };
+  }
+
+  /** The reading at the seal, on every path that composes prose: the floor's record
+   *  lines are literal and are never read. A refusal pays ONE redrive through the
+   *  composer with the refusal's sentence as the correction; a second refusal
+   *  delivers the floor. Rewrites apply to every candidate the operator could
+   *  receive. */
   private async readDelivery(
     composed: { text: string; by: 'composer' | 'prose' | 'floor'; retried: boolean },
     draft: TurnDraft, facts: readonly DeliveryFact[], draftProse: string,
-    floor: () => string, material: readonly string[]):
+    floor: () => string, material: readonly string[], grounded: ReadonlySet<string>):
     Promise<{ text: string; by: 'composer' | 'prose' | 'floor'; retried: boolean }> {
     const rewrite = (t: string): string => {
       let out = t;
@@ -440,22 +524,21 @@ export class Turn {
     };
     let text = rewrite(composed.text);
     if (composed.by === 'floor') return { ...composed, text };
-    const rules = [...this.deps.rulebook.guards().guards.map(g => g.rule),
-      ...this.deps.compiled.judged.map(g => g.rule)];
-    const first = readProse({ text, userText: draft.userText, acts: draft.acts, rules });
+    const first = this.deliveryRefusal(text, draft, grounded);
     if (first === null) return { ...composed, text };
-    draft.corrections.push({ kind: 'proseReader', check: first.check, detail: first.sentence });
+    draft.corrections.push(first.mark);
     const again = await this.composer.deliver(draft.userText, facts, draftProse, floor,
       material, first.sentence);
     text = rewrite(again.text);
     if (again.by === 'floor') return { text, by: 'floor', retried: true };
-    const second = readProse({ text, userText: draft.userText, acts: draft.acts, rules });
+    const second = this.deliveryRefusal(text, draft, grounded);
     if (second === null) return { text, by: again.by, retried: true };
-    draft.corrections.push({ kind: 'proseReader', check: second.check, detail: second.sentence });
+    draft.corrections.push(second.mark);
     return { text: rewrite(floor()), by: 'floor', retried: true };
   }
 
-  private async engineClose(session: Session, draft: TurnDraft): Promise<TurnRecord> {
+  private async engineClose(session: Session, draft: TurnDraft,
+                            operatorTexts: readonly string[]): Promise<TurnRecord> {
     const { finishDesk: fd, deliveryWriter: dw } = this.deps;
     draft.corrections.push({ kind: 'forcedFinish' });
     draft.closedBy = 'engine';
@@ -473,7 +556,10 @@ export class Turn {
     const composed = facts.length === 0
       ? { text: floor(), by: 'floor' as const, retried: false }
       : await this.composer.deliver(draft.userText, facts, '', floor, material);
-    const delivered = await this.readDelivery(composed, draft, facts, '', floor, material);
+    const grounded = groundedAmounts(operatorTexts,
+      [...draft.acts, ...session.history.pastActs()], open, notes);
+    const delivered = await this.readDelivery(composed, draft, facts, '', floor, material,
+      grounded);
     draft.delivery = { by: delivered.by, retried: delivered.retried, facts };
     draft.text = this.deps.masker.maskProse(delivered.text);
     return session.seal(draft);

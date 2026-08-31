@@ -1,8 +1,7 @@
 import { test, expect } from 'vitest';
 import { onlyAfter } from '../../src/cards/catalog.js';
 import { fact } from '../fixtures/compiled-agents.js';
-import { ScriptedModel } from '../../src/run/scripted-model.js';
-import { callStep, finishStep } from '../fixtures/scripted-model.js';
+import { callStep, finishStep, payingDesk } from '../fixtures/scripted-model.js';
 import { BOOKING_SURFACE, testEngine } from '../fixtures/compiled-agents.js';
 import { RecordsPortStub } from '../fixtures/records-port-stub.js';
 
@@ -35,7 +34,7 @@ test('the micro-step pays the debt: single-tool surface, model-filled args, engi
   const guard = onlyAfter('cancelBooking', 'getBooking').compile('contract', MISMATCHED);
   const records = new RecordsPortStub();
   records.set('bookings', 'bk_9', { status: 'CONFIRMED', customer: 'c_42' });
-  const model = new ScriptedModel([
+  const model = payingDesk([
     callStep('cancelBooking', { id: 'bk_9' }),
     callStep('getBooking', { bookingRef: 'bk_9' }),
     finishStep('Cancelled bk_9.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'done' }])
@@ -66,7 +65,7 @@ test('the micro-step pays the debt: single-tool surface, model-filled args, engi
 
 test('a satisfied prerequisite owes nothing — the read is not repeated', async () => {
   const guard = onlyAfter('cancelBooking', 'getBooking').compile('contract', BOOKING_SURFACE);
-  const model = new ScriptedModel([
+  const model = payingDesk([
     { calls: [{ tool: 'getBooking', args: { id: 'bk_9' } }, { tool: 'cancelBooking', args: { id: 'bk_9' } }], text: '' },
     finishStep('Cancelled bk_9.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'done' }])
   ,
@@ -82,7 +81,7 @@ test('a satisfied prerequisite owes nothing — the read is not repeated', async
 
 test('a micro-step that fills nothing refuses the gated call — the turn still answers the user', async () => {
   const guard = onlyAfter('cancelBooking', 'getBooking').compile('contract', MISMATCHED);
-  const model = new ScriptedModel([
+  const model = payingDesk([
     callStep('cancelBooking', { id: 'bk_9' }),
     { calls: [], text: 'I am not sure which booking.' },
     finishStep('I could not cancel bk_9 — I could not read it first.',
@@ -112,7 +111,7 @@ test('a micro-step that fills nothing refuses the gated call — the turn still 
 
 test('a paid read that FAILS refuses the gated call with the rule — never a dead turn', async () => {
   const guard = onlyAfter('cancelBooking', 'getBooking').compile('contract', MISMATCHED);
-  const model = new ScriptedModel([
+  const model = payingDesk([
     callStep('cancelBooking', { id: 'bk_9' }),
     callStep('getBooking', { bookingRef: 'bk_9' }),
     finishStep('I could not cancel bk_9.',
