@@ -71,6 +71,8 @@ desks:                                   # required, a sequence
     judged:                              # optional: the session's own model answers, per reply
       - { factory: lieCheck, acts: [cancelBooking] }   # lieCheck · impossibilityCheck ·
                                                        # injectionCheck · hallucinationCheck
+                                         # a desk carrying one is emitted with judgePass: true —
+                                         # the spec field that buys those calls
     limits: { calls: 6 }                 # optional; the desk's figure wins per field
 ```
 

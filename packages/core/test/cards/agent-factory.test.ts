@@ -57,9 +57,10 @@ test('limits merge per field — the spec wins over the contract over the defaul
 });
 
 test('nothing judged is auto-installed; a declared lieCheck lands in judged only', () => {
-  const bare = f.governed({ name: 'a', persona: 'p' }, undefined, FACTS);
+  const bare = f.governed({ name: 'a', persona: 'p', judgePass: true }, undefined, FACTS);
   expect(bare.judged).toEqual([]);
-  const c = f.governed({ name: 'a', persona: 'p', guards: [lieCheck()] }, undefined, FACTS);
+  const c = f.governed({ name: 'a', persona: 'p', judgePass: true, guards: [lieCheck()] },
+    undefined, FACTS);
   expect(c.judged.map(g => g.name)).toEqual(['lieCheck']);
   expect(c.judged[0].judged).toBe(true);
   expect(c.guards.some(g => g.name === 'lieCheck')).toBe(false);

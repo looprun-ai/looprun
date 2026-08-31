@@ -19,6 +19,13 @@ function schemaArgs(fact: ToolFact | undefined): readonly string[] {
 export class CardCheck {
   check(spec: AgentSpec, contract: DomainContract | undefined, facts: SurfaceFacts): void {
     const problems: Problem[] = [];
+    // A judged guard on a desk that buys no pass is asked by nobody, and its rule
+    // reaches no prompt either: it sits on the card as coverage and is nothing.
+    if ((spec.guards ?? []).some(g => g.judgeQuery !== undefined) && spec.judgePass !== true) {
+      problems.push({ code: 'JUDGE_PASS_MISSING',
+        sentence: `Desk '${spec.name}' carries a judged guard and declares no judgePass: true — `
+          + 'the guard is never asked. Declare the pass, or delete the guard.' });
+    }
     this.checkGuards(spec.guards ?? [], 'spec', facts, problems);
     this.checkGuards(contract?.guards ?? [], 'contract', facts, problems);
     this.checkDisclosure(contract?.disclosure ?? {}, facts, problems);

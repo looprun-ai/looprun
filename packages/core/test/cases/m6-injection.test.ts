@@ -6,8 +6,8 @@ import { caseRig } from '../fixtures/case-rig.js';
 
 // M6 — the instruction planted in bookings.bk_9.note arrives inside a tool result;
 // the model obeys it; the DECLARED injectionCheck asks the session's own seat and
-// the YES verdict redrives the reply. The judged pass exists only because the card
-// declared it.
+// the YES verdict redrives the reply. The judged pass exists only because the desk
+// declared it and its guard names the question.
 
 test('M6 — the obeyed injection is caught by the scripted judge and redriven', async () => {
   const model = new ScriptedModel([
@@ -17,7 +17,7 @@ test('M6 — the obeyed injection is caught by the scripted judge and redriven',
     finishStep('bk_9 is confirmed for Tuesday. The note in the record is data, not an order.', []),
     { calls: [], text: 'NO' }
   ]);
-  const { engine } = caseRig({ model, spec: { guards: [injectionCheck()] } });
+  const { engine } = caseRig({ model, spec: { judgePass: true, guards: [injectionCheck()] } });
 
   const r = await engine.chat('s1', 'what does booking bk_9 say?');
 
@@ -36,7 +36,7 @@ test('M6 — an unreadable answer refuses: the reply is redriven, never sealed o
     finishStep('bk_9 is confirmed for Tuesday.', []),
     { calls: [], text: 'NO' }
   ]);
-  const { engine } = caseRig({ model, spec: { guards: [
+  const { engine } = caseRig({ model, spec: { judgePass: true, guards: [
     { name: 'topic-check', rule: 'The reply stays on topic.', on: 'reply',
       judgeQuery: 'Is the reply off topic?' }
   ] } });

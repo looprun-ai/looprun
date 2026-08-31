@@ -4,7 +4,16 @@
  *  may quote the sealed history; guards read the user's text only as exact literals —
  *  judging MEANING happens here, on the session's own seat. The answer format is
  *  fixed tokens; UNREADABLE is a first-class verdict, and it refuses — an answer the
- *  engine cannot read leaves the rule unmet. */
+ *  engine cannot read leaves the rule unmet.
+ *
+ *  THE CHECK CARRIES ITS OWN SYSTEM PROMPT, and it is never the voice that wrote the
+ *  reply it reads. The desk's conversation rides beneath the question as EVIDENCE —
+ *  the same array the turn built — and the turn is pasted into the question on top of
+ *  it, so the rule, the user's words, the reply, the report and the recorded acts are
+ *  all present whatever the history holds. Under the desk's own instructions the reply
+ *  is the thing the model just wrote and the answer defends it; under this system it is
+ *  an object read against a single rule, and the desk's closing contract cannot outrank
+ *  the answer's format. */
 import type { LlmParams, Msg, ReplyCtx } from '../contract/vocabulary.js';
 import { deepFreeze } from '../contract/freeze.js';
 import type { ModelPort } from '../contract/ports.js';

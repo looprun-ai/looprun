@@ -2,7 +2,8 @@
  *  array (spec → contract → consent → the engine floor, with the auto-installed
  *  guards derived from declarations), the judged rows, the rewrites, the mask keys,
  *  the disclosure bindings (slot derivability re-proved by CardCheck), the resolved
- *  wording, and the prompt raw material. NOTHING JUDGED IS AUTO-INSTALLED. Compiled
+ *  wording, and the prompt raw material. NOTHING JUDGED IS AUTO-INSTALLED, and the
+ *  judged rows are filled only for a spec that declares the judged pass. Compiled
  *  once, deep-frozen; the runtime never re-reads the authored form. */
 import type { Json, SurfaceFacts, ToolFact } from '../contract/vocabulary.js';
 import { deepFreeze } from '../contract/freeze.js';
@@ -159,7 +160,9 @@ export class AgentFactory {
 
     return {
       guards: armedGuards,
-      judged: armed ? judged : [],
+      // The judged pass is the desk's own purchase: a judged guard is asked only where
+      // the spec declares the pass, so no card but this desk's can spend the call.
+      judged: armed && spec.judgePass === true ? judged : [],
       rewrites: armed ? [...contract?.rewrites ?? []] : [],
       limits,
       maskKeys: compileMaskKeys(contract?.secrets),

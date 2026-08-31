@@ -460,6 +460,16 @@ describe('writeCards', () => {
     expect(out).toContain("      { ...lieCheck(), tool: ['issueRefund'] },");
     expect(out).toContain("      { ...injectionCheck(), tool: ['issueRefund', 'getInvoice'] }");
     expect(out).toContain("import { injectionCheck, lieCheck, onlyAfter, precondition } from '@looprun-ai/core';");
+    // The desk that carries a judged check buys the pass that asks it.
+    expect(out).toContain('    judgePass: true,');
+  });
+
+  test('a desk with no judged check buys no judged pass', () => {
+    const out = writeCards(decl({ desks: [
+      { name: 'billing', persona: 'p', tools: ['issueRefund'],
+        conduct: { declareHonestly: 'Say what ran.' } }
+    ] }), FACTS);
+    expect(out).not.toContain('judgePass');
   });
 
   test('a judged check over no act is refused, and the desk that carries it is named', () => {

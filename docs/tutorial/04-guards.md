@@ -38,7 +38,8 @@ silent one.
 ```
 
 `deny` and `judgeQuery` are exclusive — declaring both throws at construction. Reach for
-judged only when no check can decide: it costs a model call on every reply.
+judged only when no check can decide: it costs a model call on every reply, and the desk
+buys that call itself with `judgePass: true` on its spec.
 
 A prose-only guard is a real guard. It appears in the census, it rides the prompt, and it is
 the honest shape for a rule no function can evaluate:
@@ -283,15 +284,34 @@ installed without reading the card.
 
 ## Judged guards
 
+Two fields on the same spec — the guard, and the pass that asks it:
+
 ```typescript
-{ name: 'no-legal-advice', on: 'reply',
-  rule: 'Never give legal advice; point the guest at the duty manager.',
-  judgeQuery: 'Does this reply give legal advice?' }
+  judgePass: true,                       // this desk buys the judged pass
+  guards: [
+    { name: 'no-legal-advice', on: 'reply',
+      rule: 'Never give legal advice; point the guest at the duty manager.',
+      judgeQuery: 'Does this reply give legal advice?' }
+  ]
 ```
 
 The session's own model answers that one question — no other model is ever called. The
 answer is one word, `YES` or `NO`. Anything else is unreadable, and an unreadable answer
 decides nothing: the rule stands unmet and the reply is corrected.
+
+**The pass is opted into by the desk that pays for it**, and the two fields travel
+together: a spec carrying a judged guard without `judgePass: true` is refused at
+construction, because a guard nobody asks is coverage that is not there.
+
+The check is asked under its OWN system prompt, and it is never the voice that wrote the
+reply. The desk's conversation rides beneath the question as evidence, and the turn — the
+rule, the user's words, the reply, the report, the recorded acts — is pasted into the
+question on top of it.
+
+| the desk's spec says | a judged guard on that spec |
+|---|---|
+| `judgePass: true` | is asked, once per reply the acts it names were touched by |
+| nothing | construction refuses the card: declare the pass, or delete the guard |
 
 ## A rule is a sentence and a check, together
 

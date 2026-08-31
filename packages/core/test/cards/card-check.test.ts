@@ -90,9 +90,24 @@ test('clean cards over the hostile surface pass silently', () => {
 });
 
 test('a judged guard on a spec, with or without a tool, is lawful', () => {
-  expect(() => check({ ...SPEC, guards: [{ name: 'noLies',
+  expect(() => check({ ...SPEC, judgePass: true, guards: [{ name: 'noLies',
     rule: 'Never claim an act that did not run.', on: 'reply',
     judgeQuery: 'Does the reply claim an act the record does not show?' }] })).not.toThrow();
+});
+
+test('a judged guard on a desk that buys no pass is never asked, and construction refuses it', () => {
+  try {
+    check({ ...SPEC, guards: [{ name: 'noLies',
+      rule: 'Never claim an act that did not run.', on: 'reply',
+      judgeQuery: 'Does the reply claim an act the record does not show?' }] });
+    throw new Error('expected CardError');
+  } catch (e) {
+    expect((e as CardError).problems.map(p => p.code)).toContain('JUDGE_PASS_MISSING');
+  }
+});
+
+test('a desk buying the pass with nothing judged on it is lawful — the pass costs nothing', () => {
+  expect(() => check({ ...SPEC, judgePass: true })).not.toThrow();
 });
 
 test('a judged guard on the contract runs on every desk, and construction refuses it', () => {
@@ -107,7 +122,7 @@ test('a judged guard on the contract runs on every desk, and construction refuse
 });
 
 test('a judged guard on the spec, naming its tool, is lawful', () => {
-  expect(() => check({ ...SPEC, guards: [{ name: 'noLies',
+  expect(() => check({ ...SPEC, judgePass: true, guards: [{ name: 'noLies',
     rule: 'Never claim an act that did not run.', on: 'reply', tool: 'cancelBooking',
     judgeQuery: 'Does the reply claim an act the record does not show?' }] })).not.toThrow();
 });

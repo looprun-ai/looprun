@@ -34,6 +34,10 @@ export interface AgentSpec {
   summary?: string;
   /** Guards about how THIS desk works. Highest priority. Omitted = []. */
   guards?: readonly Guard[];
+  /** THE JUDGED PASS, opted into by the desk that pays for it: one extra model call
+   *  per judged guard on every reply the guard is scoped to. Omitted = this desk asks
+   *  no judge, and a judged guard on its card is carried and never asked. */
+  judgePass?: boolean;
   /** The model's parameters, merged PER FIELD over the target's declared defaults. */
   llmParams?: LlmParams;
   /** This desk's ceilings, merged PER FIELD over the contract's limits — the spec wins. */

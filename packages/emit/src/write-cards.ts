@@ -705,6 +705,9 @@ function deskLines(desk: Declaration['desks'][number], depth: number,
     [indent(depth + 1, 'llmParams: { temperature: 0 }')],
     ...(desk.limits === undefined ? []
       : [[limitLines(`desks '${desk.name}' limits`, desk.limits, depth + 1)]]),
+    // The judged pass is bought by the desk that carries a judged check: one model
+    // call per check, on every reply the acts it names were touched by.
+    ...(judged.length === 0 ? [] : [[indent(depth + 1, 'judgePass: true')]]),
     ...(laws.length === 0 && held.length === 0 && judged.length === 0 ? [] : [[
       indent(depth + 1, 'guards: ['),
       ...commaJoin([
