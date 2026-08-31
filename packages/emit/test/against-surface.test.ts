@@ -145,11 +145,11 @@ describe('checkAgainstSurface', () => {
         + "Did you mean 'id'?"]);
   });
 
-  // `argFormat` returns null the moment it finds nothing to test, so the same mistake is the
+  // `argMatchesFormat` returns null the moment it finds nothing to test, so the same mistake is the
   // opposite failure: a check that is installed, counted in the census, and never decides anything.
-  test('argFormat pointed at an argument the act does not declare', () => {
+  test('argMatchesFormat pointed at an argument the act does not declare', () => {
     expect(checkAgainstSurface(hotelDecl([
-      { name: 'argFormat:cancelBooking', acts: ['cancelBooking'], factory: 'argFormat',
+      { name: 'argMatchesFormat:cancelBooking', acts: ['cancelBooking'], factory: 'argMatchesFormat',
         args: { arg: 'ids', pattern: 'bk_[0-9]+' } }]), HOTEL, SEAM))
       .toEqual(["contract.guards[0].args.arg names 'ids', and 'cancelBooking' accepts 'id'. "
         + 'Pointed at an argument its act does not carry, the guard never fires — it sits in the '

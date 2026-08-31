@@ -1,7 +1,7 @@
 /** atlas-next world kit: the mutable VIEW an executor's logic runs over, the diff
  *  that turns its changes into patches, and the domain helpers. No regex anywhere —
  *  id shapes are checked with plain string walks; the declared schema patterns are
- *  DATA the engine's own argFormat guard evaluates. */
+ *  DATA the engine's own argMatchesFormat guard evaluates. */
 import type { Json, Patch, StateSnapshot } from '@looprun-ai/core';
 
 export const TODAY = '2026-07-01';

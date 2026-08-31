@@ -84,7 +84,7 @@ const LAWFUL_ARGS: Readonly<Record<DeclaredGuard['factory'], readonly string[]>>
   precondition: ['reads', 'field', 'is', 'in'],
   role: ['anchor', 'by', 'from', 'field', 'in'],
   valueFromUser: ['arg'],
-  argFormat: ['arg', 'pattern'],
+  argMatchesFormat: ['arg', 'pattern'],
   argForbidden: ['arg'],
   cap: ['calls', 'scope'],
   checkResult: ['field', 'is', 'in'],
@@ -114,7 +114,7 @@ const ACT_SHAPE: Readonly<Record<DeclaredGuard['factory'], 'all' | 'first' | 'no
   precondition: 'all',
   role: 'all',
   valueFromUser: 'first',
-  argFormat: 'first',
+  argMatchesFormat: 'first',
   argForbidden: 'first',
   cap: 'first',
   checkResult: 'first',
@@ -458,9 +458,9 @@ function factoryCall(guard: DeclaredGuard): { readonly imported: string | null;
     case 'valueFromUser':
       return { imported: 'valueFromUser',
         lines: [`valueFromUser(${quote(act)}, ${quote(stringArg(guard, 'arg'))})`] };
-    case 'argFormat':
-      return { imported: 'argFormat',
-        lines: [`argFormat(${quote(act)}, ${quote(stringArg(guard, 'arg'))}, `
+    case 'argMatchesFormat':
+      return { imported: 'argMatchesFormat',
+        lines: [`argMatchesFormat(${quote(act)}, ${quote(stringArg(guard, 'arg'))}, `
           + `${quote(stringArg(guard, 'pattern'))})`] };
     case 'argForbidden':
       return { imported: 'argForbidden',

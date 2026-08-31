@@ -148,7 +148,7 @@ const SCHEMA_ARGS: Readonly<Record<string, { readonly args: readonly string[];
   valueFromUser: { args: ['arg'], costs: 'the guard refuses every call of it' },
   valueFromUserOrRecord: { args: ['arg'], costs: 'the guard refuses every call of it' },
   argMatchesRecord: { args: ['arg'], costs: 'the guard refuses every call of it' },
-  argFormat: { args: ['arg'],
+  argMatchesFormat: { args: ['arg'],
     costs: 'the guard never fires — it sits in the census as a check that decides nothing' },
   argCondition: { args: ['arg'],
     costs: 'the guard never fires — it sits in the census as a check that decides nothing' },
@@ -159,7 +159,7 @@ const SCHEMA_ARGS: Readonly<Record<string, { readonly args: readonly string[];
 /** Every argument a guard's CONFIGURATION names is an argument the act itself declares. A guard
  *  pointed at an argument outside the act's schema reads `undefined` on every arriving call, and
  *  the three factories that read one answer that differently: `valueFromUser` has no user word
- *  left to match and denies its own act for the whole conversation, while `argFormat` has no value
+ *  left to match and denies its own act for the whole conversation, while `argMatchesFormat` has no value
  *  left to test and `argForbidden` has nothing left to forbid, so both allow every call. None of it
  *  is visible downstream — the act does carry a check, and the check either never passes or never
  *  fires. */

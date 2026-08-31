@@ -65,7 +65,7 @@ for a behavior, which is why they catch what a runtime test cannot.
 | `layer-rule` | an import pointing the wrong way in the layer picture: contract imports nothing, cards import contract, the machine reaches a world only through the ports, and only a facade imports the engine |
 | `name-gate` | any identifier on the rename register, anywhere in the packages tree |
 | `no-network` | a network primitive reached from the engine — `fetch`, an http client, a socket. The declared doors are the server package (the wire is its purpose) and the models package (loopback serving) |
-| `purity` | a regex outside its declared homes — the pattern factories and `argFormat` in the catalog, and the delivery writer's sentence anatomy (`idsOf`, `unframed`) — a guard decides by reading typed values, not by matching prose |
+| `purity` | a regex outside its declared homes — the pattern factories and `argMatchesFormat` in the catalog, and the delivery writer's sentence anatomy (`idsOf`, `unframed`) — a guard decides by reading typed values, not by matching prose |
 
 ## 3 · The seven facade gates
 

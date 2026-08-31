@@ -527,7 +527,7 @@
     - `noFalseFailureClaim()` → `noFalseFailureClaim({ claimRe })`
   - **Single spec class.** `AgentSpecMinimal` and `AgentSpecFull` are removed; there is ONE
     `AgentSpecBase` (universal invariants + the destructive-safety pair iff `destructiveTools`).
-    Extend `AgentSpecBase`. The schema-auto layer is gone — author `argRequired` / `argFormat`
+    Extend `AgentSpecBase`. The schema-auto layer is gone — author `argRequired` / `argMatchesFormat`
     explicitly.
 
   **New**

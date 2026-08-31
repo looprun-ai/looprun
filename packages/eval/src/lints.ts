@@ -279,7 +279,7 @@ function surfaceKeys(sources: readonly Source[], blocks: ReadonlySet<string>): R
 }
 
 const DETERMINISTIC_FACTORIES = ['onlyAfter', 'precondition', 'valueFromUser',
-  'argFormat', 'argForbidden', 'checkResult', 'mustAccountFor', 'maxCalls', 'blockPattern'];
+  'argMatchesFormat', 'argForbidden', 'checkResult', 'mustAccountFor', 'maxCalls', 'blockPattern'];
 
 function callsAny(node: ts.Node, names: ReadonlySet<string>): boolean {
   let found = false;
@@ -859,11 +859,11 @@ export function doubleStated(subjectDir: string): readonly string[] {
  *    onlyAfter       'Run <prerequisite> before <tool>.'      — the order, both names in it
  *    valueFromUser   "Send <tool>'s '<arg>' only as the user wrote it."
  *    argForbidden       "Never send '<arg>' on <tool>."
- *    argFormat       "Send '<arg>' on <tool> in its declared format." — the format is the schema's
+ *    argMatchesFormat       "Send '<arg>' on <tool> in its declared format." — the format is the schema's
  *                    own declared pattern, and the schema rides the same card the sentence does
  *    mustAccountFor  'The report must account for <records> as <status>.' — the records and the
  *                    status word are both in it; it names no tool and reaches no act at all */
-const SELF_STATING_FACTORIES = new Set(['onlyAfter', 'valueFromUser', 'argForbidden', 'argFormat',
+const SELF_STATING_FACTORIES = new Set(['onlyAfter', 'valueFromUser', 'argForbidden', 'argMatchesFormat',
   'mustAccountFor']);
 
 /** The factories that take the law as an ARGUMENT — `precondition`'s reason, `maxCalls`'s
@@ -1887,7 +1887,7 @@ export function seamUnreached(subjectDir: string, cases: readonly ExamCase[],
  *  moved, and the finding it raises is a correction on the reply. A reply-bound check —
  *  `mustAccountFor`, a judged query, a `blockPattern` on the reply — reads words the desk wrote
  *  once the act was over. */
-const DENYING_FACTORIES = ['precondition', 'valueFromUser', 'argFormat',
+const DENYING_FACTORIES = ['precondition', 'valueFromUser', 'argMatchesFormat',
   'argForbidden', 'maxCalls'];
 
 /** The words that say why the mechanisms an act carries cannot refuse its call. */

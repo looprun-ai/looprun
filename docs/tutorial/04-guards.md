@@ -96,7 +96,7 @@ the rest.
 | holds an argument to the row on file | `argMatchesRecord` | a garage: `collectVehicle(reg)` where the plate typed must be the plate the job card carries, so a neighbouring job is never released |
 | requires a read only WHERE the record says so | `onlyAfterWhen` | a bank: `closeAccount` reads the balance first only when the account is overdrawn; a clear account closes with no order to obey |
 | requires a CHOICE the operator ANSWERED | `choiceFromUser` | a printworks counter: the customer asked for *"the matt stock"* and the model sent `finish: gloss` — nobody writes a flag, so the desk puts the finishes to the customer and the answer is the licence |
-| requires an argument to match a declared shape | `argFormat` | an insurer: `policyId` is `POL-` and eight digits, so `POL-2291` is a well-formed guess, not an identifier |
+| requires an argument to match a declared shape | `argMatchesFormat` | an insurer: `policyId` is `POL-` and eight digits, so `POL-2291` is a well-formed guess, not an identifier |
 | forbids an argument from arriving at all | `argForbidden` | a clinic: `bookAppointment` declares `overrideCapacity`, and no desk may send it |
 | checks the RESULT after the call ran | `checkResult` | a statements desk: `sendStatement` returns `delivered: false, bounce: 'mailbox_full'`, and the reply corrects itself instead of reporting success |
 | requires every named record to be accounted for | `mustAccountFor` | a claims desk asked about three policies reports on all three, including the one it could not touch |
@@ -130,7 +130,7 @@ machine can never disagree. Use one instead of hand-writing a `deny` wherever it
 | `onlyAfterWhen(tool, prerequisite, when, rule)` | the read, and a reading of the call's own row | the act until the read succeeded — but only where the condition holds | demanding a read on every call to catch the few that need it |
 | `valueFromUser(tool, arg)` | tool + arg name | a value the user never wrote, matched as whole tokens | the model inventing an amount, an address, a date |
 | `choiceFromUser(tool, arg, options, rule)` | the two or more values the argument may carry | the call until the operator's own answer names the value it carries | the model picking an option the operator never chose |
-| `argFormat(tool, arg, pattern)` | a pattern string | a value the declared shape rejects | a well-formed guess passing as an identifier |
+| `argMatchesFormat(tool, arg, pattern)` | a pattern string | a value the declared shape rejects | a well-formed guess passing as an identifier |
 | `argForbidden(tool, arg)` | tool + arg name | the call when the forbidden argument arrives | a banned field being used anyway |
 | `checkResult(tool, check)` | `(ctx) => string \| null` over the RESULT | after execution, into the reply's corrections | reporting a success the result does not show |
 | `mustAccountFor({ records, status })` | ids + a status word | a report that leaves a named record unaccounted for | silently dropping the very act the turn was about |

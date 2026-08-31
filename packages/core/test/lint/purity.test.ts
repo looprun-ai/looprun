@@ -4,9 +4,9 @@ import { srcFiles } from './walk.js';
 
 /** Charter R6.6: a guard never uses a regex. The lawful regex homes are the pattern
  *  factories in cards/catalog.ts — blockPattern, purgePattern, maskPattern, and
- *  argFormat (the schema's declared pattern is DATA; argFormat is its one
+ *  argMatchesFormat (the schema's declared pattern is DATA; argMatchesFormat is its one
  *  evaluator); a regex anywhere else in src/ is a build failure. */
-const REGEX_HOMES = new Set(['blockPattern', 'purgePattern', 'maskPattern', 'argFormat']);
+const REGEX_HOMES = new Set(['blockPattern', 'purgePattern', 'maskPattern', 'argMatchesFormat']);
 
 function insideRegexHome(node: ts.Node, rel: string): boolean {
   if (!rel.endsWith('cards/catalog.ts')) return false;

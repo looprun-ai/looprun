@@ -590,7 +590,7 @@ describe('writeCards', () => {
             rule: 'Moving money needs the treasury capability; read the clerk record and name a clerk whose grade can.' },
           { name: 'amountAsTheCustomerSaidIt', acts: ['issueRefund'], factory: 'valueFromUser',
             args: { arg: 'invoiceId' } },
-          { name: 'invoiceIdInItsShape', acts: ['getInvoice'], factory: 'argFormat',
+          { name: 'invoiceIdInItsShape', acts: ['getInvoice'], factory: 'argMatchesFormat',
             args: { arg: 'invoiceId', pattern: 'inv_[0-9]{4}' } },
           { name: 'noOverrideOnALookup', acts: ['getInvoice'], factory: 'argForbidden',
             args: { arg: 'invoiceId' } },
@@ -644,7 +644,7 @@ describe('writeCards', () => {
 
     // Every declared mechanism reaches the card under the name the engine imports it by.
     for (const factory of ['onlyAfter', 'precondition', 'valueFromUser',
-      'argFormat', 'argForbidden', 'maxCalls', 'checkResult', 'mustAccountFor', 'blockPattern',
+      'argMatchesFormat', 'argForbidden', 'maxCalls', 'checkResult', 'mustAccountFor', 'blockPattern',
       'maskPattern', 'purgePattern', 'swapTerms', 'injectionCheck']) {
       expect(out, `${factory} reaches no line of the card`).toContain(`${factory}(`);
     }

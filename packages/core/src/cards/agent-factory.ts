@@ -11,7 +11,7 @@ import type { AgentSpec, CompiledAgent, CompiledGuard, Disclosure, DisclosureBin
               DomainContract, Guard, JudgedGuard, MaskKey } from './cards.js';
 import { DEFAULT_LIMITS } from './cards.js';
 import { CardCheck } from './card-check.js';
-import { argFormat, argRequired, brokenReply, confirmFirst, groundedDates, groundedIds, maxDestructive,
+import { argMatchesFormat, argRequired, brokenReply, confirmFirst, groundedDates, groundedIds, maxDestructive,
          questionAnswered,
          noDuplicateCall, type SeedGuard } from './catalog.js';
 import { resolveWording } from './wordings.js';
@@ -142,7 +142,7 @@ export class AgentFactory {
         const pattern = typeof decl === 'object' && decl !== null && !Array.isArray(decl)
           ? (decl as { readonly pattern?: Json }).pattern : undefined;
         if (typeof pattern === 'string') {
-          guards.push(argFormat(fact.name, arg, pattern).compile('engine', lane));
+          guards.push(argMatchesFormat(fact.name, arg, pattern).compile('engine', lane));
         }
       }
     }

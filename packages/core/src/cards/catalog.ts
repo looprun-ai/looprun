@@ -2,7 +2,7 @@
  *  AND compiles its own species semantics — a caller never hand-rolls them. A factory
  *  derives rule and deny from the SAME parameters, so prose/check parity is
  *  structural. A factory MINTS its guard's name as kind:tool. Author regex exists
- *  ONLY inside blockPattern, purgePattern and maskPattern; argFormat evaluates the
+ *  ONLY inside blockPattern, purgePattern and maskPattern; argMatchesFormat evaluates the
  *  schema's own declared pattern. */
 import type { Act, CallCtx, ConsentWhen, InputCtx, Json, OwedRead, ReplyCtx, ReportWord, ResultCtx,
               Rewrite, StateSnapshot, SurfaceFacts } from '../contract/vocabulary.js';
@@ -138,14 +138,14 @@ export function maxDestructive(limit: number): SeedGuard {
 
 /** Schema-auto where the schema declares its own pattern: the declared pattern is
  *  DATA; this factory is its one evaluator. */
-export function argFormat(tool: string, arg: string, pattern: string): SeedGuard {
+export function argMatchesFormat(tool: string, arg: string, pattern: string): SeedGuard {
   const matcher = new RegExp(`^(?:${pattern})$`);
   return {
-    name: `argFormat:${tool}:${arg}`,
+    name: `argMatchesFormat:${tool}:${arg}`,
     rule: `Send '${arg}' on ${tool} in its declared format.`,
     tool,
     on: 'preTool',
-    kind: 'argFormat',
+    kind: 'argMatchesFormat',
     compile(home) {
       return installedAt<CallCtx>(this, home, ctx => {
         const value = ctx.call.args[arg];

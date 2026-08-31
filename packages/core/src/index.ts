@@ -14,7 +14,7 @@ export type {
   JudgedGuard, Limits, Disclosure, DisclosureBinding, MaskKey, Wording, PromptParts
 } from './cards/cards.js';
 export { onlyAfter, precondition, valueFromUser, checkResult,
-         mustAccountFor, argFormat, argForbidden, blockPattern, purgePattern, maskPattern,
+         mustAccountFor, argMatchesFormat, argForbidden, blockPattern, purgePattern, maskPattern,
          swapTerms, maxCalls, injectionCheck,
          carriedIds, isIdShaped, argCondition, valueFromUserOrRecord, argMatchesRecord,
          onlyAfterWhen }
