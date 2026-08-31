@@ -330,10 +330,10 @@ describe('writeCards', () => {
 
   test('a forbidden argument is emitted as the check that refuses the call carrying it', () => {
     const out = writeCards(decl({ guards: [{ name: 'noSilentOverride', acts: ['getInvoice'],
-      factory: 'argAbsent', args: { arg: 'invoiceId' } }] }), FACTS);
-    expect(out).toContain("{ ...argAbsent('getInvoice', 'invoiceId'),");
+      factory: 'argForbidden', args: { arg: 'invoiceId' } }] }), FACTS);
+    expect(out).toContain("{ ...argForbidden('getInvoice', 'invoiceId'),");
     expect(out).toContain("name: 'noSilentOverride' }");
-    expect(out).toContain("import { argAbsent } from '@looprun-ai/core';");
+    expect(out).toContain("import { argForbidden } from '@looprun-ai/core';");
   });
 
   test('a result check emits the field it reads and the helper that reads it', () => {
@@ -592,7 +592,7 @@ describe('writeCards', () => {
             args: { arg: 'invoiceId' } },
           { name: 'invoiceIdInItsShape', acts: ['getInvoice'], factory: 'argFormat',
             args: { arg: 'invoiceId', pattern: 'inv_[0-9]{4}' } },
-          { name: 'noOverrideOnALookup', acts: ['getInvoice'], factory: 'argAbsent',
+          { name: 'noOverrideOnALookup', acts: ['getInvoice'], factory: 'argForbidden',
             args: { arg: 'invoiceId' } },
           { name: 'oneRefundPerTurn', acts: ['issueRefund'], factory: 'cap',
             args: { calls: 1, scope: 'turn' },
@@ -644,7 +644,7 @@ describe('writeCards', () => {
 
     // Every declared mechanism reaches the card under the name the engine imports it by.
     for (const factory of ['onlyAfter', 'precondition', 'valueFromUser',
-      'argFormat', 'argAbsent', 'maxCalls', 'checkResult', 'mustAccountFor', 'blockPattern',
+      'argFormat', 'argForbidden', 'maxCalls', 'checkResult', 'mustAccountFor', 'blockPattern',
       'maskPattern', 'purgePattern', 'swapTerms', 'injectionCheck']) {
       expect(out, `${factory} reaches no line of the card`).toContain(`${factory}(`);
     }

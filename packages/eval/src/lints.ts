@@ -279,7 +279,7 @@ function surfaceKeys(sources: readonly Source[], blocks: ReadonlySet<string>): R
 }
 
 const DETERMINISTIC_FACTORIES = ['onlyAfter', 'precondition', 'valueFromUser',
-  'argFormat', 'argAbsent', 'checkResult', 'mustAccountFor', 'maxCalls', 'blockPattern'];
+  'argFormat', 'argForbidden', 'checkResult', 'mustAccountFor', 'maxCalls', 'blockPattern'];
 
 function callsAny(node: ts.Node, names: ReadonlySet<string>): boolean {
   let found = false;
@@ -858,12 +858,12 @@ export function doubleStated(subjectDir: string): readonly string[] {
  *  has still said it:
  *    onlyAfter       'Run <prerequisite> before <tool>.'      — the order, both names in it
  *    valueFromUser   "Send <tool>'s '<arg>' only as the user wrote it."
- *    argAbsent       "Never send '<arg>' on <tool>."
+ *    argForbidden       "Never send '<arg>' on <tool>."
  *    argFormat       "Send '<arg>' on <tool> in its declared format." — the format is the schema's
  *                    own declared pattern, and the schema rides the same card the sentence does
  *    mustAccountFor  'The report must account for <records> as <status>.' — the records and the
  *                    status word are both in it; it names no tool and reaches no act at all */
-const SELF_STATING_FACTORIES = new Set(['onlyAfter', 'valueFromUser', 'argAbsent', 'argFormat',
+const SELF_STATING_FACTORIES = new Set(['onlyAfter', 'valueFromUser', 'argForbidden', 'argFormat',
   'mustAccountFor']);
 
 /** The factories that take the law as an ARGUMENT — `precondition`'s reason, `maxCalls`'s
@@ -1888,7 +1888,7 @@ export function seamUnreached(subjectDir: string, cases: readonly ExamCase[],
  *  `mustAccountFor`, a judged query, a `blockPattern` on the reply — reads words the desk wrote
  *  once the act was over. */
 const DENYING_FACTORIES = ['precondition', 'valueFromUser', 'argFormat',
-  'argAbsent', 'maxCalls'];
+  'argForbidden', 'maxCalls'];
 
 /** The words that say why the mechanisms an act carries cannot refuse its call. */
 const NOTHING_DECIDES = 'none of those decides the call — an order is cleared by reading it, and '

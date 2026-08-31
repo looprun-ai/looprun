@@ -26,7 +26,7 @@ contract:
     - name: read-before-cancel           # unique; the census keys on it
       acts: [cancelBooking]              # every act must exist on the surface
       factory: onlyAfter                 # onlyAfter · precondition · role · valueFromUser ·
-                                         # choiceFromUser · argFormat · argAbsent · cap ·
+                                         # choiceFromUser · argFormat · argForbidden · cap ·
                                          # checkResult · mustAccountFor · blockPattern ·
                                          # prose · deny
       args: { after: getInvoice }        # only the args this factory is configured from
@@ -103,7 +103,7 @@ of them printed together, so one run shows everything.
 | a guard act does not exist | `contract.guards[i].acts[j] names 'X', and the surface declares no such act — did you mean 'Y'?` |
 | a judged act does not exist, or sits outside the desk's lane | `…names 'X', and the '<desk>' desk's lane holds '<tools>' — scope the check to an act this desk performs, or declare it on the desk that does.` |
 | a guard's configuration names a missing act (`onlyAfter`'s `after`) | `contract.guards[i].args.after names 'X', and the surface declares no such act — did you mean 'Y'?` |
-| a guard's configuration names an argument outside its act's schema | `contract.guards[i].args.arg names 'X', and '<act>' accepts '<args>'. Pointed at an argument its act does not carry, <the cost>.` — the cost is the factory's own: `valueFromUser` *refuses every call of it*; `argFormat` / `argAbsent` *never fires* |
+| a guard's configuration names an argument outside its act's schema | `contract.guards[i].args.arg names 'X', and '<act>' accepts '<args>'. Pointed at an argument its act does not carry, <the cost>.` — the cost is the factory's own: `valueFromUser` *refuses every call of it*; `argFormat` / `argForbidden` *never fires* |
 | `valueFromUser` binds an argument its act does not require | `contract.guards[i].args.arg names 'X', and '<act>' requires '<required>' — a call of '<act>' may leave 'X' out, and valueFromUser refuses a call that carries no value there. Point the guard at an argument '<act>' requires, or make 'X' one of them.` |
 | a destructive act discloses nothing | ``contract.disclosure.<act> is missing: <act> is destructive and declares no `before` — add one naming what must be confirmed first.`` |
 | a birth register entry names no declared act | `world.creates[i] names 'X', and the world card declares no such act — the entry marks no birth, and the act it was written for opens a record with neither the asked-for law nor the after. Did you mean 'Y'?` |

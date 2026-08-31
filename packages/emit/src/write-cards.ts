@@ -85,7 +85,7 @@ const LAWFUL_ARGS: Readonly<Record<DeclaredGuard['factory'], readonly string[]>>
   role: ['anchor', 'by', 'from', 'field', 'in'],
   valueFromUser: ['arg'],
   argFormat: ['arg', 'pattern'],
-  argAbsent: ['arg'],
+  argForbidden: ['arg'],
   cap: ['calls', 'scope'],
   checkResult: ['field', 'is', 'in'],
   mustAccountFor: ['records', 'status'],
@@ -115,7 +115,7 @@ const ACT_SHAPE: Readonly<Record<DeclaredGuard['factory'], 'all' | 'first' | 'no
   role: 'all',
   valueFromUser: 'first',
   argFormat: 'first',
-  argAbsent: 'first',
+  argForbidden: 'first',
   cap: 'first',
   checkResult: 'first',
   mustAccountFor: 'none',
@@ -462,9 +462,9 @@ function factoryCall(guard: DeclaredGuard): { readonly imported: string | null;
       return { imported: 'argFormat',
         lines: [`argFormat(${quote(act)}, ${quote(stringArg(guard, 'arg'))}, `
           + `${quote(stringArg(guard, 'pattern'))})`] };
-    case 'argAbsent':
-      return { imported: 'argAbsent',
-        lines: [`argAbsent(${quote(act)}, ${quote(stringArg(guard, 'arg'))})`] };
+    case 'argForbidden':
+      return { imported: 'argForbidden',
+        lines: [`argForbidden(${quote(act)}, ${quote(stringArg(guard, 'arg'))})`] };
     case 'checkResult':
       return { imported: 'checkResult', lines: checkResultLines(guard, act) };
     case 'precondition':

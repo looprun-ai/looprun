@@ -1,7 +1,7 @@
 import { test, expect } from 'vitest';
 import type { CallCtx, InputCtx, Json, ReplyCtx, ResultCtx, StateSnapshot } from '../../src/contract/vocabulary.js';
 import { TurnFailure } from '../../src/contract/vocabulary.js';
-import { argAbsent, blockPattern, brokenReply, checkResult,
+import { argForbidden, blockPattern, brokenReply, checkResult,
          mustAccountFor, precondition, questionAnswered, valueFromUser } from '../../src/cards/catalog.js';
 import { factsFromWorld } from '../../src/cards/facts.js';
 import { HOSTILE } from '../fixtures/hostile-world.js';
@@ -20,8 +20,8 @@ function replyCtx(message: string, report: ReplyCtx['report'] = []): ReplyCtx {
   return { message, report, userText: '', turnActs: [], pastActs: [] };
 }
 
-test('argAbsent denies when the forbidden declared arg arrives', () => {
-  const g = argAbsent('sendEmail', 'bcc').compile('contract', FACTS);
+test('argForbidden denies when the forbidden declared arg arrives', () => {
+  const g = argForbidden('sendEmail', 'bcc').compile('contract', FACTS);
   expect(g.deny(callCtx('sendEmail', { to: 'a@b.c' }))).toBeNull();
   expect(g.deny(callCtx('sendEmail', { to: 'a@b.c', bcc: 'x@y.z' }))).toContain('bcc');
 });

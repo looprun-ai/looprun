@@ -379,13 +379,13 @@ export function argRequired(tool: string, arg: string): SeedGuard {
 }
 
 /** Declared on the schema, but forbidden to send. */
-export function argAbsent(tool: string, arg: string): SeedGuard {
+export function argForbidden(tool: string, arg: string): SeedGuard {
   return {
-    name: `argAbsent:${tool}`,
+    name: `argForbidden:${tool}`,
     rule: `Never send '${arg}' on ${tool}.`,
     tool,
     on: 'preTool',
-    kind: 'argAbsent',
+    kind: 'argForbidden',
     compile(home) {
       return installedAt<CallCtx>(this, home, ctx =>
         ctx.call.args[arg] === undefined ? null : `'${arg}' is declared but forbidden to send`);
