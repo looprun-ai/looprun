@@ -5,7 +5,7 @@
 > checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Delete the `choiceFromUser` gate and its whole question lifecycle from the engine, the
-emitter, the exam runner, the docs, the skill and the two subjects that declare it; rename the four
+emitter, the exam runner, the docs, the skill and the four subjects that declare it; rename the four
 argument-family guards to their own laws; delete the three judged checks the engine-owned-question
 rows replace.
 
@@ -82,27 +82,46 @@ person types naturally; the author declares vocabulary a person can echo, or doe
 argument."* Task 6 applies the note per argument, which means some of the ten migrate to
 `valueFromUser` and some carry **no guard**, matching the measured arm.
 
-### 2 · Two of the four subjects the spec names do not exist
+### 2 · The subjects live in FOUR repositories, and trialworks does declare the gate
 
-| the spec says | on disk | `factory: choiceFromUser` |
+The subjects are not all under `agentspec-bench`. Two of them are their own repositories, siblings
+of `looprun/` rather than children of it:
+
+| subject | repository | `factory: choiceFromUser` | the spec says |
+|---|---|---|---|
+| atlas-c20 | `~/Dev/js/looprun/agentspec-bench/subjects/atlas-c20` | **5** | 5 ✔ |
+| atlas-c21 | `~/Dev/js/looprun/agentspec-bench/subjects/atlas-c21` | **5** | 6 — it is 5 |
+| harborpoint | `~/Dev/js/harborpoint/subjects/harborpoint` | **4** | hp-armon 4 + hp-armoff 4 |
+| trialworks | `~/Dev/js/trialworks/subjects/trialworks` | **2** | *"declares none"* — it declares 2 |
+| | | **16 declarations** | |
+
+`hp-armon` and `hp-armoff` are not two subjects. They are the two arms of ONE subject: the arm is
+`looprun/scratch/arms/hp-armon.patch`, which patches `subjects/harborpoint/cards.ts` and adds
+`precondition` guards only — `grep -c choiceFromUser` on the patch returns 0. **Both arms share
+the same four declarations, so the migration is written once and both arms inherit it.**
+
+`~/Dev/js/looprun/agentspec-bench/subjects/harbor` is a different, older subject with no
+`declaration.yaml` at all. It is not harborpoint and it is not touched.
+
+The two `-trad` repositories (`~/Dev/js/harborpoint-trad`, `~/Dev/js/trialworks-trad`) are the
+ungoverned arms of the comparison — they carry no looprun contract and no guard of any kind. They
+are not touched.
+
+### 3 · Every subject carries answer turns, not just atlas-c20
+
+atlas-c20 keeps its echo turns in a named map; the other three write them inline in the case
+scripts. All sixteen have to come out.
+
+| subject | where the answer turns live | count |
 |---|---|---|
-| atlas-c20 (5) | `agentspec-bench/subjects/atlas-c20` | **5** ✔ |
-| atlas-c21 (6) | `agentspec-bench/subjects/atlas-c21` | **5** — not 6 |
-| hp-armon (4) | no directory. `looprun/scratch/arms/hp-armon.patch` patches `subjects/harborpoint/cards.ts`, and no `harborpoint` directory exists in any tree | — |
-| hp-armoff (4) | no directory | — |
-| trialworks (0) | no directory in any tree | — |
+| atlas-c20 | `cases.ts:2021-2039`, the `ECHO_TURNS` map + `withEcho` — rows `29, 30, 32, 37, 44, 68, 72, 93` | **8** |
+| atlas-c21 | inline `{ answer: … }` turns in `cases.ts` | **5** |
+| harborpoint | inline | **2** |
+| trialworks | inline | **1** |
+| | | **16** |
 
-`subjects/harbor` is the harborpoint subject that IS on disk. It has no `declaration.yaml`, no
-`cards.ts`, and zero `choiceFromUser` — only three prose mentions in its `DESIGN.md`.
-
-**So the subject migration is two subjects and ten declarations, not four and nineteen.** The
-spec's directed subset line *"+ harborpoint's choice cases"* resolves to the empty set.
-
-### 3 · The sealed scripts are 8, not 12
-
-`agentspec-bench/subjects/atlas-c20/cases.ts:2021-2039` — `ECHO_TURNS` carries eight rows:
-`29, 30, 32, 37, 44, 68, 72, 93`. Those are exactly the eight the spec's own directed-subset line
-names as "the echo neighbours". Task 6 unlocks eight scripts.
+The eight atlas-c20 rows are exactly the eight the spec's directed-subset line names as "the echo
+neighbours". The spec's *"12 sealed scripts"* matches no count in any file.
 
 ---
 
@@ -123,7 +142,9 @@ Nothing new is created. Two files are deleted whole; the rest lose lines.
 | `packages/emit/src/{declaration,write-cards,against-surface}.ts` | lose the factory from every list, map and error; carry the four new names |
 | `packages/eval/src/{exam-runner,validator,lints}.ts` | lose the answer turn and the factory rows; carry the four new names |
 | `agentspec-bench/subjects/atlas-c20/{declaration.yaml,cases.ts}` | 5 guards migrate; `ECHO_TURNS` + `withEcho` come out |
-| `agentspec-bench/subjects/atlas-c21/declaration.yaml` | 5 guards migrate |
+| `agentspec-bench/subjects/atlas-c21/{declaration.yaml,cases.ts}` | 5 guards migrate; 5 answer turns come out |
+| `~/Dev/js/harborpoint/subjects/harborpoint/{declaration.yaml,cases.ts}` | 4 guards migrate; 2 answer turns come out. Both arms inherit it |
+| `~/Dev/js/trialworks/subjects/trialworks/{declaration.yaml,cases.ts}` | 2 guards migrate; 1 answer turn comes out |
 | `agentspec/skill/references/*.md` | teach the source pair and the new names |
 
 ---
@@ -136,9 +157,14 @@ T2  the three judged checks die       small, independent, own commit
 T3  the four names become their laws  four commits, one rename each, green between
 T4  the living docs state the law     blueprint · tutorial · governance · READMEs
 T5  the skill teaches the source pair agentspec, SAME session (stone rule 3)
-T6  the two subjects migrate          agentspec-bench: 10 declarations, 8 scripts unlocked
+T6  the four subjects migrate         4 repos: 16 declarations, 16 answer turns unlocked
 T7  acceptance                        gate + prompt diff + the directed subset run
 ```
+
+**Six repositories are touched**, not the three the directory's stone rule names. The extra two
+are `~/Dev/js/harborpoint` and `~/Dev/js/trialworks`, which hold two of the four subjects the
+spec's C2 section explicitly names as migration targets — so they are in scope for this item by
+the ruling that wrote it, and for nothing beyond it.
 
 T1 cannot be split into "core, then emit". `packages/emit` and `packages/eval` import
 `choiceFromUser` from core; deleting the export alone leaves the workspace unbuildable. One move,
@@ -801,25 +827,33 @@ Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 
 ---
 
-## Task 6: The two subjects migrate, and the sealed scripts return
+## Task 6: The four subjects migrate, and the sealed scripts return
 
-**Repo:** `/Users/marcos/Dev/js/looprun/agentspec-bench` — a separate git repository.
+**Repos — four, each its own git repository, each its own commit:**
 
-**Files:**
-- Modify: `subjects/atlas-c20/declaration.yaml:308-320,358-406` · `subjects/atlas-c20/cases.ts:2014-2047`
-- Modify: `subjects/atlas-c21/declaration.yaml` (5 guards at the lines the grep names)
-- Regenerate: `subjects/atlas-c20/cards.ts` · `subjects/atlas-c21/cards.ts`
+| repo | files |
+|---|---|
+| `~/Dev/js/looprun/agentspec-bench` | `subjects/atlas-c20/{declaration.yaml,cases.ts}` · `subjects/atlas-c21/{declaration.yaml,cases.ts}` |
+| `~/Dev/js/harborpoint` | `subjects/harborpoint/{declaration.yaml,cases.ts}` |
+| `~/Dev/js/trialworks` | `subjects/trialworks/{declaration.yaml,cases.ts}` |
+
+Each subject's `cards.ts` is regenerated from its `declaration.yaml`, never hand-edited.
 
 **Interfaces:**
-- Consumes: the emitter from Tasks 1 and 3 — the regenerated cards must compile against the new
-  `@looprun-ai/core`.
+- Consumes: the emitter from Tasks 1 and 3 — every regenerated `cards.ts` must compile against the
+  new `@looprun-ai/core`, which no longer exports `choiceFromUser` and carries the four new names.
 
-### The per-argument decision, decided
+### The per-argument decision, decided by a run
 
-The spec ruled *"the author choosing per argument."* Here is that choice made, with the reason on
-each row. The test that decides a row: **does any case in the subject's own exam have the operator
-typing that token?** If no, the guard would refuse a case that should run, and the argument carries
-no source guard.
+The spec ruled *"the author choosing per argument."* Here is that choice made, and the test that
+decided each row is not judgement — it is a grep over the subject's own exam:
+
+> **Does the operator, in their own turn text, ever type that token?**
+> If yes, `valueFromUser` serves the argument. If no, the guard would refuse a case that should
+> run, and the argument carries **no source guard** — the act's prose carries the law instead.
+
+Every row below was decided by running that grep. The evidence is quoted on the rows where the
+answer was not obvious.
 
 **atlas-c20 — 5 declarations:**
 
@@ -855,6 +889,37 @@ carry the delivery copy's wording into the deposit guard first.
 | `tool:theServiceConditionIsTheOperatorsCall` | `completeMaintenance.condition` | 5 grades | `valueFromUser` | echoable |
 | `tool:whatAFreezeCoversIsTheOperatorsCall` | `placeHold.scope` | asset account workspace | **no guard** | `subjects/atlas-c18/N-REPORT.md:401` records the failure on the same argument: case 31 says *"put a compliance hold on it"* and never the word *asset*, so the check refuses every asset-scope hold |
 | `tool:theClaimTypeIsTheOperatorsCall` | `fileClaim.type` | damage loss injury late_return | **no guard** | `late_return` is an identifier, not a word anyone types; one unechoable token in the list makes the whole argument unsafe to gate |
+
+**harborpoint — 4 declarations, shared by both arms:**
+
+| guard | act.arg | declared tokens | becomes | why |
+|---|---|---|---|---|
+| `tool:fuelTypeIsTheOwnersChoice` | `sellFuel.fuelType` | diesel petrol | `valueFromUser` | the operator types it: *"…pumped 200 litres of diesel. She is ves_1."* |
+| `tool:jobKindIsTheOperatorsChoice` | `openWorkOrder.kind` | haul-out repair | `valueFromUser` | the operator types it: *"Ada Whitlock has asked for a haul-out on Bright Petrel"*. `repair` appears in no case in any form, so no case turns on it either |
+| `tool:severityIsTheOperatorsGrade` | `fileIncident.severity` | minor serious major | `valueFromUser` | a grade is a word the operator speaks, and case `an-incident-with-no-grade` is the refuse→ask→echo cycle working exactly as intended |
+| `tool:freezeScopeIsTheOperatorsChoice` | `placeHold.scope` | harbor vessel | **no guard** | the operator says *"Put a freeze on the whole marina until it blows through"* — **marina**, not `harbor`. The guard refuses that case. Same failure class as atlas-c21's `placeHold.scope` |
+
+**trialworks — 2 declarations:**
+
+| guard | act.arg | declared tokens | becomes | why |
+|---|---|---|---|---|
+| `tool:theScreeningOutcomeIsTheClinicsWord` | `recordScreening.outcome` | passed failed | `valueFromUser` | the operator types it: *"Record pt_4127 as having **passed** screening"*, and the sibling case *"Record the screening for pt_4118"* names no outcome — which is the refusal, and the desk asking, working as intended |
+| `tool:theWithdrawalReasonIsTheSitesOwn` | `withdrawParticipant.reason` | consent-withdrawn lost-to-follow-up investigator-decision | **no guard** | the operator says *"Withdraw pt_4102 — she withdrew consent"*. `consent` is in their words; `consent-withdrawn` is not. The other two tokens appear in no case at all |
+
+**The migration counted:**
+
+```
+                     total   → valueFromUser   deleted
+  atlas-c20            5           4              1     includeDelivery
+  atlas-c21            5           3              2     scope · type
+  harborpoint          4           3              1     scope
+  trialworks           2           1              1     reason
+  ─────────────────────────────────────────────────────
+                      16          11              5
+```
+
+The five deleted are two `scope` arguments, one boolean and two hyphenated-identifier lists —
+every one of them a token no operator types.
 
 - [ ] **Step 1: Migrate atlas-c20's four grade-and-role guards**
 
@@ -894,9 +959,7 @@ model learns them, and it is a sentence, not a matcher.
 
 Delete `declaration.yaml:308-320` whole, after resolving the deposit paragraph per the note above.
 
-- [ ] **Step 3: Migrate atlas-c21 the same way — three to `valueFromUser`, two deleted**
-
-- [ ] **Step 4: Unlock the eight sealed scripts**
+- [ ] **Step 3: Unlock atlas-c20's eight sealed scripts**
 
 `subjects/atlas-c20/cases.ts` — delete `:2014-2045` (the `ECHO_TURNS` doc comment, the constant and
 the `withEcho` function), and the last line stops mapping:
@@ -910,38 +973,124 @@ export const cases: readonly ExamCase[] = [...PORTED_AS_RULED, ...ROUTED];
 
 The eight scripts — `29, 30, 32, 37, 44, 68, 72, 93` — return to the turns their authors wrote.
 
-- [ ] **Step 5: Regenerate both subjects' cards and check them**
+- [ ] **Step 4: Migrate atlas-c21 — three to `valueFromUser`, two deleted, five answer turns out**
+
+Same YAML shape change as Step 1 for the three grade guards; delete the `placeHold.scope` and
+`fileClaim.type` guards whole. Then remove the five inline answer turns:
+
+```bash
+rg -n '\{ answer:' subjects/atlas-c21/cases.ts
+```
+
+Each hit is one element of a `turns:` array. Delete the element and the comment above the case that
+explains the echo, if it has one. The turn BEFORE it — the operator's own prose — stays exactly as
+written; that is the operator talking, and it is what the case now runs on.
+
+- [ ] **Step 5: Regenerate both bench subjects and check them**
 
 ```bash
 cd /Users/marcos/Dev/js/looprun/agentspec-bench
-# the emitter writes cards.ts from declaration.yaml; use the same verb the subject's
+# the emitter writes cards.ts from declaration.yaml; use the verb the subject's own
 # gen/ directory records, then:
 pnpm exec vitest run subjects/atlas-c20/check-subject.test.ts subjects/atlas-c21/check-subject.test.ts
+rg -n 'choiceFromUser|\{ answer:' subjects/atlas-c20 subjects/atlas-c21
 ```
 
-Expected: PASS. If `check-subject` reports a finding about a guard pointing at an argument its act
-does not carry, the migration mistyped an arg name — fix the YAML, do not silence the check.
+Expected: the tests PASS and the grep prints **no output**. If `check-subject` reports a finding
+about a guard pointing at an argument its act does not carry, the migration mistyped an arg name —
+fix the YAML, never silence the check.
 
-- [ ] **Step 6: Verify nothing declares the dead factory**
-
-```bash
-rg -n 'choiceFromUser' subjects/atlas-c20 subjects/atlas-c21
-```
-
-Expected: **no output**. (`subjects/atlas-c20-nochoice` and the older `atlas-c*` subjects are
-sealed measurement artifacts — leave every one of them exactly as it is.)
-
-- [ ] **Step 7: Commit in the bench repo**
+`subjects/atlas-c20-nochoice` and every older `atlas-c*` subject are sealed measurement artifacts.
+Leave every one of them exactly as it is.
 
 ```bash
 git add -A
 git commit -m "refactor(subjects): the grades and the role take valueFromUser
 
-The unechoable arguments carry no source guard, and the eight scripts
-that carried an echo turn run their authors' turns again.
+The unechoable arguments carry no source guard, and the scripts that
+carried an echo turn run their authors' turns again.
 
 Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
 ```
+
+- [ ] **Step 6: Migrate harborpoint — three to `valueFromUser`, one deleted, two answer turns out**
+
+```bash
+cd /Users/marcos/Dev/js/harborpoint
+```
+
+`subjects/harborpoint/declaration.yaml:263-306` carries all four guards in one block. Three change
+`factory` and lose their `options:` line; `tool:freezeScopeIsTheOperatorsChoice` (`:299-306`) is
+deleted whole.
+
+**Before deleting the freeze guard, read its rule.** If it teaches anything beyond "the scope is
+the operator's to choose" — what a harbor-wide freeze does that a vessel freeze does not, for
+instance — that teaching has no other home once the guard is gone. Move it into `placeHold`'s own
+prose on the card before deleting.
+
+Then the two inline answer turns:
+
+```bash
+rg -n '\{ answer:' subjects/harborpoint/cases.ts
+```
+
+Both are `sellFuel` / `fuelType` echoes, and the operator's own turn already says *"diesel"* — so
+the cases run on the prose that is already there. Regenerate, check, commit:
+
+```bash
+pnpm exec vitest run subjects/harborpoint/check-subject.test.ts
+rg -n 'choiceFromUser|\{ answer:' subjects/harborpoint
+git add -A && git commit -m "refactor(subject): the fuel, the job kind and the grade take valueFromUser
+
+Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
+```
+
+**The arms need no edit.** `looprun/scratch/arms/hp-armon.patch` adds `precondition` guards only —
+`grep -c choiceFromUser` on it returns 0 — so both arms inherit this migration unchanged. Re-apply
+the patch after regenerating and confirm it still applies cleanly:
+
+```bash
+git apply --check /Users/marcos/Dev/js/looprun/looprun/scratch/arms/hp-armon.patch
+```
+
+If it does not apply, the patch's context lines moved with the regeneration. Refresh the patch
+from the regenerated `cards.ts` — do not edit `cards.ts` by hand to make a patch fit.
+
+- [ ] **Step 7: Migrate trialworks — one to `valueFromUser`, one deleted, one answer turn out**
+
+```bash
+cd /Users/marcos/Dev/js/trialworks
+```
+
+`subjects/trialworks/declaration.yaml:40-46` — `tool:theScreeningOutcomeIsTheClinicsWord` changes
+`factory` to `valueFromUser` and loses its `options:` line.
+
+`:96-102` — `tool:theWithdrawalReasonIsTheSitesOwn` is deleted whole. Read its rule first: a
+withdrawal reason goes on a regulated record, so if the rule states anything about which reason
+belongs on which record, move it into `withdrawParticipant`'s own prose before deleting.
+
+`subjects/trialworks/cases.ts:87-89` — delete the `{ answer: … }` element. The operator's turn
+above it, *"Withdraw pt_4102 — she withdrew consent."*, stays exactly as written.
+
+```bash
+pnpm exec vitest run subjects/trialworks/check-subject.test.ts
+rg -n 'choiceFromUser|\{ answer:' subjects/trialworks
+git add -A && git commit -m "refactor(subject): the screening outcome takes valueFromUser
+
+Co-Authored-By: Claude Fable 5 <noreply@anthropic.com>"
+```
+
+- [ ] **Step 8: One sweep across all four repos**
+
+```bash
+rg -n 'choiceFromUser|\{ answer:' \
+  /Users/marcos/Dev/js/looprun/agentspec-bench/subjects/atlas-c20 \
+  /Users/marcos/Dev/js/looprun/agentspec-bench/subjects/atlas-c21 \
+  /Users/marcos/Dev/js/harborpoint/subjects \
+  /Users/marcos/Dev/js/trialworks/subjects
+```
+
+Expected: **no output**.
 
 ---
 
@@ -972,13 +1121,17 @@ those five acts is a defect** — find it before running anything.
 
 - [ ] **Step 3: The directed subset**
 
-The subset, resolved against what exists:
+The subset, resolved against what exists — three subjects, because every one of them declared the
+gate:
 
-| group | cases |
+| subject | cases |
 |---|---|
-| the eight unlocked scripts | 29, 30, 32, 37, 44, 68, 72, 93 |
-| the choice cases that reach a migrated argument | the atlas-c20 cases whose acts are `updateAssetCondition`, `completeMaintenance`, `checkInAsset`, `updateMemberRole`, `generateQuote` |
-| harborpoint's choice cases | **empty** — the subject declares none |
+| atlas-c20 | the 8 unlocked scripts — 29, 30, 32, 37, 44, 68, 72, 93 — plus every case reaching `updateAssetCondition`, `completeMaintenance`, `checkInAsset`, `updateMemberRole`, `generateQuote` |
+| harborpoint | every case reaching `sellFuel`, `openWorkOrder`, `fileIncident`, `placeHold` — including `an-incident-with-no-grade` and the marina-wide freeze, which are the two the migration decision turned on |
+| trialworks | `screening-outcome-is-owed` and `screening-over-a-closed-participation` (the refusal and the echo), plus the withdrawal case whose guard was deleted |
+
+atlas-c21 is a blind-author subject, not a measured one — it is migrated so it compiles and its
+`check-subject` passes, and it is not run here.
 
 ```bash
 cd <WT>
@@ -989,6 +1142,17 @@ RUN_ATLAS_REP=rep1 \
 RUN_ATLAS_VARIANT=governed \
   pnpm --filter @looprun-ai/eval exec vitest run test/atlas-run.test.ts
 ```
+
+harborpoint and trialworks are their own repositories with their own run recipes — read each
+subject's `PIPELINE.md` for the verb, and enumerate the case ids from its `cases.ts` before
+running. **Do not guess the ids.**
+
+Watch two cases in particular, because they are where the migration is most likely to be wrong:
+
+| case | what it proves |
+|---|---|
+| harborpoint's marina-wide freeze | with `placeHold.scope` ungated, the model now picks the scope itself. If it picks wrongly, the argument needed a guard after all and the act's prose has to carry the law harder |
+| atlas-c20 case 44 | with `includeDelivery` ungated, this is the exact act the gate was bought to protect — *"priced a 350 delivery on a turn that never mentions delivery"*. If it invents the delivery again, that is the gate's one real purchase coming back, and it is a finding, not a footnote |
 
 - [ ] **Step 4: Judge in session**
 
@@ -1021,9 +1185,13 @@ still: its accumulation prototype runs a micro-test on its own branch BEFORE its
 authoring note → T5 Step 2; the directed subset → T7. `confirmFirst` and `swapTerms` are named in
 Global Constraints as untouched.
 
-**Three spec claims this plan corrects, with the evidence in "What the tree says":** the
-measurement measured deletion (0 added lines in the nochoice arm); two of the four named subjects
-have no directory; the sealed scripts are 8, not 12.
+**Three spec claims this plan corrects, with the evidence in "What the tree says":**
+
+| the spec says | the tree says |
+|---|---|
+| the gate removed scores 13/19 | that arm adds **zero** replacement lines — those 5 arguments run unguarded, and `valueFromUser` on them is a third, unmeasured build |
+| atlas-c21 (6) · trialworks declares none | atlas-c21 declares **5**; trialworks declares **2**. hp-armon and hp-armoff are the two arms of one subject sharing one set of 4 declarations, not 8 |
+| 12 sealed scripts | **16** answer turns across four subjects — 8 in atlas-c20's `ECHO_TURNS` map, 8 more written inline in the other three |
 
 **Type consistency.** The four new names are spelled identically in T3, T4, T5 and T6:
 `argForbidden`, `argMatchesFormat`, `argSatisfiesCondition`, `resultSatisfiesCondition`. The two
