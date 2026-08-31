@@ -647,7 +647,7 @@ function rewriteCall(rewrite: DeclaredRewrite, at: number): string {
 const WORDING_KEYS: Readonly<Record<string, readonly string[]>> = {
   status: ['done', 'not-done', 'unknown', 'held', 'refused', 'blocked'],
   sentence: ['approvalInstruction', 'exhaustionClosure', 'unknownStatus', 'questionExpired',
-    'questionSuperseded', 'questionDeclined', 'deniedByGuard', 'simulatedResult']
+    'questionSuperseded', 'questionDeclined', 'deniedByGuard']
 };
 
 /** One half of the wording table as the card carries it: the engine's key, and this business's
