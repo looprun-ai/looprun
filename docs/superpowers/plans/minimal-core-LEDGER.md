@@ -32,3 +32,59 @@ Parked questions live in `minimal-core-DECISIONS.md`.
 - 2026-08-31 09:55 — step 7 CLOSED. Two tier-driven fix rounds landed as ONE looprun commit fe233d3 (+ agentspec 78f6024): (1) the {answer} dynamic case turn (a script answers a choice the way it approves a consent) + static validation + the skill teaching it; (2) proseDropsReads keeps read-id semantics but NEVER floors (redrive-then-deliver-marked — the ask survives, the guard keeps teeth); (3) engine [F…] labels stripped before the figure walk (the F1/F2-read-as-figures floor is gone, spot-proven live); (4) THE LANGUAGE RULING: the trigram cut is DELETED — measured classes INTERLEAVE (English 0.1687 refused-would-be vs Portuguese 0.1718 delivered; no cut separates same-script short texts) and the whole-conversation reference decays (Danish passes one message later; 22/186 conversations) — the deterministic check now holds only SCRIPT classes (CJK/Cyrillic/etc. vs latin refuses; latin↔latin ABSTAINS, the accepted limit, lieCheck's half), verified over 863 delivered rows: 0 false refusals. The OLD check was itself the cause of two sealed-record anomalies (c20 case 57's French reply; case 86's self-contradiction) — both gone.
 - 2026-08-31 09:55 — step 7 SCORES OF RECORD (r2 runs): harborpoint 28/33 = r12 baseline (28/31 comparable; r005+r010+r016 paid; r001/r003 rotate unpaid as in r12; evidence 302ae6f). trialworks 25/29 (25/28 comparable; the one move is a receipt+refusal D-3-family self-contradiction on a repeated acting call, judged strictly and flagged overrulable; the fix paid 2 floors away; evidence c70b86b). atlas-c20 routed ladder 11/12 · 35/40 (beats sealed 32/35 on comparable) · 85/100 raw, 79/88 comparable = 89.8% vs ≥92 (sealed same-set 84/88); language clean over the hundred; the gap's biggest driver is the choice mechanism reaching past the D-4 twelve — the desk VOLUNTARILY enters gated acts (61/77/82) and delivers a code prompt instead of the answer (D-4's ruling must cover this); evidence c3c45a6. The 3×-both-columns re-certification of 92-vs-78 stays OPEN (not this run's gate). Cross-cutting residuals on record: the engine's ask-instruction text reaches the operator verbatim on some paths; the desk once denied a tool the house has (atlas 71); a cap applied without naming the refused figure (atlas 75); "4,8000" read as 48000; a 65k-token runaway generation reproduced 2× (no output cap); label() inflates per-call input on deep-nested records (+17-19% c20) and saves on flat ones (−18% trialworks).
 - 2026-08-31 00:15 — NOTE: the agentspec skill still teaches the old `terms` surface; the split lands at steps 5/6 per the spec (PREPARED → COMPLETE). Step 8 already depends on step 6. Step 7's pin updates must migrate each subject's generated cards.ts to the new choiceFromUser surface — recorded as part of the deliberate pin update.
+
+## FINAL-REPORT
+
+The unattended run executed steps 1-8 of the minimal-core program on branch
+`minimal-core`. Every engine step landed, was adversarially reviewed, and carries its
+fix rounds folded into ONE commit per step. Nothing was pushed except this branch.
+
+### Steps landed
+
+| step | commit | one line |
+|---|---|---|
+| 1 | ade2892 | choiceFromUser is ask-then-echo on a per-session ChoiceDesk; NEGATORS and its helpers deleted; 14/14 ported |
+| 2 | 22a4f19 | D1 — owed facts (numbered) gate the desk's own message, same-prefix redrive; figure walk both paths; r12 slice 5/5 twice |
+| 3 | 1f9ef80 | D2′ — composer DELETED everywhere; desk close-step, message-facing funnel, 2 measured redrives; byte guarantee on every run |
+| 4 | 9fc43d7 | cache_prompt declared by the local tier, applied at the single funnel; --parallel 1; layout untouched |
+| 4b | f5020d5 | tape append-only (window-2 rewrite dead); one fact list per close; the 59 B cut that cost a letter REVERTED by the law; bare-code turns keep their language |
+| 5 | b842017 | judge rows name their stage (guardName·detail·finish.message·delivery.by); judgePass opt-in; engine-seams.md in the skill; both subject trees git-init'd + sealed |
+| 6 | 2b42c4f | emitter SHRUNK (prose free, checks factory-only, 4 new rungs each named back against the surface); word-list+world-id lints; strict subject tsconfig wired into the gate; certify() held-out refusal; recursive label(); author.md = the one lesson |
+| 7 | fe233d3 | the tier's fixes: {answer} case turn; unspoken-read never floors an ask; [F…] labels are not figures; the language check holds SCRIPT classes only (the trigram cut measured unseparable and deleted) |
+
+agentspec (main, UNPUSHED): d040faf → 78f6024. agentspec-bench: migration + run evidence commits, UNPUSHED. harborpoint/trialworks: git-init'd this run, sealed, evidence committed, no remotes.
+
+### The step-7 regression table (scores of record, r2 runs on the tier's fixed build)
+
+| subject | score | comparable | baseline | verdict |
+|---|---|---|---|---|
+| harborpoint | 28/33 | 28/31 | r12 28/33 | HOLDS the baseline; r005/r010/r016 paid; r001/r003 rotate unpaid as in r12 |
+| trialworks | 25/29 | 25/28 | 29/29 | 3 real drops: 1 strict-judged D-3-family self-contradiction (flagged overrulable) + 2 desk-finish quality classes; cost −18% input/−31.6% output |
+| atlas-c20 routed | 85/100 | 79/88 = 89.8% | sealed 96/100 (same-set 84/88) | UNDER the ≥92 target by 2.2 comparable points; biggest driver = the choice mechanism reaching past D-4 (desk voluntarily enters gated acts); language clean over the hundred |
+
+The 92-vs-78 governed-vs-traditional claim was NOT re-certified (needs 3× both columns; open).
+
+### Parked for the owner (minimal-core-DECISIONS.md)
+
+- D-1 seal-and-charge the close-step report, or keep it discarded?
+- D-2 STATE_TAG paraphrase class: mechanical fold or judged-only?
+- D-3 the close path can state a falsehood no mechanism catches (wrong-branch tense/actor class; measured; grew: receipt+refusal contradictions, rule text riding into operator sentences via the refusal-frame exemption) — a/b/c options recorded.
+- D-4 sealed exam scripts predate ask-then-echo (3 cases across 2 subjects unrunnable/short; AND the ruling must cover the desk voluntarily entering gated acts — atlas 61/77/82). The {answer} turn + validation EXISTS now; the case-script edits await the ruling.
+- c20 cannot be emitted by anyone (7 mutating acts carry no after:) — pre-existing on main, surfaced by the step-6 emitter checks.
+
+### Step 8 — blind atlas-c21
+
+IN FLIGHT at report time: a fresh clean-context opus agent authoring
+`agentspec-bench/subjects/atlas-c21` from zero under the shipped skill (78f6024) on
+the shipped engine (fe233d3), whole pipeline to T-loop close, then ungoverned + certification.
+Its running log: the session scratchpad's `step8-blind-REPORT.md`. Its result is appended
+below this section when it lands.
+
+### To resume / review
+
+```
+cd ~/Dev/js/looprun/looprun && git checkout minimal-core   # everything is here
+# rollback of everything: tag pre-minimal-core-2026-08-30 (all three repos)
+# unpushed: agentspec main (78f6024), agentspec-bench main (evidence),
+#           harborpoint/trialworks local git repos (no remotes)
+```
