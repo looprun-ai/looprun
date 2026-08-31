@@ -472,31 +472,6 @@ function checkEmptyFillable(declaration: Declaration): readonly string[] {
   return refusals;
 }
 
-/** Every option of a choice stands apart from every other. The desk puts the options to the
- *  operator by name and the operator answers with one of them, so two options carrying the same
- *  name are one line the operator can never choose between. */
-function checkChoiceOptionsDistinct(declaration: Declaration): readonly string[] {
-  const refusals: string[] = [];
-  declaration.contract.guards.forEach((guard, guardIndex) => {
-    if (guard.factory !== 'choiceFromUser') return;
-    const declared = guard.args?.options;
-    if (!Array.isArray(declared)) return;
-    const seen = new Set<string>();
-    for (const option of declared as readonly unknown[]) {
-      if (typeof option !== 'string') continue;
-      const folded = option.toLowerCase();
-      if (seen.has(folded)) {
-        refusals.push(`contract.guards[${guardIndex}].args.options carries '${option}' twice. The `
-          + `desk lists the options for the operator to choose between, and an option spelled the `
-          + `same as another is a line the answer can never tell apart — give each value the `
-          + `argument may carry its own name.`);
-      }
-      seen.add(folded);
-    }
-  });
-  return refusals;
-}
-
 /** Every desk states the line that routes a message to it, exactly when a router stands in front
  *  of more than one desk to read it. Two or more desks route by comparing each desk's own
  *  `description` line against the arriving message, so a desk that declares none — or writes one that
@@ -615,7 +590,6 @@ export function checkAgainstSurface(declaration: Declaration, facts: SurfaceFact
     ...checkDisclosureNeedsInLane(declaration, facts),
     ...checkAfterSpeaksResult(declaration),
     ...checkEmptyFillable(declaration),
-    ...checkChoiceOptionsDistinct(declaration),
     ...checkSeamRows(declaration, facts, seam),
     ...checkRoutingLines(declaration)
   ];

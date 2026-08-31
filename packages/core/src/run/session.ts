@@ -8,7 +8,6 @@ import type { CanonicalCallData } from '../contract/vocabulary.js';
 import { isJson, type CanonicalCall } from '../contract/canonical-call.js';
 import type { ActionHistory } from './action-history.js';
 import { ConsentDesk } from './consent-desk.js';
-import { ChoiceDesk } from './choice-desk.js';
 
 /** The one mutable work area of a turn, private to it and folded by seal. */
 export interface TurnDraft {
@@ -44,8 +43,6 @@ export class Session {
   readonly history: ActionHistory;
   /** The question lifecycle; the delivered display form is masked at the desk door. */
   readonly consent: ConsentDesk;
-  /** The choice question lifecycle: one standing question per coded argument. */
-  readonly choices = new ChoiceDesk();
   private turnIndex = 1;
   private tail: Promise<unknown> = Promise.resolve();
 
@@ -68,7 +65,6 @@ export class Session {
   /** The work area; discarded on failure. The desk starts a fresh overlay with it. */
   draft(): TurnDraft {
     this.consent.beginTurn();
-    this.choices.beginTurn();
     return { turn: this.turnIndex, userText: '', servedBy: '', acts: [], corrections: [],
              issued: [], consumed: [], closed: [], finish: null, closedBy: 'model', text: '',
              delivery: null,
@@ -93,7 +89,6 @@ export class Session {
     });
     this.history.sealTurn(record);
     this.consent.commit();
-    this.choices.commit();
     this.turnIndex += 1;
     return record;
   }

@@ -59,33 +59,6 @@ export class Validator {
         : [c.agent ?? Object.keys(subject.specs)[0]];
       for (const turn of c.turns) {
         if (typeof turn === 'string' || 'decline' in turn) continue;
-        if ('answer' in turn) {
-          const ref = turn.answer;
-          if (facts.tools[ref.tool] === undefined) {
-            findings.push({ code: 'CASE_ANSWER_TOOL_UNKNOWN',
-              sentence: `Case '${c.id}' answers a choice on '${ref.tool}', which the surface `
-                + 'does not declare.' });
-            continue;
-          }
-          const gate = seats.flatMap(seat => compiledByAgent.get(seat)?.guards ?? [])
-            .find(g => g.choice?.arg === ref.arg
-              && (g.tools.length === 0 || g.tools.includes(ref.tool)));
-          if (gate?.choice === undefined) {
-            findings.push({ code: 'CASE_ANSWER_NOT_GATED',
-              sentence: `Case '${c.id}' answers a choice on '${ref.tool}' argument '${ref.arg}', `
-                + `but ${routed ? 'no desk of the house' : `nothing on agent '${seats[0]}'`} `
-                + 'gates that argument with a choice.' });
-          } else if (!gate.choice.options.includes(ref.option)) {
-            // The runner types the option and the code, those two tokens and nothing
-            // else, so an undeclared option — or one carrying a space — answers nothing
-            // and the act stays refused for a reason the case never meant to measure.
-            findings.push({ code: 'CASE_ANSWER_OPTION_UNKNOWN',
-              sentence: `Case '${c.id}' answers '${ref.tool}' argument '${ref.arg}' with `
-                + `'${ref.option}', which is not one of the declared options `
-                + `${gate.choice.options.join(', ')}.` });
-          }
-          continue;
-        }
         const approve = turn.approve;
         const refs: readonly ApproveRef[] = Array.isArray(approve)
           ? approve as readonly ApproveRef[] : [approve as ApproveRef];

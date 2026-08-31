@@ -84,7 +84,6 @@ const LAWFUL_ARGS: Readonly<Record<DeclaredGuard['factory'], readonly string[]>>
   precondition: ['reads', 'field', 'is', 'in'],
   role: ['anchor', 'by', 'from', 'field', 'in'],
   valueFromUser: ['arg'],
-  choiceFromUser: ['arg', 'options'],
   argFormat: ['arg', 'pattern'],
   argAbsent: ['arg'],
   cap: ['calls', 'scope'],
@@ -115,7 +114,6 @@ const ACT_SHAPE: Readonly<Record<DeclaredGuard['factory'], 'all' | 'first' | 'no
   precondition: 'all',
   role: 'all',
   valueFromUser: 'first',
-  choiceFromUser: 'first',
   argFormat: 'first',
   argAbsent: 'first',
   cap: 'first',
@@ -133,14 +131,13 @@ const ACT_SHAPE: Readonly<Record<DeclaredGuard['factory'], 'all' | 'first' | 'no
 /** The factories whose law is the declaration's own sentence: the check refuses with it, or it
  *  states the correction the reply owes. A factory that mints its sentence from its own
  *  configuration is not here — a `rule` beside it overrides that sentence and is optional. */
-const OWES_RULE: ReadonlySet<DeclaredGuard['factory']> = new Set(['precondition', 'role',
-  'choiceFromUser', 'cap', 'checkResult', 'blockPattern', 'prose',
+const OWES_RULE: ReadonlySet<DeclaredGuard['factory']> = new Set(['precondition', 'role', 'cap', 'checkResult', 'blockPattern', 'prose',
   'argCondition', 'valueFromUserOrRecord', 'argMatchesRecord', 'onlyAfterWhen']);
 
 /** The factories handed the declared sentence inside the call itself. Every other factory mints
  *  its own, and a `rule` declared beside one of those is emitted as a field of the literal. */
 const TAKES_RULE: ReadonlySet<DeclaredGuard['factory']> = new Set(['precondition', 'role',
-  'choiceFromUser', 'cap', 'blockPattern',
+  'cap', 'blockPattern',
   'argCondition', 'valueFromUserOrRecord', 'argMatchesRecord', 'onlyAfterWhen']);
 
 function checkArgs(guard: DeclaredGuard): void {
@@ -328,27 +325,6 @@ function roleLines(guard: DeclaredGuard): readonly string[] {
     `${quote(ruleOf(guard))})`];
 }
 
-/** The options a choice puts to the operator, as the card carries them: every value the argument
- *  may carry, in the order the desk lists them in. Two options are the fewest a choice can be
- *  made from, and a blank one can never be answered — the desk would put an empty line to the
- *  operator, and the act it covers would refuse every call for the whole conversation. */
-function choiceOptions(guard: DeclaredGuard): string {
-  const declared = guard.args?.options;
-  if (!Array.isArray(declared) || declared.length < 2) {
-    throw new Error(`contract.guards '${guard.name}' declares factory 'choiceFromUser', whose `
-      + `configuration is args.options — the two or more values the argument may carry, which `
-      + `the desk puts to the operator to choose between, and which this declaration does not `
-      + `carry`);
-  }
-  for (const option of declared as readonly unknown[]) {
-    if (typeof option === 'string' && option.trim() !== '') continue;
-    throw new Error(`contract.guards '${guard.name}' declares an option that says nothing in `
-      + `args.options, and the desk puts every option to the operator by name — declare each one `
-      + `as the value the argument carries for it`);
-  }
-  return list(declared as readonly string[]);
-}
-
 /** A check over the result the act came back with: the field the declaration reads off it and the
  *  value that field owes. The call already ran, so the check never vetoes — it hands back the
  *  violation and the `rule` states the correction the reply owes, which is the whole of what a
@@ -482,10 +458,6 @@ function factoryCall(guard: DeclaredGuard): { readonly imported: string | null;
     case 'valueFromUser':
       return { imported: 'valueFromUser',
         lines: [`valueFromUser(${quote(act)}, ${quote(stringArg(guard, 'arg'))})`] };
-    case 'choiceFromUser':
-      return { imported: 'choiceFromUser',
-        lines: [`choiceFromUser(${quote(act)}, ${quote(stringArg(guard, 'arg'))},`,
-          `${choiceOptions(guard)},`, `${quote(ruleOf(guard))})`] };
     case 'argFormat':
       return { imported: 'argFormat',
         lines: [`argFormat(${quote(act)}, ${quote(stringArg(guard, 'arg'))}, `

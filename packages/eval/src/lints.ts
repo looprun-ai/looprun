@@ -152,7 +152,7 @@ const SENTENCE_KEYS = new Set(['rule', 'voice', 'persona', 'description', 'summa
 
 /** Where each factory takes the sentence its law is stated in. */
 const SENTENCE_ARG: ReadonlyMap<string, number> = new Map([
-  ['prose', 1], ['precondition', 2], ['choiceFromUser', 3], ['maxCalls', 2], ['blockPattern', 2],
+  ['prose', 1], ['precondition', 2], ['maxCalls', 2], ['blockPattern', 2],
   ['argCondition', 3], ['valueFromUserOrRecord', 4], ['argMatchesRecord', 3], ['onlyAfterWhen', 3]
 ]);
 
@@ -278,7 +278,7 @@ function surfaceKeys(sources: readonly Source[], blocks: ReadonlySet<string>): R
   return tools;
 }
 
-const DETERMINISTIC_FACTORIES = ['onlyAfter', 'precondition', 'valueFromUser', 'choiceFromUser',
+const DETERMINISTIC_FACTORIES = ['onlyAfter', 'precondition', 'valueFromUser',
   'argFormat', 'argAbsent', 'checkResult', 'mustAccountFor', 'maxCalls', 'blockPattern'];
 
 function callsAny(node: ts.Node, names: ReadonlySet<string>): boolean {
@@ -866,11 +866,11 @@ export function doubleStated(subjectDir: string): readonly string[] {
 const SELF_STATING_FACTORIES = new Set(['onlyAfter', 'valueFromUser', 'argAbsent', 'argFormat',
   'mustAccountFor']);
 
-/** The factories that take the law as an ARGUMENT — `precondition`'s reason, `choiceFromUser`'s
- *  rule, `maxCalls`'s reason, `blockPattern`'s rule. The words are the author's, so an act one of
- *  these names is an act somebody has written a sentence about. */
+/** The factories that take the law as an ARGUMENT — `precondition`'s reason, `maxCalls`'s
+ *  reason, `blockPattern`'s rule. The words are the author's, so an act one of these names is
+ *  an act somebody has written a sentence about. */
 const AUTHORED_RULE_ARG: ReadonlyMap<string, number> = new Map([
-  ['precondition', 2], ['choiceFromUser', 3], ['maxCalls', 2], ['blockPattern', 2]]);
+  ['precondition', 2], ['maxCalls', 2], ['blockPattern', 2]]);
 
 /** What is left of the deterministic catalog once the self-stating factories and the ones handed
  *  their law are taken out: a factory that refuses on an act and mints a sentence naming no law. */
@@ -1887,7 +1887,7 @@ export function seamUnreached(subjectDir: string, cases: readonly ExamCase[],
  *  moved, and the finding it raises is a correction on the reply. A reply-bound check —
  *  `mustAccountFor`, a judged query, a `blockPattern` on the reply — reads words the desk wrote
  *  once the act was over. */
-const DENYING_FACTORIES = ['precondition', 'valueFromUser', 'choiceFromUser', 'argFormat',
+const DENYING_FACTORIES = ['precondition', 'valueFromUser', 'argFormat',
   'argAbsent', 'maxCalls'];
 
 /** The words that say why the mechanisms an act carries cannot refuse its call. */

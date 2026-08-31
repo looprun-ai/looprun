@@ -10,7 +10,7 @@ export type DeclaredWhy = 'noSuchAct' | 'aboutARead' | 'conduct';
 export interface DeclaredGuard {
   readonly name: string;
   readonly acts: readonly string[];
-  readonly factory: 'onlyAfter' | 'precondition' | 'role' | 'valueFromUser' | 'choiceFromUser'
+  readonly factory: 'onlyAfter' | 'precondition' | 'role' | 'valueFromUser'
     | 'argFormat' | 'argAbsent' | 'cap' | 'checkResult' | 'mustAccountFor' | 'blockPattern'
     | 'argCondition' | 'valueFromUserOrRecord' | 'argMatchesRecord' | 'onlyAfterWhen'
     | 'prose' | 'deny';
@@ -118,7 +118,7 @@ export interface Declaration {
   }[];
 }
 
-const FACTORIES: ReadonlySet<DeclaredGuard['factory']> = new Set(['onlyAfter', 'precondition', 'role', 'valueFromUser', 'choiceFromUser', 'argFormat', 'argAbsent', 'cap', 'checkResult', 'mustAccountFor', 'blockPattern', 'argCondition', 'valueFromUserOrRecord', 'argMatchesRecord', 'onlyAfterWhen', 'prose', 'deny']);
+const FACTORIES: ReadonlySet<DeclaredGuard['factory']> = new Set(['onlyAfter', 'precondition', 'role', 'valueFromUser', 'argFormat', 'argAbsent', 'cap', 'checkResult', 'mustAccountFor', 'blockPattern', 'argCondition', 'valueFromUserOrRecord', 'argMatchesRecord', 'onlyAfterWhen', 'prose', 'deny']);
 const REWRITE_KINDS: ReadonlySet<DeclaredRewrite['kind']> = new Set(['maskPattern', 'purgePattern', 'swapTerms']);
 const JUDGED_FACTORIES: ReadonlySet<DeclaredJudged['factory']> = new Set(['lieCheck', 'impossibilityCheck', 'injectionCheck', 'hallucinationCheck']);
 const WIDE_KINDS: ReadonlySet<NonNullable<DeclaredGuard['wide']>> = new Set(['oneLawEveryAct', 'sameRefusal']);

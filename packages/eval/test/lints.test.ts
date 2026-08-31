@@ -1105,8 +1105,7 @@ describe('noEffectDenied', () => {
 
   test('a check that decides the call answers it', () => {
     for (const guard of ['precondition(\'issueRefund\', h => h.record !== null)',
-                         'valueFromUser(\'issueRefund\', \'amount\')',
-                         'choiceFromUser(\'issueRefund\', \'route\', [\'card\', \'credit\'], \'r\')']) {
+                         'valueFromUser(\'issueRefund\', \'amount\')']) {
       expect(noEffectDenied(write(`const CONTRACT = { guards: [ ${guard} ] };`), REFUSED)).toEqual([]);
     }
   });

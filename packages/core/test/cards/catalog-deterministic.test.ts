@@ -1,9 +1,8 @@
 import { test, expect } from 'vitest';
 import type { CallCtx, InputCtx, Json, ReplyCtx, ResultCtx, StateSnapshot } from '../../src/contract/vocabulary.js';
 import { TurnFailure } from '../../src/contract/vocabulary.js';
-import { argAbsent, blockPattern, brokenReply, checkResult, choiceFromUser,
+import { argAbsent, blockPattern, brokenReply, checkResult,
          mustAccountFor, precondition, questionAnswered, valueFromUser } from '../../src/cards/catalog.js';
-import { ChoiceDesk } from '../../src/run/choice-desk.js';
 import { factsFromWorld } from '../../src/cards/facts.js';
 import { HOSTILE } from '../fixtures/hostile-world.js';
 
@@ -130,69 +129,6 @@ test('valueFromUser reads a number arg by its digits — the user must have writ
   expect(g.deny(call(3000, 'Deposit is 3000, condition good.'))).toBeNull();
   expect(g.deny(call(0, 'Add a new machine: Genie S-65, 780 a day.')))
     .toContain('requiredDeposit');
-});
-
-const DELIVERY = ['true', 'false'];
-const RULE = 'Send whether delivery is included only as the customer chose it.';
-const DELIVERY_CODE = '481922';
-
-/** The desk that asked, and the operator's message read against its question. */
-function asked(...said: readonly string[]): ChoiceDesk {
-  const desk = new ChoiceDesk(() => DELIVERY_CODE);
-  desk.beginTurn();
-  desk.raise('compRoom', 'includeDelivery', DELIVERY);
-  for (const message of said) desk.readAnswer(message);
-  return desk;
-}
-
-function choiceCtx(desk: ChoiceDesk, args: Record<string, Json>): CallCtx {
-  return { ...callCtx('compRoom', args, STATE, ''), choices: desk.standing() };
-}
-
-test('choiceFromUser passes a boolean choice the answer licenses', () => {
-  const g = choiceFromUser('compRoom', 'includeDelivery', DELIVERY, RULE)
-    .compile('contract', FACTS);
-  expect(g.deny(choiceCtx(asked(`1 ${DELIVERY_CODE}`), { includeDelivery: true }))).toBeNull();
-  expect(g.rule).toBe(RULE);
-});
-
-test('choiceFromUser refuses a choice nobody answered, and the guard asks instead', () => {
-  const g = choiceFromUser('compRoom', 'includeDelivery', DELIVERY, RULE)
-    .compile('contract', FACTS);
-  const ctx = choiceCtx(asked(), { includeDelivery: true });
-  expect(g.deny(ctx)).toContain('no answer of the operator');
-  expect(g.choose?.(ctx)).toEqual({ arg: 'includeDelivery', options: DELIVERY });
-});
-
-test('choiceFromUser refuses a value outside the declared options', () => {
-  const g = choiceFromUser('compRoom', 'includeDelivery', DELIVERY, RULE)
-    .compile('contract', FACTS);
-  expect(g.deny(choiceCtx(asked(`1 ${DELIVERY_CODE}`), { includeDelivery: 'maybe' })))
-    .toContain('no such option');
-});
-
-test('choiceFromUser refuses a call the gated argument never arrives on', () => {
-  const g = choiceFromUser('compRoom', 'includeDelivery', DELIVERY, RULE)
-    .compile('contract', FACTS);
-  expect(g.deny(choiceCtx(asked(`1 ${DELIVERY_CODE}`), { id: 'bk_9' }))).toBe('');
-});
-
-test('choiceFromUser refuses the value the operator did not choose', () => {
-  const g = choiceFromUser('compRoom', 'includeDelivery', DELIVERY, RULE)
-    .compile('contract', FACTS);
-  const desk = asked(`2 ${DELIVERY_CODE}`);
-  expect(g.deny(choiceCtx(desk, { includeDelivery: true }))).toContain("chose 'false'");
-  expect(g.deny(choiceCtx(desk, { includeDelivery: false }))).toBeNull();
-});
-
-test('choiceFromUser licenses nothing from prose, whatever the prose says', () => {
-  const g = choiceFromUser('compRoom', 'includeDelivery', DELIVERY, RULE)
-    .compile('contract', FACTS);
-  for (const said of ['There is no rush; have it delivered on Friday.',
-                      "They're collecting it themselves, no delivery needed.",
-                      'true', DELIVERY_CODE]) {
-    expect(g.deny(choiceCtx(asked(said), { includeDelivery: true }))).not.toBeNull();
-  }
 });
 
 test('questionAnswered demands words for a question — empty and tool roll-calls violate', () => {

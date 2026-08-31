@@ -45,10 +45,7 @@ export type Verdict =
   | { readonly kind: 'restate'; readonly actId: string }      // duplicate call: the first result restated
   | { readonly kind: 'owe'; readonly guardName: string;       // rule-owed reads the ENGINE performs,
       readonly rule: string;                                  //   refused in the owing guard's own
-      readonly reads: readonly OwedRead[] }                   //   words when the debt goes unpaid
-  | { readonly kind: 'choose'; readonly guardName: string;    // a coded argument with no answer
-      readonly arg: string;                                   //   standing: the ChoiceDesk opens the
-      readonly options: readonly string[] };                  //   question and mints its code
+      readonly reads: readonly OwedRead[] };                  //   words when the debt goes unpaid
 export interface OwedRead { readonly alias: string; readonly tool: string; readonly args: Readonly<Record<string, Json>> }
 export type Correction =
   | { readonly kind: 'redrive'; readonly guardName: string; readonly detail: string }
@@ -202,20 +199,7 @@ export interface CallCtx   { readonly call: CanonicalCallData; readonly effect: 
                              /** Ids the conversation's own acts returned at other desks —
                               *  engine-minted provenance a grounding check may accept. */
                              readonly grounded?: readonly string[];
-                             /** The choice questions standing OPEN right now, by act and
-                              *  argument. Absent where no desk keeps them, and a choice with
-                              *  nothing open licenses nothing. */
-                             readonly choices?: StandingChoices;
                              readonly turnActs: readonly Act[]; readonly pastActs: readonly Act[] }
-/** One open choice question as a guard reads it: the code the operator must echo, and the
- *  option the latest answer named. Keyed by choiceKey. */
-export type StandingChoices = Readonly<Record<string, { readonly code: string;
-                                                        readonly answer: string | null }>>;
-/** The key one choice question stands under: its act and its argument. The desk that opens
- *  the question and the guard that reads it mint the key HERE, so they cannot disagree. */
-export function choiceKey(tool: string, arg: string): string {
-  return `${tool} ${arg}`;
-}
 export interface ResultCtx { readonly call: CanonicalCallData; readonly result: Json;
                              readonly state: StateSnapshot | null;
                              readonly userText: string;
@@ -359,17 +343,10 @@ export interface WorldCard { readonly records: StateSnapshot;
  *  to split open SIBLINGS of one tool — a code is never extracted from prose. */
 export interface ApproveRef { readonly tool: string;
                               readonly args?: Readonly<Record<string, Json>> }
-/** One typed answer to a choice question: the act and the argument the question stands
- *  under, and the option the operator names. The code is minted at run time and read
- *  from the open question — never written into a script, never scraped from prose. */
-export interface AnswerRef { readonly tool: string; readonly arg: string;
-                             readonly option: string }
 /** One scripted exam turn: user text, one or several typed approvals (several =
- *  one message licensing several open questions), a typed answer to an open choice,
- *  or a typed decline. */
+ *  one message licensing several open questions), or one typed decline. */
 export type ExamTurn = string
   | { readonly approve: ApproveRef | readonly ApproveRef[] }
-  | { readonly answer: AnswerRef }
   | { readonly decline: true };
 /** A deterministic act matcher: the named call happened (required) or took no
  *  effect (noEffect), with an args subset when the case pins one. `anyOf` widens

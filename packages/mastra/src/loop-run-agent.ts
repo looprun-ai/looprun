@@ -2,7 +2,7 @@
  *  Construction takes the closed two-card config; every turn runs through the governed
  *  Engine — the host base class never generates. A failed turn rejects with TurnFailure. */
 import { Agent } from '@mastra/core/agent';
-import type { ForeignExchange, GuardCensus, Question, StandingChoices, TurnRecord,
+import type { ForeignExchange, GuardCensus, Question, TurnRecord,
               TurnReturned } from '@looprun-ai/core';
 import { Engine } from '@looprun-ai/core';
 import { assemble, type Assembled, type LoopRunConfig } from './agent-assembly.js';
@@ -82,13 +82,6 @@ export class LoopRunAgent extends Agent {
    *  answer. Empty before construction settles or for a session that never spoke. */
   openQuestions(id: string): readonly Question[] {
     return this.settledValue === null ? [] : this.settledValue.engine.openQuestions(id);
-  }
-
-  /** The session's open choice questions, by act and argument — the code an option
-   *  token must arrive beside. Empty before construction settles or for a session
-   *  that never spoke. */
-  openChoices(id: string): StandingChoices {
-    return this.settledValue === null ? {} : this.settledValue.engine.openChoices(id);
   }
 
   endSession(id: string): void {

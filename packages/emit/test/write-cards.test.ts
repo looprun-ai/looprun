@@ -164,54 +164,9 @@ describe('writeCards', () => {
     expect(out).toContain("after: 'The invoice carries {result.total}, and {result.balanceDue} is still due.'");
   });
 
-  test('a choice gate is emitted with its options and refuses with the declared rule', () => {
-    const rule = 'Send whether the refund goes back to the card only as the customer chose it.';
-    const out = writeCards(decl({ guards: [
-      { name: 'refundRouteAsTheCustomerChoseIt', acts: ['issueRefund'], factory: 'choiceFromUser',
-        args: { arg: 'invoiceId', options: ['toTheCard', 'asStoreCredit'] },
-        rule }] }), FACTS);
-    expect(out).toContain("{ ...choiceFromUser('issueRefund', 'invoiceId',");
-    expect(out).toContain("['toTheCard', 'asStoreCredit'],");
-    expect(out).toContain(`'${rule}')`);
-    // The sentence rides inside the call, so the literal around it never restates it.
-    expect(out).not.toContain(`rule: '${rule}'`);
-    expect(out).toContain("import { choiceFromUser } from '@looprun-ai/core';");
 
-    const dir = mkdtempSync(join(tmpdir(), 'cards-'));
-    writeFileSync(join(dir, 'cards.ts'), out);
-    expect(typecheck(dir)).toEqual([]);
-  });
 
-  test('a choice gate over several acts rides every card it names', () => {
-    const out = writeCards(decl({ guards: [
-      { name: 'routeAsTheCustomerChoseIt', acts: ['issueRefund', 'closeBooking'],
-        factory: 'choiceFromUser', wide: 'oneLawEveryAct',
-        args: { arg: 'invoiceId', options: ['toTheCard', 'asStoreCredit'] },
-        rule: 'Send the route only as the customer chose it.' }] }), FACTS);
-    expect(out).toContain("tool: ['issueRefund', 'closeBooking']");
-    expect(out).toContain("routeAsTheCustomerChoseIt: 'oneLawEveryAct'");
-  });
 
-  test('a choice of fewer than two options, or of one that says nothing, is refused', () => {
-    const guard = (options: unknown): readonly DeclaredGuard[] => [
-      { name: 'routeAsTheCustomerChoseIt', acts: ['issueRefund'], factory: 'choiceFromUser',
-        args: { arg: 'invoiceId', options }, rule: 'Send the route as the customer chose it.' }];
-    expect(() => writeCards(decl({ guards: guard(['toTheCard', ' ']) }), FACTS))
-      .toThrow('declares an option that says nothing in args.options');
-    expect(() => writeCards(decl({ guards: guard(['toTheCard']) }), FACTS))
-      .toThrow("declares factory 'choiceFromUser', whose configuration is args.options");
-    expect(() => writeCards(decl({ guards: guard([]) }), FACTS))
-      .toThrow("declares factory 'choiceFromUser', whose configuration is args.options");
-    expect(() => writeCards(decl({ guards: guard(undefined) }), FACTS))
-      .toThrow("declares factory 'choiceFromUser', whose configuration is args.options");
-  });
-
-  test('a choice gate with no rule is refused — the sentence is the whole refusal', () => {
-    expect(() => writeCards(decl({ guards: [
-      { name: 'routeAsTheCustomerChoseIt', acts: ['issueRefund'], factory: 'choiceFromUser',
-        args: { arg: 'invoiceId', options: ['toTheCard', 'asStoreCredit'] } }] }), FACTS))
-      .toThrow("declares factory 'choiceFromUser', which states its law in the card's own words");
-  });
 
   test('a contract prose rule is emitted as its sentence and the acts it is stamped on', () => {
     const rule = 'Name the role the member record states, then a member whose role can act.';
@@ -637,9 +592,6 @@ describe('writeCards', () => {
             rule: 'Moving money needs the treasury capability; read the clerk record and name a clerk whose grade can.' },
           { name: 'amountAsTheCustomerSaidIt', acts: ['issueRefund'], factory: 'valueFromUser',
             args: { arg: 'invoiceId' } },
-          { name: 'routeAsTheCustomerChoseIt', acts: ['issueRefund'], factory: 'choiceFromUser',
-            args: { arg: 'invoiceId', options: ['toTheCard', 'asStoreCredit'] },
-            rule: 'Where the money goes back is the customer\'s choice; send it only as they said it.' },
           { name: 'invoiceIdInItsShape', acts: ['getInvoice'], factory: 'argFormat',
             args: { arg: 'invoiceId', pattern: 'inv_[0-9]{4}' } },
           { name: 'noOverrideOnALookup', acts: ['getInvoice'], factory: 'argAbsent',
@@ -694,7 +646,7 @@ describe('writeCards', () => {
     expect(typecheck(dir)).toEqual([]);
 
     // Every declared mechanism reaches the card under the name the engine imports it by.
-    for (const factory of ['onlyAfter', 'precondition', 'valueFromUser', 'choiceFromUser',
+    for (const factory of ['onlyAfter', 'precondition', 'valueFromUser',
       'argFormat', 'argAbsent', 'maxCalls', 'checkResult', 'mustAccountFor', 'blockPattern',
       'maskPattern', 'purgePattern', 'swapTerms', 'lieCheck', 'hallucinationCheck']) {
       expect(out, `${factory} reaches no line of the card`).toContain(`${factory}(`);

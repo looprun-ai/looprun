@@ -6,7 +6,7 @@
  *  schema's own declared pattern. */
 import type { Act, CallCtx, ConsentWhen, InputCtx, Json, OwedRead, ReplyCtx, ReportWord, ResultCtx,
               Rewrite, StateSnapshot, SurfaceFacts } from '../contract/vocabulary.js';
-import { choiceKey, TurnFailure } from '../contract/vocabulary.js';
+import { TurnFailure } from '../contract/vocabulary.js';
 import type { CompiledGuard, Guard, GuardCtx } from './cards.js';
 
 /** An authored guard that carries its own AgentFactory derivation. */
@@ -776,65 +776,6 @@ export function onlyAfterWhen(tool: string, prerequisite: string,
           return `${prerequisite} has not succeeded yet this conversation`;
         }
       });
-    }
-  };
-}
-
-/** A CHOICE the operator must have ANSWERED: an argument carrying an option — a flag, a grade, a
- *  class — is never grounded by its own text, because nobody writes `true`, and it is never
- *  grounded by a reading of the operator's prose either. The engine opens a QUESTION and mints
- *  its code; the desk puts the declared options to the operator in the language of the
- *  operator's own latest message. The licence is the operator's reply carrying one option token
- *  and THAT question's code, those two and nothing else.
- *
- *  The licence is the open question's answer, so it is spent when the act runs: a later call on
- *  the same argument finds nothing open, asks again, and the operator answers under a code they
- *  have not seen before. An echo arriving against no open question licenses nothing.
- *
- *  What the engine matches is the declared options, the code it minted and the shape of the
- *  message — never a word of any language, so an operator writing Portuguese or Japanese is
- *  served exactly as an operator writing English is. The model's own reading of the prose is
- *  never the licence. A value outside the declared options refuses, and the argument itself has
- *  to arrive — a call that leaves a gated choice out made that choice for the operator. */
-export function choiceFromUser(tool: string, arg: string,
-  options: readonly string[], rule: string): SeedGuard {
-  const key = choiceKey(tool, arg);
-  /** The value the call carries for the gated argument; null for a block of values. */
-  const carried = (ctx: CallCtx): string | null | undefined => {
-    const raw = ctx.call.args[arg];
-    if (raw === undefined) return undefined;
-    return typeof raw === 'string' ? raw
-      : typeof raw === 'number' || typeof raw === 'boolean' ? String(raw) : null;
-  };
-  return {
-    name: `choiceFromUser:${tool}`,
-    rule,
-    tool,
-    on: 'preTool',
-    kind: 'choiceFromUser',
-    compile(home) {
-      const row = installedAt<CallCtx>(this, home, ctx => {
-        const value = carried(ctx);
-        if (value === undefined) return '';
-        if (value === null) return `'${arg}' carries a block of values, and a choice is one value`;
-        if (!options.includes(value)) {
-          return `'${arg}' arrived as '${value}', and this rule carries no such option`;
-        }
-        const answer = ctx.choices?.[key]?.answer ?? null;
-        if (answer === value) return null;
-        if (answer !== null) {
-          return `'${arg}' arrived as '${value}', and the operator's answer chose '${answer}'`;
-        }
-        return `'${arg}' is a choice, and no answer of the operator licenses a value for it`;
-      });
-      // The ask outranks the refusal: a declared option with no answer standing opens the
-      // question, and the desk puts it to the operator in the operator's own language.
-      const choice = { arg, options };
-      return { ...row, choice, choose: (ctx: CallCtx) => {
-        const value = carried(ctx);
-        if (value === undefined || value === null || !options.includes(value)) return null;
-        return ctx.choices?.[key]?.answer == null ? choice : null;
-      } };
     }
   };
 }

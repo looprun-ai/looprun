@@ -14,7 +14,6 @@ import type { Rulebook } from './rulebook.js';
 import type { GradeInput, StatusClerk } from './status-clerk.js';
 import type { ActionHistory } from './action-history.js';
 import type { ConsentDesk } from './consent-desk.js';
-import type { ChoiceDesk } from './choice-desk.js';
 import type { DisclosureDesk } from './disclosure-desk.js';
 import type { Masker } from './masker.js';
 import type { TurnDraft } from './session.js';
@@ -47,8 +46,6 @@ export interface CallRunnerDeps {
   readonly recordsPort: RecordsPort | null;
   /** The per-session question desk; the hold route issues through it. */
   readonly consent: ConsentDesk;
-  /** The per-session choice desk; the ask route opens its questions and mints their codes. */
-  readonly choices: ChoiceDesk;
   /** The record-seam masker: stored calls and results. */
   readonly masker: Masker;
   /** The compiled disclosure recipes; the hold route reads and renders through it. */
@@ -195,21 +192,6 @@ export class CallRunner {
           owed: null, result: null
         }, undefined, question.id, verdict.guardName);
       }
-      case 'choose': {
-        // The desk owns the question: it opens one under a fresh code, or restates the
-        // standing one, and the refusal carries the words that put it to the operator.
-        const rule = rulebook.guards().guards.find(g => g.name === verdict.guardName)?.rule ?? '';
-        const asked = this.deps.choices.raise(call.tool, verdict.arg, verdict.options);
-        const grade = clerk.grade({ verdict: { kind: 'refuse', guardName: verdict.guardName,
-          detail: asked }, actId: '' }, fact.effect, state, state, draft);
-        return this.record(draft, {
-          origin, call: call.data(v => this.deps.masker.maskData(v)), effect: fact.effect,
-          said: grade.said, status: grade.status, reason: grade.reason, evidence: grade.evidence,
-          sentence: `${this.head(call, fact)} — not-done (${`${rule} ${asked}`.trim()})`,
-          owed: { kind: 'refusal', text: `${rule} ${asked}`.trim() },
-          result: null
-        }, undefined, null, verdict.guardName);
-      }
       case 'owe': {
         if (oweRounds <= 0) {
           return this.refuseUnpaidDebt(call, fact, origin, state, draft, verdict);
@@ -275,13 +257,6 @@ export class CallRunner {
           ? { kind: 'refusal', text: refusedSentence(result) } : null,
       result: this.deps.masker.maskData(result)
     }, id);
-    // The act ran on the operator's answer, so the question that licensed it is spent: the
-    // next call on that argument asks again, under a code the operator has not yet seen.
-    // An unknown act spends it too — the write may have landed, and an answer left live
-    // would license the NEXT record with nothing asked about it. Fail closed.
-    if (grade.status === 'done' || grade.status === 'unknown') {
-      this.deps.choices.consume(call.tool, call.args);
-    }
     if ('answer' in input && grade.status === 'done') {
       const resultCtx = deepFreeze({
         call: act.call, result: act.result, state: after,
@@ -320,7 +295,6 @@ export class CallRunner {
       state, userText: draft.userText,
       userTexts: [draft.userText, ...this.deps.history.sealed().map(r => r.userText)],
       grounded: [...draft.grounded],
-      choices: this.deps.choices.standing(),
       turnActs: [...draft.acts],
       pastActs: this.deps.history.pastActs()
     });

@@ -1,7 +1,7 @@
 import { test, expect } from 'vitest';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
-import { choiceFromUser, world } from '@looprun-ai/core';
+import { world } from '@looprun-ai/core';
 import { SubjectLoader, type Subject } from '../src/subject-loader.js';
 import { Validator } from '../src/validator.js';
 
@@ -133,59 +133,3 @@ test('an underivable disclosure slot blocks through the compile', async () => {
   expect(findings.length).toBeGreaterThan(0);
 });
 
-/** A subject whose one write carries a gated choice — what a `{ answer }` turn is
- *  validated against, exactly as an approve turn is validated against a hold. */
-function graded(subject: Subject): Subject {
-  return { ...subject,
-    contract: { name: 'minihotel', guards: [
-      choiceFromUser('cancelBooking', 'grade', ['pass', 'fail'],
-        'Whether the stay passed is the operator\'s finding, and nothing decides it for them.')
-    ] } };
-}
-
-test('an answer turn naming a tool the surface does not declare blocks', async () => {
-  const planted: Subject = { ...graded(await mini()), cases: [{
-    id: 'bad-answer-tool', split: 'fix',
-    turns: ['grade it', { answer: { tool: 'ghost', arg: 'grade', option: 'pass' } }],
-    rubric: 'r' }] };
-  const codes = new Validator().run(planted).findings.map(f => f.code);
-  expect(codes).toContain('CASE_ANSWER_TOOL_UNKNOWN');
-});
-
-test('an answer turn on an argument no choice gates blocks', async () => {
-  const planted: Subject = { ...graded(await mini()), cases: [{
-    id: 'bad-answer-arg', split: 'fix',
-    turns: ['grade it', { answer: { tool: 'cancelBooking', arg: 'mood', option: 'pass' } }],
-    rubric: 'r' }] };
-  const codes = new Validator().run(planted).findings.map(f => f.code);
-  expect(codes).toContain('CASE_ANSWER_NOT_GATED');
-});
-
-test('an answer turn whose option is not declared blocks, and the finding names the options', async () => {
-  const planted: Subject = { ...graded(await mini()), cases: [{
-    id: 'bad-answer-option', split: 'fix',
-    turns: ['grade it', { answer: { tool: 'cancelBooking', arg: 'grade', option: 'gud' } }],
-    rubric: 'r' }] };
-  const finding = new Validator().run(planted).findings
-    .find(f => f.code === 'CASE_ANSWER_OPTION_UNKNOWN');
-  expect(finding?.sentence).toContain('gud');
-  expect(finding?.sentence).toContain('pass');
-  expect(finding?.sentence).toContain('fail');
-});
-
-test('an option carrying a space answers nothing and blocks', async () => {
-  const planted: Subject = { ...graded(await mini()), cases: [{
-    id: 'spaced-answer', split: 'fix',
-    turns: ['grade it', { answer: { tool: 'cancelBooking', arg: 'grade', option: 'pass it' } }],
-    rubric: 'r' }] };
-  const codes = new Validator().run(planted).findings.map(f => f.code);
-  expect(codes).toContain('CASE_ANSWER_OPTION_UNKNOWN');
-});
-
-test('a well-formed answer turn validates clean', async () => {
-  const planted: Subject = { ...graded(await mini()), cases: [{
-    id: 'good-answer', split: 'fix',
-    turns: ['grade it', { answer: { tool: 'cancelBooking', arg: 'grade', option: 'pass' } }],
-    rubric: 'r' }] };
-  expect(new Validator().run(planted).findings).toEqual([]);
-});

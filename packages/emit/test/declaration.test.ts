@@ -549,49 +549,6 @@ desks:
   });
 });
 
-describe('choice options stay distinct', () => {
-  const withOptions = (options: string): string => `
-contract:
-  name: seaside-hotel
-  voice: Warm, brief, and exact about dates and money.
-  facts: []
-  guards:
-    - name: refundRouteAsTheGuestChoseIt
-      acts: [issueRefund]
-      factory: choiceFromUser
-      args: { arg: invoiceId, options: ${options} }
-      rule: Send the refund back only the way the guest asked for it.
-  disclosure:
-    issueRefund:
-      before: Refunding this invoice cannot be taken back.
-      after: The refund of {result.refunded} is on this invoice.
-    closeBooking:
-      after: The closing note reads {result.status}.
-desks:
-  - name: front-desk
-    persona: The front desk.
-    tools: [issueRefund, getInvoice]
-    conduct: { declareHonestly: Say what ran and what did not. }
-`;
-
-  it('one option spelled twice is refused, naming the option', () => {
-    const d = readDeclaration(fixture(withOptions("[card, storeCredit, card]")));
-    const refusals = checkAgainstSurface(d, FACTS, SEAM);
-    expect(refusals).toEqual([expect.stringContaining('contract.guards[0].args.options')]);
-    expect(refusals[0]).toContain("'card'");
-  });
-
-  it('two options differing only in case are the same option', () => {
-    const d = readDeclaration(fixture(withOptions("[card, CARD]")));
-    expect(checkAgainstSurface(d, FACTS, SEAM))
-      .toEqual([expect.stringContaining('contract.guards[0].args.options')]);
-  });
-
-  it('options that name different values are accepted', () => {
-    const d = readDeclaration(fixture(withOptions("[card, storeCredit]")));
-    expect(checkAgainstSurface(d, FACTS, SEAM)).toEqual([]);
-  });
-});
 
 describe('a guard name is unique', () => {
   it('two guards under one name are refused by that name and both lines', () => {
