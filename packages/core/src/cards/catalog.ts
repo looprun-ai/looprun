@@ -442,14 +442,14 @@ export function precondition(tool: string | readonly string[],
 
 /** postTool: the author check runs over the result; a violation joins the reply
  *  corrections — the call already ran, so it is never a veto. */
-export function checkResult(tool: string,
+export function resultSatisfiesCondition(tool: string,
   check: (ctx: ResultCtx) => string | null): SeedGuard {
   return {
-    name: `checkResult:${tool}`,
+    name: `resultSatisfiesCondition:${tool}`,
     rule: `Every ${tool} result must pass its declared check.`,
     tool,
     on: 'postTool',
-    kind: 'checkResult',
+    kind: 'resultSatisfiesCondition',
     compile(home) {
       return installedAt<ResultCtx>(this, home, ctx => check(ctx));
     }

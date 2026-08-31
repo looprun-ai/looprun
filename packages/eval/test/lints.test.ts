@@ -962,21 +962,21 @@ describe('unspokenChecks', () => {
 
   test('a result check on an act no sentence names is a finding', () => {
     const dir = write(`const CONTRACT = { guards: [
-      { ...checkResult('issueRefund', r => null), name: 'refundLanded' } ] };`);
+      { ...resultSatisfiesCondition('issueRefund', r => null), name: 'refundLanded' } ] };`);
     const found = unspokenChecks(dir);
     expect(found.map(f => f.code)).toEqual(['CHECK_UNSPOKEN']);
-    expect(found[0].sentence).toContain("the checkResult check on 'issueRefund' states no law");
+    expect(found[0].sentence).toContain("the resultSatisfiesCondition check on 'issueRefund' states no law");
   });
 
   test('the guard\'s own rule, or a prose rule naming the act, is the law in words', () => {
     const ruled = write(`const CONTRACT = { guards: [
-      { ...checkResult('issueRefund', r => null), name: 'refundLanded',
+      { ...resultSatisfiesCondition('issueRefund', r => null), name: 'refundLanded',
         rule: 'A refund lands on the invoice the read returned, and on no other.' } ] };`);
     expect(unspokenChecks(ruled)).toEqual([]);
     const covered = write(`
       const prose = (name, rule, tool) => ({ name, rule, on: 'reply', tool });
       const CONTRACT = { guards: [
-        { ...checkResult('issueRefund', r => null), name: 'refundLanded' },
+        { ...resultSatisfiesCondition('issueRefund', r => null), name: 'refundLanded' },
         prose('refundsAreFinal', 'Money paid out does not come back.', ['issueRefund']) ] };`);
     expect(unspokenChecks(covered)).toEqual([]);
   });
@@ -1097,10 +1097,10 @@ describe('noEffectDenied', () => {
 
   test('a check reading the result lands after the record moved, so it is still a finding', () => {
     const dir = write(`const CONTRACT = { guards: [
-      checkResult('issueRefund', r => r.total > 0 ? null : 'nothing was refunded') ] };`);
+      resultSatisfiesCondition('issueRefund', r => r.total > 0 ? null : 'nothing was refunded') ] };`);
     const found = noEffectDenied(dir, REFUSED);
     expect(found.map(f => f.code)).toEqual(['ACT_UNDENIABLE']);
-    expect(found[0].sentence).toContain('only checkResult');
+    expect(found[0].sentence).toContain('only resultSatisfiesCondition');
   });
 
   test('a check that decides the call answers it', () => {

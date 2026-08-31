@@ -279,7 +279,7 @@ function surfaceKeys(sources: readonly Source[], blocks: ReadonlySet<string>): R
 }
 
 const DETERMINISTIC_FACTORIES = ['onlyAfter', 'precondition', 'valueFromUser',
-  'argMatchesFormat', 'argForbidden', 'checkResult', 'mustAccountFor', 'maxCalls', 'blockPattern'];
+  'argMatchesFormat', 'argForbidden', 'resultSatisfiesCondition', 'mustAccountFor', 'maxCalls', 'blockPattern'];
 
 function callsAny(node: ts.Node, names: ReadonlySet<string>): boolean {
   let found = false;
@@ -922,7 +922,7 @@ function spokenActs(sources: readonly Source[],
 }
 
 /** A check that refuses on an act whose law no sentence on the card states. Two mechanisms can
- *  reach an act without saying anything: `checkResult`, whose minted sentence says only that a
+ *  reach an act without saying anything: `resultSatisfiesCondition`, whose minted sentence says only that a
  *  declared check exists, and a disclosure `cap`, which refuses at a figure and appears in no rule
  *  at all. Either one meets the desk as a refusal it was never taught, and the operator as a limit
  *  nobody wrote down.
@@ -1883,7 +1883,7 @@ export function seamUnreached(subjectDir: string, cases: readonly ExamCase[],
  *  refuses never reaches the world. Three shapes that look like protection are not here.
  *
  *  An `onlyAfter` owes a read rather than deciding a call: a desk that runs the prerequisite walks
- *  straight through it. A `checkResult` runs after the call returned — the record has already
+ *  straight through it. A `resultSatisfiesCondition` runs after the call returned — the record has already
  *  moved, and the finding it raises is a correction on the reply. A reply-bound check —
  *  `mustAccountFor`, a judged query, a `blockPattern` on the reply — reads words the desk wrote
  *  once the act was over. */
@@ -1931,7 +1931,7 @@ function denyingNames(sources: readonly Source[]): ReadonlySet<string> {
  *  choice or value the operator has to have given, a format or ceiling the arriving call fails.
  *
  *  What the act carries is read for its SHAPE, never counted. An `onlyAfter` is satisfied by
- *  running the read, and a desk that reads first then acts has cleared it. A `checkResult` or a
+ *  running the read, and a desk that reads first then acts has cleared it. A `resultSatisfiesCondition` or a
  *  reply-bound check answers once the call has returned, and by then the record has moved. Either
  *  way the invariant fails on a call the engine allowed. */
 export function noEffectDenied(subjectDir: string, cases: readonly ExamCase[]): readonly LintFinding[] {

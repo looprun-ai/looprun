@@ -338,9 +338,9 @@ describe('writeCards', () => {
 
   test('a result check emits the field it reads and the helper that reads it', () => {
     const out = writeCards(decl({ guards: [{ name: 'refundReallyLanded', acts: ['issueRefund'],
-      factory: 'checkResult', args: { field: 'settled', is: true },
+      factory: 'resultSatisfiesCondition', args: { field: 'settled', is: true },
       rule: 'When the refund did not settle, say so and name what the result carries instead of reporting it paid.' }] }), FACTS);
-    expect(out).toContain("{ ...checkResult('issueRefund', ctx =>");
+    expect(out).toContain("{ ...resultSatisfiesCondition('issueRefund', ctx =>");
     expect(out).toContain("resultField(ctx.result, 'settled') === true ? null : ''),");
     expect(out).toContain('const resultField = (result: Json, field: string): Json | undefined =>');
     expect(out).toContain('Json, ');
@@ -348,7 +348,7 @@ describe('writeCards', () => {
 
   test('a result check states the field it reads and its law, and refuses without them', () => {
     const check = (guard: Partial<DeclaredGuard>): Declaration =>
-      decl({ guards: [{ name: 'refundReallyLanded', acts: ['issueRefund'], factory: 'checkResult',
+      decl({ guards: [{ name: 'refundReallyLanded', acts: ['issueRefund'], factory: 'resultSatisfiesCondition',
         args: { field: 'settled', is: true }, rule: 'Say what the result carries.', ...guard }] });
     expect(() => writeCards(check({ args: {} }), FACTS))
       .toThrow('declare args.field and the value that field owes');
@@ -597,7 +597,7 @@ describe('writeCards', () => {
           { name: 'oneRefundPerTurn', acts: ['issueRefund'], factory: 'cap',
             args: { calls: 1, scope: 'turn' },
             rule: 'One refund goes out per turn; a second is owed and takes another turn.' },
-          { name: 'refundReallyLanded', acts: ['issueRefund'], factory: 'checkResult',
+          { name: 'refundReallyLanded', acts: ['issueRefund'], factory: 'resultSatisfiesCondition',
             args: { field: 'settled', is: true },
             rule: 'When the refund did not settle, say so and name what the result carries.' },
           { name: 'everyInvoiceAnswered', acts: ['getInvoice'], factory: 'mustAccountFor',
@@ -644,7 +644,7 @@ describe('writeCards', () => {
 
     // Every declared mechanism reaches the card under the name the engine imports it by.
     for (const factory of ['onlyAfter', 'precondition', 'valueFromUser',
-      'argMatchesFormat', 'argForbidden', 'maxCalls', 'checkResult', 'mustAccountFor', 'blockPattern',
+      'argMatchesFormat', 'argForbidden', 'maxCalls', 'resultSatisfiesCondition', 'mustAccountFor', 'blockPattern',
       'maskPattern', 'purgePattern', 'swapTerms', 'injectionCheck']) {
       expect(out, `${factory} reaches no line of the card`).toContain(`${factory}(`);
     }

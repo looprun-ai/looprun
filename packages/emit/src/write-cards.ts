@@ -87,7 +87,7 @@ const LAWFUL_ARGS: Readonly<Record<DeclaredGuard['factory'], readonly string[]>>
   argMatchesFormat: ['arg', 'pattern'],
   argForbidden: ['arg'],
   cap: ['calls', 'scope'],
-  checkResult: ['field', 'is', 'in'],
+  resultSatisfiesCondition: ['field', 'is', 'in'],
   mustAccountFor: ['records', 'status'],
   blockPattern: ['pattern', 'on'],
   argSatisfiesCondition: ['arg', 'is', 'in'],
@@ -117,7 +117,7 @@ const ACT_SHAPE: Readonly<Record<DeclaredGuard['factory'], 'all' | 'first' | 'no
   argMatchesFormat: 'first',
   argForbidden: 'first',
   cap: 'first',
-  checkResult: 'first',
+  resultSatisfiesCondition: 'first',
   mustAccountFor: 'none',
   blockPattern: 'none',
   argSatisfiesCondition: 'all',
@@ -131,7 +131,7 @@ const ACT_SHAPE: Readonly<Record<DeclaredGuard['factory'], 'all' | 'first' | 'no
 /** The factories whose law is the declaration's own sentence: the check refuses with it, or it
  *  states the correction the reply owes. A factory that mints its sentence from its own
  *  configuration is not here — a `rule` beside it overrides that sentence and is optional. */
-const OWES_RULE: ReadonlySet<DeclaredGuard['factory']> = new Set(['precondition', 'role', 'cap', 'checkResult', 'blockPattern', 'prose',
+const OWES_RULE: ReadonlySet<DeclaredGuard['factory']> = new Set(['precondition', 'role', 'cap', 'resultSatisfiesCondition', 'blockPattern', 'prose',
   'argSatisfiesCondition', 'valueFromUserOrRecord', 'argMatchesRecord', 'onlyAfterWhen']);
 
 /** The factories handed the declared sentence inside the call itself. Every other factory mints
@@ -329,14 +329,14 @@ function roleLines(guard: DeclaredGuard): readonly string[] {
  *  value that field owes. The call already ran, so the check never vetoes — it hands back the
  *  violation and the `rule` states the correction the reply owes, which is the whole of what a
  *  reader is given. */
-function checkResultLines(guard: DeclaredGuard, act: string): readonly string[] {
+function resultSatisfiesConditionLines(guard: DeclaredGuard, act: string): readonly string[] {
   const field = testedField(guard);
   if (field === null) {
-    throw new Error(`contract.guards '${guard.name}' declares factory 'checkResult', which reads `
+    throw new Error(`contract.guards '${guard.name}' declares factory 'resultSatisfiesCondition', which reads `
       + `one field of the result — declare args.field and the value that field owes`);
   }
   const test = fieldTest(guard, `resultField(ctx.result, ${quote(field)})`);
-  return [`checkResult(${quote(act)}, ctx =>`, `${test} ? null : '')`];
+  return [`resultSatisfiesCondition(${quote(act)}, ctx =>`, `${test} ? null : '')`];
 }
 
 /** A seam the declared pattern refuses at: the text it reads — `input` for the arriving message,
@@ -397,7 +397,7 @@ function capLines(guard: DeclaredGuard, act: string): readonly string[] {
 /** A law over the CALL's own argument: the acts it covers, the values that argument may carry,
  *  and the sentence it refuses with. The value tested is the one the call arrived with, so the
  *  records decide nothing here — an act on a surface holding no records states this law too. */
-function argConditionLines(guard: DeclaredGuard): readonly string[] {
+function argSatisfiesConditionLines(guard: DeclaredGuard): readonly string[] {
   const acts = guard.acts.length === 1 ? quote(guard.acts[0]) : list(guard.acts);
   return [`argSatisfiesCondition(${acts}, ${quote(stringArg(guard, 'arg'))}, ({ value }) => `
     + `${fieldTest(guard, 'value', 'args.arg')},`, `${quote(ruleOf(guard))})`];
@@ -465,8 +465,8 @@ function factoryCall(guard: DeclaredGuard): { readonly imported: string | null;
     case 'argForbidden':
       return { imported: 'argForbidden',
         lines: [`argForbidden(${quote(act)}, ${quote(stringArg(guard, 'arg'))})`] };
-    case 'checkResult':
-      return { imported: 'checkResult', lines: checkResultLines(guard, act) };
+    case 'resultSatisfiesCondition':
+      return { imported: 'resultSatisfiesCondition', lines: resultSatisfiesConditionLines(guard, act) };
     case 'precondition':
       return { imported: 'precondition', lines: preconditionLines(guard) };
     case 'role':
@@ -478,7 +478,7 @@ function factoryCall(guard: DeclaredGuard): { readonly imported: string | null;
     case 'blockPattern':
       return { imported: 'blockPattern', lines: blockLines(guard) };
     case 'argSatisfiesCondition':
-      return { imported: 'argSatisfiesCondition', lines: argConditionLines(guard) };
+      return { imported: 'argSatisfiesCondition', lines: argSatisfiesConditionLines(guard) };
     case 'valueFromUserOrRecord':
       return { imported: 'valueFromUserOrRecord',
         lines: valueFromUserOrRecordLines(guard, act) };
@@ -843,7 +843,7 @@ export function writeCards(declaration: Declaration, facts: SurfaceFacts): strin
     || declaration.contract.guards.some(guard => guard.factory === 'prose')
     || seam.length > 0;
   const gatesOnRole = declaration.contract.guards.some(guard => guard.factory === 'role');
-  const readsResults = declaration.contract.guards.some(guard => guard.factory === 'checkResult');
+  const readsResults = declaration.contract.guards.some(guard => guard.factory === 'resultSatisfiesCondition');
   const helperBlocks: readonly (readonly string[])[] = [
     ...(teaches ? [[
       '/** A rule the prompt states in plain words, on the desk that owes it: it renders into the',

@@ -1,7 +1,7 @@
 import { test, expect } from 'vitest';
 import type { CallCtx, InputCtx, Json, ReplyCtx, ResultCtx, StateSnapshot } from '../../src/contract/vocabulary.js';
 import { TurnFailure } from '../../src/contract/vocabulary.js';
-import { argForbidden, blockPattern, brokenReply, checkResult,
+import { argForbidden, blockPattern, brokenReply, resultSatisfiesCondition,
          mustAccountFor, precondition, questionAnswered, valueFromUser } from '../../src/cards/catalog.js';
 import { factsFromWorld } from '../../src/cards/facts.js';
 import { HOSTILE } from '../fixtures/hostile-world.js';
@@ -50,8 +50,8 @@ test('precondition on a stateless surface is loud, never a silent pass', () => {
   expect(() => g.deny(callCtx('cancelBooking', { id: 'bk_9' }, null))).toThrow(TurnFailure);
 });
 
-test('checkResult wraps the author check over the result ctx', () => {
-  const g = checkResult('compRoom', ctx =>
+test('resultSatisfiesCondition wraps the author check over the result ctx', () => {
+  const g = resultSatisfiesCondition('compRoom', ctx =>
     (ctx.result as { comped?: boolean }).comped === true ? null : 'the room was not comped')
     .compile('contract', FACTS);
   const ok: ResultCtx = { call: { tool: 'compRoom', args: {}, key: 'k' }, result: { comped: true },

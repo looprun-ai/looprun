@@ -98,7 +98,7 @@ the rest.
 | requires a CHOICE the operator ANSWERED | `choiceFromUser` | a printworks counter: the customer asked for *"the matt stock"* and the model sent `finish: gloss` — nobody writes a flag, so the desk puts the finishes to the customer and the answer is the licence |
 | requires an argument to match a declared shape | `argMatchesFormat` | an insurer: `policyId` is `POL-` and eight digits, so `POL-2291` is a well-formed guess, not an identifier |
 | forbids an argument from arriving at all | `argForbidden` | a clinic: `bookAppointment` declares `overrideCapacity`, and no desk may send it |
-| checks the RESULT after the call ran | `checkResult` | a statements desk: `sendStatement` returns `delivered: false, bounce: 'mailbox_full'`, and the reply corrects itself instead of reporting success |
+| checks the RESULT after the call ran | `resultSatisfiesCondition` | a statements desk: `sendStatement` returns `delivered: false, bounce: 'mailbox_full'`, and the reply corrects itself instead of reporting success |
 | requires every named record to be accounted for | `mustAccountFor` | a claims desk asked about three policies reports on all three, including the one it could not touch |
 | puts a ceiling on how many times a tool runs | `maxCalls` | a payments desk: `capturePayment` at most once per turn, so a timeout is not retried into a double charge |
 | stops a text from crossing a seam | `blockPattern` (refuse) · `maskPattern` / `purgePattern` (edit) | a lender: a national identity number is masked out of every reply, whichever record it came from |
@@ -132,7 +132,7 @@ machine can never disagree. Use one instead of hand-writing a `deny` wherever it
 | `choiceFromUser(tool, arg, options, rule)` | the two or more values the argument may carry | the call until the operator's own answer names the value it carries | the model picking an option the operator never chose |
 | `argMatchesFormat(tool, arg, pattern)` | a pattern string | a value the declared shape rejects | a well-formed guess passing as an identifier |
 | `argForbidden(tool, arg)` | tool + arg name | the call when the forbidden argument arrives | a banned field being used anyway |
-| `checkResult(tool, check)` | `(ctx) => string \| null` over the RESULT | after execution, into the reply's corrections | reporting a success the result does not show |
+| `resultSatisfiesCondition(tool, check)` | `(ctx) => string \| null` over the RESULT | after execution, into the reply's corrections | reporting a success the result does not show |
 | `mustAccountFor({ records, status })` | ids + a status word | a report that leaves a named record unaccounted for | silently dropping the very act the turn was about |
 | `maxCalls(tool, n, { scope, reason })` | tool + ceiling | the n+1-th completed call | a retry storm on a write |
 | `blockPattern(name, regex, rule, { on })` | a regex, on input or reply | text carrying the pattern | a card number or a secret crossing a seam |

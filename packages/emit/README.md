@@ -27,7 +27,7 @@ contract:
       acts: [cancelBooking]              # every act must exist on the surface
       factory: onlyAfter                 # onlyAfter · precondition · role · valueFromUser ·
                                          # choiceFromUser · argMatchesFormat · argForbidden · cap ·
-                                         # checkResult · mustAccountFor · blockPattern ·
+                                         # resultSatisfiesCondition · mustAccountFor · blockPattern ·
                                          # prose · deny
       args: { after: getInvoice }        # only the args this factory is configured from
       rule: "Read the invoice first."    # the law in the card's own words, where the factory
