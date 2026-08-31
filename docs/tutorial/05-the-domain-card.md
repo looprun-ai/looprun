@@ -59,7 +59,7 @@ re-reads — the operator meets it whenever the engine's own line has to speak.
 | you can rename | examples |
 |---|---|
 | status words | `done` · `not-done` · `unknown` · `held` · `refused` · `blocked` |
-| engine sentences | `approvalInstruction` · `exhaustionClosure` · `unknownStatus` · `questionExpired` · `questionSuperseded` · `questionDeclined` · `deniedByGuard` · `simulatedResult` |
+| engine sentences | `approvalInstruction` · `exhaustionClosure` · `unknownStatus` · `questionExpired` · `questionSuperseded` · `questionDeclined` · `deniedByGuard` |
 
 ## Step 12 — `llmParams`: parameters that actually arrive
 

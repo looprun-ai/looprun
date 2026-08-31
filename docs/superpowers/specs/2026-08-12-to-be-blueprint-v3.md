@@ -28,7 +28,7 @@ The compliance table this charter demands is §15; the three R10.5 maps are §13
 The whole authoring surface is two names — one agent = one `AgentSpec`, everything
 conversation-global = one `DomainContract` — and both cards carry only WORDS: a persona, a
 voice, rule sentences, disclosure sentences, a masked-field list, wording overrides. A
-tool's governance facts (effect class, target argument, simulation parameter, sensitive
+tool's governance facts (effect class, target argument, sensitive
 paths, user-facing label) live in the table of the surface that executes the tool: the
 `world` card's own data blocks locally, the `mcpWorld` card's SAME blocks over a live
 MCP surface (§4). In production the author writes NO tool anything.
@@ -289,7 +289,7 @@ const agent = new LoopRunAgent({ spec, contract, world: hotel, model: 'google/ge
 
 - **Two sibling factories, not one factory with a mode:** the block ENTRY shapes differ —
   local entries carry the action forms (`list` · `remove` · …); remote entries carry
-  `label` / `target` / `proxy` / `simulation` / `does` — and two factories give clean
+  `label` / `target` / `proxy` / `does` — and two factories give clean
   types and clean errors. What is SECRET is a business fact and lives ONLY on the
   contract card (`contract.secrets`, §3) — no surface entry declares it. `liveWorld({ tools, …blocks })` is the third
   sibling, for native host tools (same entry shape as `mcpWorld`).
@@ -350,7 +350,6 @@ export interface ToolAnswer { readonly result: Json; readonly done: Done }
 export interface Patch { readonly entity: string; readonly id: string; readonly set: Readonly<Record<string, Json>> }
 
 /** The call as the executor receives it: the tool name and the coerced REAL args — nothing else.
- *  A simulation downgrade exists only as the tool's OWN declared parameter set inside args.
  *  No other field exists: no options, no flags, no attestation override (R2.6). */
 export interface ReadyCall { readonly tool: string; readonly args: Readonly<Record<string, Json>> }
 
@@ -363,8 +362,7 @@ export interface CanonicalCallData { readonly tool: string;
 export type Verdict =
   | { readonly kind: 'allow' }
   | { readonly kind: 'refuse'; readonly guardName: string; readonly detail: string }
-  | { readonly kind: 'hold' }                                 // consent, no simulation declared: hold-and-ask
-  | { readonly kind: 'simulate' }                             // consent, simulation declared: preview, then ask (R5.4)
+  | { readonly kind: 'hold' }                                 // consent: hold-and-ask
   | { readonly kind: 'restate'; readonly actId: string }      // duplicate call: the first result restated
   | { readonly kind: 'owe'; readonly reads: readonly OwedRead[] };   // rule-owed reads the ENGINE performs (R5.2)
 export interface OwedRead { readonly alias: string; readonly tool: string; readonly args: Readonly<Record<string, Json>> }
@@ -373,7 +371,6 @@ export type Correction =
   | { readonly kind: 'postToolFinding'; readonly guardName: string; readonly detail: string }
   | { readonly kind: 'earlyFinish' } | { readonly kind: 'staleFinish' } | { readonly kind: 'forcedFinish' }
   | { readonly kind: 'recordCorrected'; readonly actId: string; readonly said: Done }   // snapshot diff overruled the executor
-  | { readonly kind: 'simulationRevoked'; readonly tool: string }
   | { readonly kind: 'judgeUnreadable'; readonly guardName: string }
   | { readonly kind: 'returnRefused'; readonly detail: string };   // the return door was tried
                                                                    //   after work began
@@ -388,7 +385,7 @@ export interface Act {
   readonly reason: Reason | null;             // set exactly when status is 'not-done'
   readonly evidence: Evidence;
   readonly sentence: string;                  // the record line the user reads
-  readonly result: Json;                      // masked; on a held call with simulation: the preview result
+  readonly result: Json;                      // masked
   readonly questionId: string | null;         // the consent question this act raised or served
 }
 export interface ReportLine { readonly tool: string; readonly target: string; readonly word: ReportWord }
@@ -537,7 +534,7 @@ live in the contract leaf — `StepInput` carries the first — and are re-expor
 authors). Types + doc comments only. Collaborators: contract leaf.
 
 **`facts.ts`** (module, ~100 lines) — the engine-internal `SurfaceFacts` and `ToolFact`
-(name · label · does · effect · target · schema · simulation · proxy), plus
+(name · label · does · effect · target · schema · proxy), plus
 `factsFromWorld(card: WorldCard | McpWorldCard | LiveWorldCard): SurfaceFacts` — the one
 derivation that keeps every surface kind on a single fact truth. No authoring name exists
 for these types (§4). Collaborators: contract leaf, world vocabulary.
@@ -742,11 +739,8 @@ class CallRunner {
   //            the session's own seat), runs engine-side (origin 'engine'), then the
   //            call re-checks once; an unpaid debt refuses with the owning rule —
   //            the turn always answers
-  // simulate → the tool runs with its OWN declared simulation parameter set → the preview
-  //            is recorded on the held act → disclosure reads → question born FROM the
-  //            preview: status 'not-done', reason 'held', result = the preview (R5.4)
-  // hold     → the no-simulation surface: disclosure reads engine-side → question born from
-  //            the reads alone: status 'not-done', reason 'held' (R3.4)
+  // hold     → disclosure reads engine-side → question born from the reads alone:
+  //            status 'not-done', reason 'held' (R3.4)
   // restate  → the first act's result restated; no re-execution
   // allow    → execute (ReadyCall) → grade → record
 }
@@ -805,8 +799,7 @@ Private: the sealed question map, keyed by canonical key, holding the executable
 (draft overlays until seal). Collaborators: CanonicalCall, Wordings, contract leaf.
 
 **`StatusClerk`** (class, ~130 lines) — derives the user-facing word from the executor's
-one-word answer plus control flow, and never guesses (R3.6). Stateless: the per-session
-revoked-simulation set lives in `Session`'s stores and is read/written through the draft.
+one-word answer plus control flow, and never guesses (R3.6). Stateless.
 
 ```typescript
 class StatusClerk {
@@ -827,9 +820,7 @@ class StatusClerk {
 }
 ```
 Where a `RecordsPort` exists, verifies by snapshot diff: a change under `done:'no'`
-corrects the act to `done` and mints `recordCorrected`; a simulation that mutated state
-additionally mints `simulationRevoked` — that tool falls back to plain consent for the
-session (the set lives in the session stores). A caught lie never crashes the turn.
+corrects the act to `done` and mints `recordCorrected`. A caught lie never crashes the turn.
 Private: none (stateless). Collaborators: contract leaf.
 
 **`ActionHistory`** (class, ~150 lines) — the append-only truth: mints act ids (R5.3),
@@ -994,7 +985,7 @@ Collaborators: Masker, Wordings, contract leaf.
 
 **`Session`** (class, ~110 lines) — per-conversation state, caller-supplied identity only
 (R8.3): the turn index, sealed history, the per-session ActionHistory / ConsentDesk /
-Masker / world instance / revoked-simulation set, and the promise-queue mutex that
+Masker / world instance, and the promise-queue mutex that
 serializes EVERY entry (`generate` and `stream` alike). `seal(draft)` folds the TurnDraft
 into all stores in one move — the ONLY place session state changes (R2.10).
 
@@ -1006,7 +997,7 @@ class Session {
   seal(draft: TurnDraft): TurnRecord;
 }
 ```
-Private: the queue tail and the component stores (incl. the revoked-simulation set).
+Private: the queue tail and the component stores.
 Collaborators: ActionHistory, ConsentDesk, Masker, contract leaf.
 
 **`ModelSeat`** (class, ~150 lines) — the model seat (R7.5): a SET of certified targets
@@ -1036,24 +1027,22 @@ action forms as data (`list` · `get` · `make` · `set` · `remove` · `run` na
 executor), per-tool `label` and optional `does` (omitted, the engine composes one from the
 action form + entity), `gates` (the closed union `{ kind: 'exists' } | { kind: 'stateIs';
 field; value } | { kind: 'fieldAtLeast'; field; min }`, evaluated on EVERY tool kind),
-`simulation` (the tool's own parameter), `presets` — and `world(card, executors?)`
+`presets` — and `world(card, executors?)`
 returning the frozen card. Closed data — a law of the `WorldCard`: no functions in the
 card, no regexes, no clock (custom executors pass OUTSIDE the card; a `LiveWorldCard`'s
 tools execute themselves by nature and sit outside this law). The sibling cards live
 here too: `McpWorldCard` / `mcpWorld(card)` and `LiveWorldCard` /
 `liveWorld(card)` — the SAME effect blocks, remote entries carrying `label` / `target` /
-`proxy` / `simulation` / `does`, with no action forms, no `records`, no `gates`. `factsFromWorld` (§5.2) derives the same engine-internal `SurfaceFacts` from all
+`proxy` / `does`, with no action forms, no `records`, no `gates`. `factsFromWorld` (§5.2) derives the same engine-internal `SurfaceFacts` from all
 three card kinds. Collaborators: contract leaf.
 
 **`WorldBuilder`** (class, ~200 lines) — interprets a `WorldCard` into a per-session
 `BuiltWorld implements ToolPort, RecordsPort` (R4·GEN, R5.8): reception coerces declared
 args (a non-coercible value is a refusal, never a stringified object), gates run on EVERY
-tool kind against the declared target record, simulate ≡ act by shared code path, refusals
-are honest results, every state change is attributable to a recorded audit row, `done` is
+tool kind against the declared target record, refusals are honest results, every state change is attributable to a recorded audit row, `done` is
 answered from the world's own write. Presets never half-apply (a patch naming a missing
 record throws at build). The world's documented surface is the BUSINESS's own
-documentation: a pipeline emendation (a proxy row, a simulation declaration, a composed
-read) is pipeline output and never licenses a world behavior — `Validator` rejects a world
+documentation: a pipeline emendation (a proxy row, a composed read) is pipeline output and never licenses a world behavior — `Validator` rejects a world
 tool whose only documentation source is a pipeline-emended surface row (R5.8). The world's verdicts
 are engine-independent — case 72's mis-ordered maintenance refusal lives here and survives
 the rebuild untouched (R10.2).
@@ -1084,7 +1073,7 @@ Collaborators: contract leaf.
 receives coerced args and a deep-frozen CLONE of the records (mutation throws; the live
 store is never handed out) and returns `{ result, patches }`; the desk applies the patches
 through the shared gated, audited, attesting path — a custom tool's `done` is true by
-construction and simulation works on it unchanged. There is no attestation escape hatch.
+construction. There is no attestation escape hatch.
 (`Store` is the world-package-private record container; it crosses no package boundary.)
 
 ```typescript
@@ -1528,7 +1517,6 @@ call is still governed.
  LoopRunAgent ──holds──► Engine ──holds──► ModelSeat · Rulebook · Judge · FinishDesk
                            │                DisclosureDesk · StatusClerk · PromptWriter · Wordings
                            └─holds per session─► Session ──holds──► ConsentDesk · ActionHistory
-                                                                    Masker · revoked-simulation set
                                                                     world: ToolPort
  Per turn, Engine.chat builds Turn · CallRunner · DeliveryWriter over the session's stores —
  that is how CallRunner reaches ConsentDesk/ActionHistory/Masker/world and DeliveryWriter
@@ -1561,11 +1549,7 @@ call is still governed.
    │           Rulebook verdict routes —
    │             allow    → execute → grade → record
    │             owe      → the owed reads run engine-side (origin 'engine'), then re-check
-   │             simulate → the tool runs with its OWN declared parameter → preview recorded
-   │                        → DisclosureDesk.owedReads → DisclosureDesk.before(filled) →
-   │                        ConsentDesk.hold → Question born FROM the preview:
-   │                        act status 'not-done', reason 'held', result = the preview
-   │             hold     → (no simulation declared) DisclosureDesk.owedReads →
+   │             hold     → DisclosureDesk.owedReads →
    │                        CallRunner.run(read, 'engine') each → DisclosureDesk.before(filled) →
    │                        ConsentDesk.hold → Question born from the reads alone:
    │                        act status 'not-done', reason 'held'
@@ -1594,11 +1578,11 @@ call is still governed.
 | R5.1 | Consent | `ConsentDesk.hold(call, sentence, draft): Question` · `readAnswer(text, draft)` · `close(id, why, draft)` · `sweep(turn, ttl, draft)` — state machine `open → consumed \| closed(declined\|superseded\|expired\|vetoed)`; crypto entropy + per-issuance nonce + unique codes, no tool name on screen; an identical re-attempt returns the SAME question, a differing one births a sibling, and a licensed execution closes ('superseded') every open question of the same (tool, target); every closure delivered. Approval never a bypass: `CallRunner.run(ConsentDesk.held(id), 'licence')` re-enters the FULL `Rulebook.checkPreTool`. No dead ends: the engine births the question from the held call itself (no unbirthable question), and an agent/contract refusal precedes consent — no question is born for an impossible act, so no approval loop can be unsatisfiable |
 | R5.2 | Disclosure | `DisclosureDesk.owedReads(tool, call)` + `CallRunner.run(read, 'engine')` — the ENGINE performs EVERY owed read itself: consent-owed (disclosure recipes) AND guard-owed (`catalog.onlyAfter` with a read prerequisite → `Verdict {kind:'owe'}`); `before/after/later` fill by alias, bound to the question's target record; no deny can starve the reads because no forced-model-read pass exists to starve |
 | R5.3 | Honest report | `FinishDesk.toolCard()/parse()` (one channel, one schema) + `HonestyCheck.check(ctx)` (bipartite both directions, order-free, target-bound, evidence classes per word, figures structurally absent from declarations — engine-rendered only, structural lie check over collected record ids) + `ActionHistory.mint()` (engine act identity) + `DeliveryWriter.compose` (the record ships every turn). The model claims `(tool, target, word)` — it never writes act ids (the referencing choice is priced under R10.4); a prose-improvement pass is a judged rule ABOVE the deterministic floor and can only improve delivery |
-| R5.4 | Downgrade-to-simulation | `Rulebook.checkPreTool → Verdict 'simulate'` (simulation declared) — `CallRunner` runs the tool with its OWN declared parameter, records the preview, and the question is born FROM that preview; no simulation declared → `Verdict 'hold'` (R3.4); a lying simulation is caught by `StatusClerk.grade` diff and revoked (`simulationRevoked` — plain consent thereafter, per session) |
+| R5.4 | Two moves at the door | `Rulebook.checkPreTool → Verdict 'hold'` — an unapproved destructive call is HELD and asked about; nothing about it is learned beforehand. The engine calls, or it does not call. What the surface would answer is known only once the licensed act runs, and the answer the surface gives is owed to the operator in the surface's own words (`Act.owed`, kind `refusal`) |
 | R5.5 | Sensitive data | `Masker.maskData(value)` at the recording seam inside `CallRunner` — the filtered form is the ONLY stored form; the executor alone receives real args; `Masker.maskProse(text)` in `DeliveryWriter`, collected literals only |
 | R5.6 | Guard ordering + determinism | `Rulebook` — one frozen order: spec → contract (change-window; the spec-vs-change-window boundary declared OPEN, kept decidable) → consent band (incl. `maxDestructive`) → honesty → the universal floor (`noDuplicateCall`, `brokenReply`); `deny` pure over frozen ctx (R6.4); the ONLY model-judged escape is `Judge.run` through `ModelSeat.port()` — no JudgePort exists, the seam is deleted, not guarded; UNREADABLE first-class, priced by `Guard.judgePolicy` |
 | R5.7 | Terminal protocol | `FinishDesk` — one `z.strictObject` renders the taught description AND validates (taught = validated); `split` handles early/stale finishes on typed calls; `Turn` redrives ≤ `limits.retries` carrying the FULL violation set; `closure(acts)` is a pure function of recorded acts — never empty, never "nothing changed" over `unknown`; `force()` when the model will not close |
-| R5.8 | Worst-world | `WorldBuilder.build(card)` — only the BUSINESS-documented surface exists; a pipeline emendation is never a license for a world behavior (`Validator` rejects it); gates on every kind (`WorldGates`); simulate ≡ act shared path; `PatchDesk.runCustom` (frozen clone in, patches out, applied gated + audited); rendered truth via `DeliveryWriter`; every change attributable in `BuiltWorld.audit()` |
+| R5.8 | Worst-world | `WorldBuilder.build(card)` — only the BUSINESS-documented surface exists; a pipeline emendation is never a license for a world behavior (`Validator` rejects it); gates on every kind (`WorldGates`); `PatchDesk.runCustom` (frozen clone in, patches out, applied gated + audited); rendered truth via `DeliveryWriter`; every change attributable in `BuiltWorld.audit()` |
 
 ---
 
@@ -1636,15 +1620,15 @@ NOW     a world tool declares effect by the block it sits in (reads/writes/destr
 GAIN    the author cannot forget the field (there is none), and spelling decides nothing
 ```
 
-**2 · Simulation is the tool's own parameter; gating is the engine's.**
+**2 · What an act would do is the world's to answer; asking is the engine's.**
 ```
-DEFECT  cancelBooking({ id, confirmed: true }) → DENIED — 'confirmed' invokes simulation
+DEFECT  cancelBooking({ id, confirmed: true }) → DENIED — 'confirmed' both previews the act
         AND signals approval; tools artificially grow a parameter; prose fills the field
-NOW     the surface entry declares simulation: { arg: 'dryRun', value: true } — the tool's OWN name;
-        the engine downgrades an unapproved destructive call by setting THAT parameter;
-        the acting call is clean, with NO field to fill
-GAIN    no invented parameter, no prose-fillable approval; a surface with no dry-run still
-        works — consent alone gates it (R3.4)
+NOW     the acting call is clean, with NO field to fill: an unapproved destructive call is
+        held and asked about, and the world answers only when the licensed act runs — its
+        refusal reaches the operator in the world's own words
+GAIN    no invented parameter, no prose-fillable approval, and no engine claim about an act
+        that never ran; consent alone gates it (R3.4)
 ```
 
 **3 · The executor answers one tiny question; the engine grades it.**
@@ -1760,7 +1744,6 @@ on the ban list, and no design name carries it (`Guard.judgeQuery`, `StepInput`,
 | `stateView` / `modelParams` / `terminalProtocol` / `stopOnRepeatedToolCall` / `redrives` | deleted / `llmParams` / engine-owned (`FinishDesk`) / brake in `ModelSeat` + the floor / `limits.retries` | constructor fields name purposes; mechanisms the author never wires have no constructor field |
 | `tookEffect` / `effectInferred` | `Act.said` (the executor's word) + `Act.status` + `Act.evidence` | who attested is in the fields: the executor said, the engine derived, the evidence names the grounding (R8.4) |
 | `internal.ts` | does not exist | the ports are the only backend seam; there is no everything-barrel to promise nothing about |
-| `probe` / taught-generic `dryRun` / `simulation.on` | the surface entry's `simulation: { arg, value }` — the tool's OWN parameter name, and `value` never collides with the guard-phase field `on` | the engine's canonical word never enters a tool schema |
 
 ---
 
@@ -1788,7 +1771,7 @@ construction, all at once; nothing surfaces mid-conversation (R1.6).
 | id-naming-convention | the licence is the whole call (`CanonicalCall`); the target is a DECLARED surface field; no key fishing anywhere | `transferAsset` licensed by whichever `*Id` key serialized first → one canonical key, one licence, key order irrelevant |
 | order-dependence | `CanonicalCall` sorted-key identity; `HonestyCheck` bipartite order-free; serial engine-owned scheduling | "the booking blocked, and then the quote passed" DENIED for its order → either order passes; the deny names the tool |
 | no-deterministic-return | `DeliveryWriter` renders every act line, every open question + code, every denial, every closure — every delivery | figures behind a refusal reaching the user only if the model's prose said them → the record line prints what the result filled |
-| confusing-names | §11, enforced by the name gate with an empty allowlist | `probe`/`trunk`/`challenge` era words → `simulate`/`assembledPrompt`/`approvalRequest` era continued: every §11 row |
+| confusing-names | §11, enforced by the name gate with an empty allowlist | `probe`/`trunk`/`challenge` era words → `assembledPrompt`/`approvalRequest` era continued: every §11 row |
 | entangled-dependencies | §6 one-way layers; `Turn` imports only declared collaborators (lintable); ports are the only backend seam | `turn.ts` at 1045 lines, 13 imports, two diverged loop copies → `Turn` ~180 lines sequencing 9 named desks |
 | dubious-status-names | one `Status` + `Reason` + `ReportWord` set of closed unions, shared by record, report, wording and exam | `pending_confirmation` split into two interchangeable words → `held`, one word, one evidence class |
 | hand-mirrored types / other | one contract leaf; the server imports `TurnRecord`; `wire.ts` has no local copy | a drifted server-side TurnMeta copy → structurally impossible: there is exactly one declaration |
@@ -1892,14 +1875,14 @@ change (— = not authoring-visible).
 | R2.10 | PASS | §5.1 `TurnFailure`; §5.3 `Session.seal` single commit, draft discarded on failure; §5.8 `Monitor` incident-bound markers | — |
 | R3.1 | PASS | §4 `mcpWorld` / `liveWorld` (live surfaces primary); `world` (genesis secondary) | skill A2 |
 | R3.2 | PASS | §4: the `mcpWorld` module generated + approved as code review; no silent rewrite — proxies/excludes are gate exits | skill gate doc |
-| R3.3 | PASS | §4 the surface entry's `does` (sanitized description) + `proxy` rename AND compose forms + `simulation` (the tool's OWN parameter); `HostToolPort` wire mapping incl. composed reads (§5.5) | skill proxy rules |
-| R3.4 | PASS | §8 R5.4: no simulation declared → plain `hold`; consent creates the two-step | — |
+| R3.3 | PASS | §4 the surface entry's `does` (sanitized description) + `proxy` rename AND compose forms; `HostToolPort` wire mapping incl. composed reads (§5.5) | skill proxy rules |
+| R3.4 | PASS | §8 R5.4: an unapproved destructive call is `hold`; consent creates the two-step | — |
 | R3.5 | PASS | §4 surface entries (effect by BLOCK; target/label/does declared; secrets on the contract, §3); §10 inversion 1 | skill surface schema |
-| R3.6 | PASS | `StatusClerk.grade` derivation table (§5.3); `Done`→`Status`+`Reason`; snapshot-diff verify; `simulationRevoked` per session (the set in `Session`'s stores); thrown-write = `unknown`, thrown-read = `TurnFailure`, never `refused` | — |
+| R3.6 | PASS | `StatusClerk.grade` derivation table (§5.3); `Done`→`Status`+`Reason`; snapshot-diff verify; thrown-write = `unknown`, thrown-read = `TurnFailure`, never `refused` | — |
 | R3.7 | PASS | `Question.code` carries no tool name (§5.1); questions worded from `label` (§2 output) | tutorial lesson 4 |
 | R3.8 | PASS | §4 (credentials host env/closure; three gates); `SurfaceGate` canonical fingerprint + structural exclusions (§5.2) | skill: certification |
 | R4·ASK | PASS | `targets.ts` (§5.8): every routing fact declared (`ModelTarget`), brakes armed from the declared tier | skill ASK |
-| R4·GEN | PASS | `world.ts`/`WorldBuilder`/`WorldGates`/`PatchDesk` (§5.4): declared data, simulate ≡ act, `{result, patches}` over frozen clone | skill GEN |
+| R4·GEN | PASS | `world.ts`/`WorldBuilder`/`WorldGates`/`PatchDesk` (§5.4): declared data, `{result, patches}` over frozen clone | skill GEN |
 | R4·EVALS | PASS | `ExamRunner` typed approve step (§5.8); census keyed on `installedBecause` (`lints.ts`) | skill EVALS |
 | R4·NORMS | PASS | §3: contract guards bind live-surface tools (the NORMS home); disclosure, wording, rewrites, secrets on the cards | skill NORMS |
 | R4·TEST | PASS | `Validator` (fresh world per phase, every preset); `UngovernedAgent` via `AgentFactory.ungoverned`; `JudgeInputBuilder` complete+blind; `Folder`; `SubjectLoader` provenance; `Certifier` margin discipline (§5.8) | skill TEST |
@@ -1907,7 +1890,7 @@ change (— = not authoring-visible).
 | R5.1 | PASS | §8 row R5.1 (`ConsentDesk` signatures; state machine; nonce; no bypass; both dead ends excluded, each by its own mechanism) | tutorial lesson 2 |
 | R5.2 | PASS | §8 row R5.2 (`DisclosureDesk.owedReads` + `owe` verdict — consent-owed AND guard-owed engine-performed) | tutorial lessons 5–8 |
 | R5.3 | PASS | §8 row R5.3 (`HonestyCheck` bipartite, target-bound, evidence classes, figures engine-rendered only, structural lie check; `ActionHistory.mint`); acceptance bar in §13.3 row 9 | — |
-| R5.4 | PASS | §8 row R5.4 + §5.3 CallRunner routing + §7 step 4 — one description everywhere: simulate = preview then ask; hold = the no-simulation route | — |
+| R5.4 | PASS | §8 row R5.4 + §5.3 CallRunner routing + §7 step 4 — one description everywhere: an unapproved destructive call holds and asks; the world answers only when the licensed act runs | — |
 | R5.5 | PASS | §8 row R5.5 (`Masker` at the recording seam; only stored form; collected literals; executor alone sees real args) | tutorial lesson 9 |
 | R5.6 | PASS | §8 row R5.6 (frozen order incl. the throttle's band; OPEN boundary declared; `Judge` on the session seat; UNREADABLE priced) | — |
 | R5.7 | PASS | §8 row R5.7 (`FinishDesk` one strict object; full violation set; pure closure; `force()`) | — |

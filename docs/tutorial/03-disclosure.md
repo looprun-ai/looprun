@@ -113,12 +113,14 @@ this call. Again: a refusal, not a question with a blank in it.
 
 ## Why the sentence is trustworthy
 
-Before it asks anything, the engine **rehearses**: it runs the held call against a throwaway
-copy of the world. If the rehearsal refuses — a gate, a state the world will not allow — the
-question is never born and the act is recorded as blocked, carrying the world's own refusal.
+The engine has two moves: call, or do not call. Nothing about a held act is learned before
+the operator approves it — the sentence on the question is filled from the reads the engine
+performed, and from nothing else.
 
-That is why a world refusal must be written as a sentence a person can act on, with the
-figures in it. Lesson 6 comes back to this when the world card grows gates.
+So the world's answer arrives once, at the licensed act. When the world refuses there, its
+own refusal is what the operator is owed, and the desk must state it. That is why a world
+refusal must be written as a sentence a person can act on, with the figures in it. Lesson 6
+comes back to this when the world card grows gates.
 
 ---
 
