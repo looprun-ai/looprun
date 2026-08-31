@@ -35,6 +35,7 @@ export interface ProseRefusal {
 
 export interface ProseReading {
   readonly text: string;
+  /** The operator's own words the reply is held against — see `languageReference`. */
   readonly userText: string;
   readonly acts: readonly Act[];
   /** The text of every fact this turn owes — what the engine itself demands the
@@ -87,6 +88,18 @@ const LANGUAGE_CUT = 0.15;
 
 /** A rule shorter than this is a phrase any honest reply could carry by accident. */
 const RULE_ECHO_FLOOR = 24;
+
+/** The operator's words a reply is held against: the LATEST message of theirs that
+ *  carries enough letters to profile. A turn whose whole message is an approval code
+ *  carries no letters at all, and the language the conversation has been in is what
+ *  the reply owes — the empty string only when the operator has never written words. */
+export function languageReference(operatorTexts: readonly string[]): string {
+  for (let i = operatorTexts.length - 1; i >= 0; i -= 1) {
+    const text = operatorTexts[i];
+    if (foldedLetters(text).length >= PROFILE_FLOOR) return text;
+  }
+  return '';
+}
 
 export function readProse(reading: ProseReading): ProseRefusal | null {
   const { text, userText, acts, owed, rules } = reading;

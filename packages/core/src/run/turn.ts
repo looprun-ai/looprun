@@ -23,7 +23,7 @@ import { canonicalAmount, carriedIds, figureRuns } from '../cards/catalog.js';
 import { assembleFacts, closeInstruction, engineLabels, factIdMisses, gateMisses,
          isCodeShaped, unowedFactIds } from './delivery-facts.js';
 import type { DeliveryFact } from './delivery-facts.js';
-import { readProse } from './prose-reader.js';
+import { languageReference, readProse } from './prose-reader.js';
 import { DisclosureDesk } from './disclosure-desk.js';
 import { Judge } from './judge.js';
 import type { Masker } from './masker.js';
@@ -212,16 +212,18 @@ export class Turn {
       { role: 'user' as const, text: x.userText },
       { role: 'assistant' as const, text: x.replyText }
     ]);
-    // The model's memory of a past turn is its delivered text; the LAST TWO turns
-    // also carry their own record lines — what just ran and what did not, frames
-    // the operator never sees. A delivered wording can drift; the record cannot,
-    // and bounding it to two turns keeps the window's cost flat.
+    // The model's memory of a past turn is its delivered text and its own record
+    // lines — what ran and what did not, frames the operator never sees. A
+    // delivered wording can drift; the record cannot. The tape is APPEND-ONLY:
+    // what a turn carries is decided when it seals, and no later turn edits those
+    // bytes again. A retention rule shaped as "the last N turns" is a rewrite
+    // rule, and every slide of that window deletes record lines the model has
+    // already read, forcing everything behind the deletion to be read again.
     const sealed = history.sealed();
-    const recorded = new Set(sealed.slice(-2));
     const messages: Msg[] = [
       ...sealed.flatMap(r => [
         { role: 'user' as const, text: r.userText },
-        { role: 'assistant' as const, text: !recorded.has(r) || r.acts.length === 0
+        { role: 'assistant' as const, text: r.acts.length === 0
           ? r.text
           : `${r.text}\n${r.acts.map(a => a.sentence).join('\n')}` }
       ]),
@@ -321,6 +323,11 @@ export class Turn {
         : shown === null ? null : masker.maskState(shown);
       const owed = owedNow();
       const tail = pw.tail(userText, state, desk.open(), owed);
+      // The close step carries this same prefix WITHOUT the owed block. Its one
+      // numbered list is the post-call list the closing order prints, so the facts
+      // are stated once, under one numbering, in the request that asks for them.
+      const closeTail = pw.tail(userText, state, desk.open(), []);
+      const closeSystem = closeTail === '' ? pw.system() : `${pw.system()}\n${closeTail}`;
       const stepInput = deepFreeze({
         system: tail === '' ? pw.system() : `${pw.system()}\n${tail}`,
         messages: [...messages],
@@ -377,7 +384,8 @@ export class Turn {
       // IS the turn's outcome, and every further model step would be spent
       // re-proposing the very call the question already carries.
       if (draft.acts.slice(actsBefore).some(a => a.reason === 'held' && a.questionId !== null)) {
-        return await this.engineClose(session, draft, operatorTexts, messages, stepInput);
+        return await this.engineClose(session, draft, operatorTexts, messages, stepInput,
+          closeSystem);
       }
 
       if (finish !== null) {
@@ -387,12 +395,16 @@ export class Turn {
         if (closed === 'sealed') return session.seal(draft);
         retriesUsed += 1;
         if (retriesUsed > compiled.limits.retries) {
-          return await this.engineClose(session, draft, operatorTexts, messages, stepInput);
+          return await this.engineClose(session, draft, operatorTexts, messages, stepInput,
+            closeSystem);
         }
         continue;
       }
 
-      if (forced) return await this.engineClose(session, draft, operatorTexts, messages, stepInput);
+      if (forced) {
+        return await this.engineClose(session, draft, operatorTexts, messages, stepInput,
+          closeSystem);
+      }
       if (callsUsed >= compiled.limits.calls || domain.length === 0) {
         forced = true;
         messages.push({ role: 'user', text: fd.force() });
@@ -524,7 +536,7 @@ export class Turn {
     // The words the operator would receive, read at the seam where they exist.
     const text = this.rewrite(parsed.finish.message);
     const refusal = violations.length > 0 ? null
-      : this.deliveryRefusal(text, draft, records, facts);
+      : this.deliveryRefusal(text, draft, records, facts, operatorTexts);
     if (refusal !== null) draft.corrections.push(refusal.mark);
     if (violations.length > 0 || refusal !== null) {
       for (const v of violations) {
@@ -560,7 +572,8 @@ export class Turn {
    *  the SAME law the desk's own draft answered to, one stage later — then the prose
    *  reader. Returns the correction to send and the mark it leaves, or null. */
   private deliveryRefusal(text: string, draft: TurnDraft, records: GroundedRecords,
-                          facts: readonly DeliveryFact[]):
+                          facts: readonly DeliveryFact[],
+                          operatorTexts: readonly string[]):
     { readonly sentence: string; readonly mark: Correction } | null {
     const ungrounded = ungroundedAmounts(text, records);
     if (ungrounded.length > 0) {
@@ -569,8 +582,8 @@ export class Turn {
     }
     const rules = [...this.deps.rulebook.guards().guards.map(g => g.rule),
       ...this.deps.compiled.judged.map(g => g.rule)];
-    const found = readProse({ text, userText: draft.userText, acts: draft.acts,
-      owed: facts.map(f => f.text), rules });
+    const found = readProse({ text, userText: languageReference(operatorTexts),
+      acts: draft.acts, owed: facts.map(f => f.text), rules });
     if (found === null) return null;
     return { sentence: found.sentence,
       mark: { kind: 'proseReader', check: found.check, detail: found.sentence } };
@@ -584,7 +597,7 @@ export class Turn {
    *  what comes back, and a refusal redrives the desk on that same prefix. */
   private async engineClose(session: Session, draft: TurnDraft,
                             operatorTexts: readonly string[], messages: Msg[],
-                            drive: StepInput): Promise<TurnRecord> {
+                            drive: StepInput, closeSystem: string): Promise<TurnRecord> {
     const { finishDesk: fd, deliveryWriter: dw } = this.deps;
     draft.corrections.push({ kind: 'forcedFinish' });
     draft.closedBy = 'engine';
@@ -598,8 +611,8 @@ export class Turn {
       open, draft.closed, notes));
     const records = groundedRecords(operatorTexts,
       [...draft.acts, ...session.history.pastActs()], facts);
-    const delivered = await this.closeStep(draft, messages, drive, facts, records,
-      session.history.pastActs());
+    const delivered = await this.closeStep(draft, messages, drive, closeSystem, facts,
+      records, session.history.pastActs(), operatorTexts);
     draft.delivery = { by: delivered === null ? 'floor' : 'desk',
       retried: delivered === null || delivered.retried, facts };
     draft.text = this.deps.masker.maskProse(delivered === null ? floor() : delivered.text);
@@ -608,8 +621,9 @@ export class Turn {
 
   /** The close-step itself: null when the desk cannot be asked or does not pay. */
   private async closeStep(draft: TurnDraft, messages: Msg[], drive: StepInput,
-                          facts: readonly DeliveryFact[], records: GroundedRecords,
-                          pastActs: readonly Act[]):
+                          closeSystem: string, facts: readonly DeliveryFact[],
+                          records: GroundedRecords, pastActs: readonly Act[],
+                          operatorTexts: readonly string[]):
     Promise<{ readonly text: string; readonly retried: boolean } | null> {
     // A turn owing nothing has no reply for the desk to write, and a bare world code
     // standing where an authored sentence should carries no sentence to render:
@@ -618,16 +632,23 @@ export class Turn {
     if (facts.some(f => f.kind !== 'code' && isCodeShaped(f.text))) return null;
 
     const fd = this.deps.finishDesk;
-    const conversation: Msg[] = [...messages,
+    // The loop may already have ordered the finish on its way out. The closing order
+    // below says the same thing over the turn's own facts, so the earlier line is
+    // dropped rather than stated twice.
+    const order = fd.force();
+    const last = messages[messages.length - 1];
+    const priors = last !== undefined && last.role === 'user' && last.text === order
+      ? messages.slice(0, -1) : messages;
+    const conversation: Msg[] = [...priors,
       { role: 'user', text: closeInstruction(facts) }];
     for (let attempt = 0; attempt <= CLOSE_REDRIVES; attempt++) {
       const step = await this.metered.step(deepFreeze({
-        system: drive.system, messages: [...conversation], tools: drive.tools,
+        system: closeSystem, messages: [...conversation], tools: drive.tools,
         forceFinish: true, llmParams: drive.llmParams
       }));
       const finish = fd.split(step.calls).finish;
       if (finish === null) {
-        conversation.push({ role: 'user', text: fd.force() });
+        conversation.push({ role: 'user', text: order });
         continue;
       }
       const parsed = fd.parse(finish.args);
@@ -640,7 +661,7 @@ export class Turn {
         records, false);
       const text = this.rewrite(parsed.finish.message);
       const refusal = violations.length > 0 ? null
-        : this.deliveryRefusal(text, draft, records, facts);
+        : this.deliveryRefusal(text, draft, records, facts, operatorTexts);
       if (violations.length === 0 && refusal === null) {
         return { text, retried: attempt > 0 };
       }
