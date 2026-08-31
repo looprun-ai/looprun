@@ -1,12 +1,13 @@
 /** Plays scripted multi-turn cases through the REAL path: one LoopRunAgent per
- *  case through the public door — no second loop exists. The typed approve step
- *  reads the open question's code from the records' question fold (issued minus
- *  consumed minus closed across ALL prior records); a code is never extracted
- *  from prose. Invariants are priced into the dump as data. */
+ *  case through the public door — no second loop exists. The two typed coded steps
+ *  read their code off the question that is open when the turn plays: approve from
+ *  the records' question fold (issued minus consumed minus closed across ALL prior
+ *  records), answer from the desks' standing choices. A code is never extracted from
+ *  prose. Invariants are priced into the dump as data. */
 import { createHash } from 'node:crypto';
-import type { ApproveRef, ExamCase, Json, ProviderOptions, Question, ToolMatcher,
-              TurnRecord } from '@looprun-ai/core';
-import { TurnFailure } from '@looprun-ai/core';
+import type { AnswerRef, ApproveRef, ExamCase, Json, ProviderOptions, Question,
+              StandingChoices, ToolMatcher, TurnRecord } from '@looprun-ai/core';
+import { choiceKey, TurnFailure } from '@looprun-ai/core';
 import { LoopRunAgent, RoutedAgent, UngovernedAgent, type LoopRunConfig,
          type LoopRunModel } from '@looprun-ai/mastra';
 import type { Subject } from './subject-loader.js';
@@ -54,6 +55,18 @@ function approvalText(refs: readonly ApproveRef[], open: readonly Question[],
     throw new Error(`case ${caseId}: no question ever held any of the approve refs`);
   }
   return usable.join(' and ');
+}
+
+/** The message ONE answer turn types: the option the case names and the code the
+ *  engine minted for that question, those two and nothing else. The code is read from
+ *  the open question at run time, exactly as an approval reads its own. */
+function answerText(ref: AnswerRef, choices: StandingChoices, caseId: string): string {
+  const standing = choices[choiceKey(ref.tool, ref.arg)];
+  if (standing === undefined) {
+    throw new Error(`case ${caseId}: no choice question stands open for `
+      + `'${ref.tool}' argument '${ref.arg}'`);
+  }
+  return `${ref.option} ${standing.code}`;
 }
 
 function declineText(open: readonly Question[], caseId: string): string {
@@ -153,12 +166,17 @@ export class ExamRunner {
 
     for (const turn of agent === null ? [] : c.turns) {
       try {
-        // The ungoverned twin never issues a question, so a consent turn plays
-        // as the operator's plain word — the same message weight, no code.
+        // The ungoverned twin never issues a question, so a consent turn plays as the
+        // operator's plain word and an answer turn as the option alone — the same
+        // message the case names, without a code nothing minted.
         const text = typeof turn === 'string' ? turn
           : variant === 'ungoverned'
-            ? ('decline' in turn ? 'No — do not.' : 'Yes — go ahead.')
+            ? ('decline' in turn ? 'No — do not.'
+              : 'answer' in turn ? turn.answer.option : 'Yes — go ahead.')
           : 'decline' in turn ? declineText(openQuestions(records), c.id)
+          : 'answer' in turn
+            ? answerText(turn.answer,
+                (agent as LoopRunAgent | RoutedAgent).openChoices(c.id), c.id)
           : approvalText(Array.isArray(turn.approve) ? turn.approve : [turn.approve],
               openQuestions(records), records.flatMap(r => r.questions.issued), c.id);
         const started = Date.now();

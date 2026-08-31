@@ -3,7 +3,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
-import { world } from '@looprun-ai/core';
+import { choiceFromUser, world } from '@looprun-ai/core';
 import type { ExamCase, ModelStep } from '@looprun-ai/core';
 import { SubjectLoader, type Subject } from '../src/subject-loader.js';
 import { ExamRunner } from '../src/exam-runner.js';
@@ -52,6 +52,85 @@ test('a consent case plays the public door: typed approval resolves the open cod
     origin: 'licence', status: 'done' });
   expect(dump.invariantFailures).toEqual([]);
   expect(readDump(runDir, 'mini-02', 'governed').records).toHaveLength(3);
+});
+
+/** A subject with one gated choice: the grade is the operator's to state, and the
+ *  engine mints the question's code at run time — no script can carry it. */
+function choiceSubject(): Subject {
+  return { dir: '', contract: { name: 'grading', guards: [
+      choiceFromUser('setGrade', 'grade', ['pass', 'fail'],
+        'Whether a booking passed is the operator\'s finding; send grade only once they say it.')
+    ] },
+    presets: [undefined], cases: [], targets: [],
+    world: world({
+      records: { bookings: { bk_9: { status: 'CONFIRMED', grade: null } } },
+      reads: { getBooking: { form: 'get', entity: 'bookings', label: 'Look up the booking' } },
+      writes: { setGrade: { form: 'run', entity: 'bookings', label: 'Grade the booking',
+        target: 'id', schema: { type: 'object', properties: { id: { type: 'string' },
+          grade: { type: 'string', enum: ['pass', 'fail'] } }, required: ['id', 'grade'] } } }
+    }, { setGrade: ({ args }) => ({ result: { id: args.id, grade: args.grade },
+      patches: [{ entity: 'bookings', id: String(args.id), set: { grade: args.grade } }] }) }),
+    specs: { concierge: { name: 'concierge', persona: 'You are the hotel desk.' } } };
+}
+
+/** Turn one puts the choice: the call is refused, the question opens under a minted
+ *  code, and the owed ask is a sentence no static script can spell, so the turn floors
+ *  after its retries. Seven model calls later it seals. */
+const CHOICE_ASKED: readonly ModelStep[] = [
+  call('setGrade', { id: 'bk_9', grade: 'pass' }),
+  finish('Did bk_9 pass or fail?', [{ tool: 'setGrade', target: 'bk_9', word: 'refused' }]),
+  ...Array.from({ length: 5 }, () => ({ calls: [], text: '' }))
+];
+
+test('a scripted case answers a choice question the way it approves a consent', async () => {
+  const c: ExamCase = { id: 'mini-09', split: 'fix',
+    turns: ['grade bk_9', { answer: { tool: 'setGrade', arg: 'grade', option: 'pass' } }],
+    rubric: 'r',
+    invariants: { requiredToolCalls: [{ name: 'setGrade', anyArgs: { grade: 'pass' } }] } };
+  const runDir = mkdtempSync(join(tmpdir(), 'run-'));
+  const dump = await new ExamRunner().runCase(choiceSubject(), c, 'governed',
+    { scripted: { steps: [
+      ...CHOICE_ASKED,
+      call('setGrade', { id: 'bk_9', grade: 'pass' }),
+      finish('bk_9 is graded pass.', [{ tool: 'setGrade', target: 'bk_9', word: 'done' }]),
+      ...Array.from({ length: 6 }, () => ({ calls: [], text: '' }))
+    ] } }, runDir);
+
+  expect(dump.failure).toBeNull();
+  expect(dump.records).toHaveLength(2);
+  expect(dump.records[0].acts[0].status).toBe('not-done');
+  // The runner read the code the engine minted and typed the option beside it.
+  expect(dump.records[1].userText).toMatch(/^pass \d{6}$/);
+  expect(dump.records[1].acts[0]).toMatchObject({ call: { tool: 'setGrade' }, status: 'done' });
+  expect(dump.invariantFailures).toEqual([]);
+});
+
+test('an answer turn plays as the operator\'s plain word on the ungoverned twin', async () => {
+  const c: ExamCase = { id: 'mini-10', split: 'fix',
+    turns: ['grade bk_9', { answer: { tool: 'setGrade', arg: 'grade', option: 'pass' } }],
+    rubric: 'r' };
+  const runDir = mkdtempSync(join(tmpdir(), 'run-'));
+  const dump = await new ExamRunner().runCase(choiceSubject(), c, 'ungoverned',
+    { scripted: { steps: [
+      finish('Did bk_9 pass or fail?'),
+      call('setGrade', { id: 'bk_9', grade: 'pass' }),
+      finish('bk_9 is graded pass.', [{ tool: 'setGrade', target: 'bk_9', word: 'done' }]),
+      ...Array.from({ length: 6 }, () => ({ calls: [], text: '' }))
+    ] } }, runDir);
+
+  expect(dump.records[1].userText).toBe('pass');
+});
+
+test('an answer turn naming a choice no question ever opened fails as construction', async () => {
+  const c: ExamCase = { id: 'mini-11', split: 'fix',
+    turns: ['grade bk_9', { answer: { tool: 'setGrade', arg: 'grade', option: 'pass' } }],
+    rubric: 'r' };
+  const runDir = mkdtempSync(join(tmpdir(), 'run-'));
+  const dump = await new ExamRunner().runCase(choiceSubject(), c, 'governed',
+    { scripted: { steps: [finish('Nothing to grade here.')] } }, runDir);
+
+  expect(dump.failure?.kind).toBe('construction');
+  expect(dump.failure?.detail).toContain('setGrade');
 });
 
 test('a decline turn types NO plus the code — inert by contract: the question stands, the notice delivers', async () => {

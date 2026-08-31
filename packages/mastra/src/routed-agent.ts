@@ -15,7 +15,8 @@
  *  conversations: one session is one queue, so a second message waits for the first to
  *  seal and no history entry is ever written over. */
 import type { AgentSpec, DeclaredWorld, DomainContract, FrontDeskCfg,
-              LlmParams, ModelPort, ModelStep, ProvenanceMark, ProviderOptions, StepUsage,
+              LlmParams, ModelPort, ModelStep, ProvenanceMark, ProviderOptions,
+              StandingChoices, StepUsage,
               TurnRecord, TurnReturned, TurnRouting } from '@looprun-ai/core';
 import { carriedIds } from '@looprun-ai/core';
 import { CardError, ScriptedModel, TurnFailure, WorldBuilder, composeWindow,
@@ -274,6 +275,12 @@ export class RoutedAgent {
     }
     return this.remember(id, seat, text, settled, { desk: again.desk, returned }, steps,
       handedBack);
+  }
+
+  /** The house's open choice questions: a choice stands at the desk that raised it,
+   *  and one act belongs to one desk, so the desks' rows never collide. */
+  openChoices(id: string): StandingChoices {
+    return Object.assign({}, ...Object.values(this.desks).map(d => d.openChoices(id)));
   }
 
   endSession(id: string): void {

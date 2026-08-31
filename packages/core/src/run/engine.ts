@@ -2,7 +2,8 @@
  *  compiled agent, one chat entry, whole typed turn record out. EngineConfig is a
  *  CLOSED key set — no index signature, no options object, no field through which
  *  governance weakens. */
-import type { ChatOpts, GuardCensus, Question, TurnRecord, TurnReturned } from '../contract/vocabulary.js';
+import type { ChatOpts, GuardCensus, Question, StandingChoices, TurnRecord,
+              TurnReturned } from '../contract/vocabulary.js';
 import { TurnFailure } from '../contract/vocabulary.js';
 import { deepFreeze } from '../contract/freeze.js';
 import type { ToolPort, RecordsPort } from '../contract/ports.js';
@@ -92,6 +93,12 @@ export class Engine {
    *  whole message may be answering. Empty for a session that never spoke. */
   openQuestions(sessionId: string): readonly Question[] {
     return this.sessions.get(sessionId)?.consent.open() ?? [];
+  }
+
+  /** The open choice questions of one session, by act and argument — the code an
+   *  option token must arrive beside. Empty for a session that never spoke. */
+  openChoices(sessionId: string): StandingChoices {
+    return this.sessions.get(sessionId)?.choices.standing() ?? deepFreeze({});
   }
 
   endSession(sessionId: string): void {

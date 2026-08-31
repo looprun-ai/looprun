@@ -21,7 +21,7 @@ import type { CompiledAgent } from '../cards/cards.js';
 import { CallRunner } from './call-runner.js';
 import { canonicalAmount, carriedIds, figureRuns } from '../cards/catalog.js';
 import { assembleFacts, closeInstruction, engineLabels, factIdMisses, gateMisses,
-         isCodeShaped, unowedFactIds } from './delivery-facts.js';
+         isCodeShaped, unowedFactIds, withoutFactLabels } from './delivery-facts.js';
 import type { DeliveryFact } from './delivery-facts.js';
 import { languageReference, readProse } from './prose-reader.js';
 import { DisclosureDesk } from './disclosure-desk.js';
@@ -104,12 +104,14 @@ export function groundedRecords(operatorTexts: readonly string[], acts: readonly
 }
 
 /** Every canonical amount a text states that the records do not carry. A figure worked
- *  out at the desk — a product, a sum — grounds on nothing. The identifiers THE RECORDS
- *  CARRY leave the text first, so the digits inside a record's name for a thing are
- *  never read as an amount; a token that merely wears the shape of an identifier and
- *  names nothing on the record stays in the text and answers for its digits. */
+ *  out at the desk — a product, a sum — grounds on nothing. Two things leave the text
+ *  first: this prompt's own fact labels, whose number counts the block and names no
+ *  amount, and the identifiers THE RECORDS CARRY, so the digits inside a record's name
+ *  for a thing are never read as an amount. A token that merely wears the shape of an
+ *  identifier and names nothing on the record stays in the text and answers for its
+ *  digits. */
 export function ungroundedAmounts(text: string, records: GroundedRecords): readonly string[] {
-  let bare = text;
+  let bare = withoutFactLabels(text);
   for (const id of carriedIds(text)) {
     if (records.ids.has(id)) bare = bare.split(id).join(' ');
   }
@@ -133,8 +135,9 @@ export function readMaterial(acts: readonly Act[]): readonly string[] {
 }
 
 /** A done read's identifiers are the record's answer. Prose that carries not one
- *  of them delivered nothing the reads returned. Reads that return no identifiers (an
- *  empty log, a not-found) demand nothing. */
+ *  of them delivered nothing the reads returned — an identifier the operator already
+ *  typed is not an answer, it is the question read back. Reads that return no
+ *  identifiers (an empty log, a not-found) demand nothing. */
 export function proseDropsReads(acts: readonly Act[], prose: string): boolean {
   const returned = new Set(readMaterial(acts).flatMap(m => carriedIds(m)));
   if (returned.size === 0) return false;
@@ -535,6 +538,14 @@ export class Turn {
     }
     // The words the operator would receive, read at the seam where they exist.
     const text = this.rewrite(parsed.finish.message);
+    // An unspoken read is the ONE violation whose correction may cost the operator the
+    // whole turn: a desk that read the roster and came back with a question names no
+    // roster row, and the record dump the floor would deliver destroys the question.
+    // The redrive still fires — the words are kept in case the retries run out.
+    if (violations.length === 1 && violations[0].guardName === 'readIsSpoken'
+      && this.deliveryRefusal(text, draft, records, facts, operatorTexts) === null) {
+      draft.unspokenReadReply = text;
+    }
     const refusal = violations.length > 0 ? null
       : this.deliveryRefusal(text, draft, records, facts, operatorTexts);
     if (refusal !== null) draft.corrections.push(refusal.mark);
@@ -613,9 +624,14 @@ export class Turn {
       [...draft.acts, ...session.history.pastActs()], facts);
     const delivered = await this.closeStep(draft, messages, drive, closeSystem, facts,
       records, session.history.pastActs(), operatorTexts);
-    draft.delivery = { by: delivered === null ? 'floor' : 'desk',
-      retried: delivered === null || delivered.retried, facts };
-    draft.text = this.deps.masker.maskProse(delivered === null ? floor() : delivered.text);
+    // The close step's words first, then the words an unspoken read refused, then the
+    // floor. A turn that wrote nothing an operator can use gets the record lines; a
+    // turn that wrote a question keeps it.
+    const kept = delivered ?? (draft.unspokenReadReply === null ? null
+      : { text: draft.unspokenReadReply, retried: true });
+    draft.delivery = { by: kept === null ? 'floor' : delivered === null ? 'prose' : 'desk',
+      retried: kept === null || kept.retried, facts };
+    draft.text = this.deps.masker.maskProse(kept === null ? floor() : kept.text);
     return session.seal(draft);
   }
 

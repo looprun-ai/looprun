@@ -1326,11 +1326,14 @@ Private: none. Collaborators: SubjectLoader, core.
 **`ExamRunner`** (class, ~200 lines) — R9.4/R4·EVALS: the public scriptable surface. Plays
 scripted multi-turn cases through the REAL path — it constructs a `LoopRunAgent` (Path A)
 per case and calls `generate`, the same facade hosts call; no second loop exists to drive.
-The typed approve step reads the open question's code from the records' question fold —
-issued minus consumed minus closed across ALL prior `TurnRecord`s (open questions persist
-across turns) — typed fields, random per run: a case can never regex a code out of prose.
+The two typed coded steps read their code off the question that is open when the turn plays:
+approve from the records' question fold — issued minus consumed minus closed across ALL prior
+`TurnRecord`s (open questions persist across turns) — and answer from the desks' standing
+choices. Typed fields, random per run: a case can never regex a code out of prose.
 `approve.args` (an arg subset) selects among open SIBLINGS of one tool; two open siblings
-with no `args` is a loud case error, never a guess. Runs the governed variant and the `ungoverned` variant — the ungoverned one
+with no `args` is a loud case error, never a guess. `answer` names the act, the argument a
+`choiceFromUser` gates and the option the operator picks; the runner types `<option> <code>`,
+and the validator refuses an unknown tool, an ungated argument or an undeclared option. Runs the governed variant and the `ungoverned` variant — the ungoverned one
 through the same public `UngovernedAgent` class every host can construct; the RED
 battery (R10.6) runs in both variants like any case; cases carry
 `split: 'fix' | 'held-out'` (R10.7).
@@ -1341,6 +1344,7 @@ class ExamRunner {
 }
 // ExamCase = { id, split: 'fix' | 'held-out', red?: AttackClass,
 //              turns: (string | { approve: { tool: string; args?: Readonly<Record<string, Json>> } }
+//                             | { answer: { tool: string; arg: string; option: string } }
 //                             | { decline: true })[], rubric }
 // CaseDump = { case: ExamCase['id'], variant, records: readonly TurnRecord[], servedBy: string }
 ```

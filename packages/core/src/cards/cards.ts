@@ -158,6 +158,9 @@ export interface CompiledGuard extends InstalledGuard {
    *  and the operator is asked to choose; the ChoiceDesk owns the question lifecycle
    *  and mints its code — the guard only declares. */
   choose?(ctx: CallCtx): { readonly arg: string; readonly options: readonly string[] } | null;
+  /** The same declaration standing still: the argument this guard gates and the options
+   *  it accepts, readable without a call. A case script is validated against it. */
+  choice?: { readonly arg: string; readonly options: readonly string[] };
 }
 
 /** The prompt raw material an agent compiles to. */

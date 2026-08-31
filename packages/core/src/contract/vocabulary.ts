@@ -363,10 +363,17 @@ export interface WorldCard { readonly records: StateSnapshot;
  *  to split open SIBLINGS of one tool — a code is never extracted from prose. */
 export interface ApproveRef { readonly tool: string;
                               readonly args?: Readonly<Record<string, Json>> }
+/** One typed answer to a choice question: the act and the argument the question stands
+ *  under, and the option the operator names. The code is minted at run time and read
+ *  from the open question — never written into a script, never scraped from prose. */
+export interface AnswerRef { readonly tool: string; readonly arg: string;
+                             readonly option: string }
 /** One scripted exam turn: user text, one or several typed approvals (several =
- *  one message licensing several open questions), or a typed decline. */
+ *  one message licensing several open questions), a typed answer to an open choice,
+ *  or a typed decline. */
 export type ExamTurn = string
   | { readonly approve: ApproveRef | readonly ApproveRef[] }
+  | { readonly answer: AnswerRef }
   | { readonly decline: true };
 /** A deterministic act matcher: the named call happened (required) or took no
  *  effect (noEffect), with an args subset when the case pins one. `anyOf` widens

@@ -105,6 +105,26 @@ export function engineLabels(text: string): readonly string[] {
   return [...found];
 }
 
+/** The text with every fact label struck out — `[F7]` as the prompt prints it and the
+ *  bare `F7` a desk writes when it cites the block in a sentence. The number in a label
+ *  is this prompt's own counting, never an amount the records carry, and the figure
+ *  walks must not read its digits as one. */
+export function withoutFactLabels(text: string): string {
+  const isDigit = (ch: string): boolean => ch >= '0' && ch <= '9';
+  const isWordy = (ch: string): boolean => isDigit(ch) || ch === '_'
+    || (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z');
+  const chars = [...text];
+  for (let at = 0; at < chars.length; at += 1) {
+    if (chars[at] !== 'F' || (at > 0 && isWordy(chars[at - 1]))) continue;
+    let end = at + 1;
+    while (end < chars.length && isDigit(chars[end])) end += 1;
+    if (end === at + 1 || (end < chars.length && isWordy(chars[end]))) continue;
+    for (let k = at; k < end; k += 1) chars[k] = ' ';
+    at = end;
+  }
+  return chars.join('');
+}
+
 /** A bare world code standing where an authored sentence should: four or more
  *  characters, the first A-Z, the rest A-Z, digits or underscore. A turn whose owed
  *  word is one of these has no sentence to render — the floor delivers it literally

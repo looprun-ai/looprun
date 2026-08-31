@@ -27,6 +27,10 @@ export interface TurnDraft {
   /** Prerequisite tools whose micro-step yielded no call this turn — the debt is
    *  asked of the model at most once per turn. */
   readonly microTried: string[];
+  /** The last reply the desk wrote that ONLY an unspoken read refused, and that the
+   *  deterministic delivery walks passed. It reaches the operator if the retries run
+   *  out: a turn whose whole work was a question keeps its question. */
+  unspokenReadReply: string | null;
   /** Ids the conversation's own acts returned at other desks — engine-minted
    *  provenance the grounding floor accepts alongside the desk's own reads. */
   readonly grounded: string[];
@@ -70,7 +74,7 @@ export class Session {
     return { turn: this.turnIndex, userText: '', servedBy: '', acts: [], corrections: [],
              issued: [], consumed: [], closed: [], finish: null, closedBy: 'model', text: '',
              delivery: null,
-             microTried: [], grounded: [],
+             microTried: [], grounded: [], unspokenReadReply: null,
              usage: { inputTokens: 0, outputTokens: 0, cachedInputTokens: 0, reasoningTokens: 0,
                       modelCalls: 0 } };
   }

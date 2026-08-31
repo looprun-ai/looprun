@@ -1,6 +1,7 @@
 import { test, expect } from 'vitest';
 import { callStep, finishStep, payingDesk } from '../fixtures/scripted-model.js';
 import { caseRig } from '../fixtures/case-rig.js';
+import { withoutFactLabels } from '../../src/run/delivery-facts.js';
 
 // Every figure the message states is one the records carry; a report the settled
 // record contradicts never delivers. Both are corrections that TEACH — the redrive
@@ -48,4 +49,29 @@ test('a report the settled record contradicts is corrected, never delivered', as
   expect(r.corrections.some(c => c.kind === 'redrive'
     && c.guardName === 'reportContradictsRecord')).toBe(true);
   expect(r.text).not.toContain('went through');
+});
+
+// A desk citing the OWED FACTS block writes the label the prompt printed — `As F1
+// states`. The number counts the block; it is not an amount the records owe.
+test('a fact label is not walked as a figure', () => {
+  expect(withoutFactLabels('As F1 states, and as F2 explains, wo_1 stands cancelled.'))
+    .toBe('As    states, and as    explains, wo_1 stands cancelled.');
+  expect(withoutFactLabels('[F1] [F12] the mooring is ended.'))
+    .toBe('[  ] [   ] the mooring is ended.');
+  expect(withoutFactLabels('986 stays owed on F1A and berth A-05.'))
+    .toBe('986 stays owed on F1A and berth A-05.');
+});
+
+test('a message citing F1 and F2 is not corrected for stating 1 and 2', async () => {
+  const model = payingDesk([
+    callStep('getBooking', { id: 'bk_9' }),
+    finishStep('As F1 states, booking bk_9 has room 12 on Tuesday, and as F2 explains, '
+      + 'nothing else changed.')
+  ]);
+  const { engine } = caseRig({ model });
+
+  const r = await engine.chat('s1', 'check booking bk_9');
+  expect(r.corrections.filter(c => c.kind === 'redrive'
+    && c.guardName === 'figureIsGrounded')).toEqual([]);
+  expect(r.text).toContain('As F1 states');
 });

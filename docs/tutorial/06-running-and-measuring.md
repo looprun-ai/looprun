@@ -25,12 +25,22 @@ read by a person, not by a framework.
 
 | field | what it carries |
 |---|---|
-| `turns` | user text, or `{ approve: { tool } }`, or `{ decline: true }` — a typed approval, so no code is ever scraped out of prose |
+| `turns` | user text, or `{ approve: { tool } }`, or `{ answer: { tool, arg, option } }`, or `{ decline: true }` — typed, so no code is ever scraped out of prose |
 | `invariants` | checked against the records, deterministically: what must have happened, what must NOT have taken effect |
 | `rubric` | a title line and one numbered row per thing the reply owes; `[critical]` rows decide the case |
 | `covers` | the guards this case exists to fire — the census key |
 | `preset` | the world scenario this case runs in |
 | `split` | `fix` for cases you tune against, `held-out` for cases you do not |
+
+Both coded turns read their code off the OPEN question at run time. `{ approve }` names the
+act whose consent question stands; `{ answer }` names the act, the gated argument and the
+option the operator picks, and the runner types `<option> <code>` — the two tokens the choice
+desk accepts and nothing else. A choice a case never answers leaves its act refused:
+
+```typescript
+turns: ['Put ast_genr01 back in service.',
+        { answer: { tool: 'completeMaintenance', arg: 'condition', option: 'good' } }]
+```
 
 Write an invariant as the **requirement**, not as one path to it. When two reads would both
 ground the same fact, say so instead of pinning the one you happened to see:

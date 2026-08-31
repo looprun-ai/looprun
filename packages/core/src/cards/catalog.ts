@@ -829,10 +829,11 @@ export function choiceFromUser(tool: string, arg: string,
       });
       // The ask outranks the refusal: a declared option with no answer standing opens the
       // question, and the desk puts it to the operator in the operator's own language.
-      return { ...row, choose: (ctx: CallCtx) => {
+      const choice = { arg, options };
+      return { ...row, choice, choose: (ctx: CallCtx) => {
         const value = carried(ctx);
         if (value === undefined || value === null || !options.includes(value)) return null;
-        return ctx.choices?.[key]?.answer == null ? { arg, options } : null;
+        return ctx.choices?.[key]?.answer == null ? choice : null;
       } };
     }
   };
