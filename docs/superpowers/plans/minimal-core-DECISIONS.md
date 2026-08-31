@@ -72,3 +72,30 @@ Shipped: (c) — nothing unruled was built.
 
 The question: which of a/b/c? Step 7 measures letters AND floors together on this
 case either way.
+
+## D-4 · Sealed exam scripts predate the ask-then-echo law (step 7, measured on two subjects)
+
+The ruled `choiceFromUser` swap (step 1) changes the licence: a gated choice is
+licensed by the operator's echo (option token + minted code), never by reading the
+operator's prose. Three sealed exam cases were AUTHORED against the old prose
+licence and are now unrunnable or short a turn:
+
+- harborpoint `fuel-asked-for-by-the-litre` (r017): the case script has ONE turn —
+  the desk now asks for the fuel-type choice and the script has no echo turn to
+  answer; unrunnable as authored (this run's one invariant failure).
+- harborpoint r018: the choice refusal displaced the stock comparison the rubric
+  wants on turn 1.
+- trialworks `withdrawal-asks-first`: turn 1 says "she withdrew consent" (prose the
+  old word map licensed); the desk now asks for the reason, no approval question is
+  ever opened, and the scripted approve turn 2 fails with "no question ever held
+  any of the approve refs".
+
+Re-authoring sealed exams is forbidden in this run (re-run, never re-author), so
+these rows are recorded as costs of the ruled change, separated in each score:
+harborpoint 26/33 (28/33 on the mechanism-comparable set) · trialworks 26/29
+(27/29 comparable).
+
+The question: rule the exam-script migration (add the echo turn to choice cases —
+one turn per case, the pt-BR case-68 minimal pair family) so step 7 can be re-run
+comparable, or accept the rows as the ruled change's standing cost until each
+subject's next authored revision?
