@@ -82,7 +82,7 @@ export interface DeclaredWording {
  *  reply, and the acts it is asked about. The four take no configuration — the question IS the
  *  factory — so a declaration states which one, and the acts that scope it. */
 export interface DeclaredJudged {
-  readonly factory: 'lieCheck' | 'impossibilityCheck' | 'injectionCheck' | 'hallucinationCheck';
+  readonly factory: 'injectionCheck';
   readonly acts: readonly string[];
 }
 
@@ -120,7 +120,7 @@ export interface Declaration {
 
 const FACTORIES: ReadonlySet<DeclaredGuard['factory']> = new Set(['onlyAfter', 'precondition', 'role', 'valueFromUser', 'argFormat', 'argAbsent', 'cap', 'checkResult', 'mustAccountFor', 'blockPattern', 'argCondition', 'valueFromUserOrRecord', 'argMatchesRecord', 'onlyAfterWhen', 'prose', 'deny']);
 const REWRITE_KINDS: ReadonlySet<DeclaredRewrite['kind']> = new Set(['maskPattern', 'purgePattern', 'swapTerms']);
-const JUDGED_FACTORIES: ReadonlySet<DeclaredJudged['factory']> = new Set(['lieCheck', 'impossibilityCheck', 'injectionCheck', 'hallucinationCheck']);
+const JUDGED_FACTORIES: ReadonlySet<DeclaredJudged['factory']> = new Set(['injectionCheck']);
 const WIDE_KINDS: ReadonlySet<NonNullable<DeclaredGuard['wide']>> = new Set(['oneLawEveryAct', 'sameRefusal']);
 
 function fail(path: string, line: number, detail: string): never {

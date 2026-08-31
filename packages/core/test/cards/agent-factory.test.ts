@@ -1,7 +1,7 @@
 import { test, expect } from 'vitest';
 import type { Act } from '../../src/contract/vocabulary.js';
 import { AgentFactory } from '../../src/cards/agent-factory.js';
-import { lieCheck, maskPattern, onlyAfter } from '../../src/cards/catalog.js';
+import { injectionCheck, maskPattern, onlyAfter } from '../../src/cards/catalog.js';
 import { factsFromWorld } from '../../src/cards/facts.js';
 import { Rulebook } from '../../src/run/rulebook.js';
 import { HOSTILE } from '../fixtures/hostile-world.js';
@@ -56,14 +56,14 @@ test('limits merge per field — the spec wins over the contract over the defaul
   expect(c.limits).toEqual({ calls: 25, destructive: 2, retries: 2, questionTurns: 3 });
 });
 
-test('nothing judged is auto-installed; a declared lieCheck lands in judged only', () => {
+test('nothing judged is auto-installed; a declared injectionCheck lands in judged only', () => {
   const bare = f.governed({ name: 'a', persona: 'p', judgePass: true }, undefined, FACTS);
   expect(bare.judged).toEqual([]);
-  const c = f.governed({ name: 'a', persona: 'p', judgePass: true, guards: [lieCheck()] },
+  const c = f.governed({ name: 'a', persona: 'p', judgePass: true, guards: [injectionCheck()] },
     undefined, FACTS);
-  expect(c.judged.map(g => g.name)).toEqual(['lieCheck']);
+  expect(c.judged.map(g => g.name)).toEqual(['injectionCheck']);
   expect(c.judged[0].judged).toBe(true);
-  expect(c.guards.some(g => g.name === 'lieCheck')).toBe(false);
+  expect(c.guards.some(g => g.name === 'injectionCheck')).toBe(false);
 });
 
 test('secrets compile to mask keys; disclosure needs normalize to resolved recipes', () => {

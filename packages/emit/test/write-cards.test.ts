@@ -408,13 +408,11 @@ describe('writeCards', () => {
     const out = writeCards(decl({ desks: [
       { name: 'billing', persona: 'p', tools: ['issueRefund', 'getInvoice'],
         conduct: { declareHonestly: 'Say what ran.' },
-        judged: [{ factory: 'lieCheck', acts: ['issueRefund'] },
-                 { factory: 'injectionCheck', acts: ['issueRefund', 'getInvoice'] }] }
+        judged: [{ factory: 'injectionCheck', acts: ['issueRefund', 'getInvoice'] }] }
     ] }), FACTS);
     expect(out).toContain("      prose('declareHonestly', 'Say what ran.'),");
-    expect(out).toContain("      { ...lieCheck(), tool: ['issueRefund'] },");
     expect(out).toContain("      { ...injectionCheck(), tool: ['issueRefund', 'getInvoice'] }");
-    expect(out).toContain("import { injectionCheck, lieCheck, onlyAfter, precondition } from '@looprun-ai/core';");
+    expect(out).toContain("import { injectionCheck, onlyAfter, precondition } from '@looprun-ai/core';");
     // The desk that carries a judged check buys the pass that asks it.
     expect(out).toContain('    judgePass: true,');
   });
@@ -430,10 +428,10 @@ describe('writeCards', () => {
   test('a judged check over no act is refused, and the desk that carries it is named', () => {
     const declaration = decl({ desks: [
       { name: 'billing', persona: 'p', tools: ['issueRefund'], conduct: { declareHonestly: 'x' },
-        judged: [{ factory: 'hallucinationCheck', acts: [] }] }
+        judged: [{ factory: 'injectionCheck', acts: [] }] }
     ] });
     expect(() => writeCards(declaration, FACTS))
-      .toThrow("desks 'billing' declares judged 'hallucinationCheck' over no act");
+      .toThrow("desks 'billing' declares judged 'injectionCheck' over no act");
   });
 
   test('the contract carries the words this business says its own way', () => {
@@ -636,8 +634,7 @@ describe('writeCards', () => {
         { name: 'counter', persona: 'You are the chandlery counter: orders, invoices and refunds.',
           tools: ['issueRefund', 'getInvoice', 'closeBooking'],
           conduct: { declareHonestly: 'Say what ran and what did not, and the condition that stopped it.' },
-          judged: [{ factory: 'lieCheck', acts: ['issueRefund'] },
-                   { factory: 'hallucinationCheck', acts: ['getInvoice'] }] }
+          judged: [{ factory: 'injectionCheck', acts: ['issueRefund'] }] }
       ]
     };
     const out = writeCards(declaration, FACTS);
@@ -648,7 +645,7 @@ describe('writeCards', () => {
     // Every declared mechanism reaches the card under the name the engine imports it by.
     for (const factory of ['onlyAfter', 'precondition', 'valueFromUser',
       'argFormat', 'argAbsent', 'maxCalls', 'checkResult', 'mustAccountFor', 'blockPattern',
-      'maskPattern', 'purgePattern', 'swapTerms', 'lieCheck', 'hallucinationCheck']) {
+      'maskPattern', 'purgePattern', 'swapTerms', 'injectionCheck']) {
       expect(out, `${factory} reaches no line of the card`).toContain(`${factory}(`);
     }
     for (const field of ['rewrites: [', 'wording: {', 'later: ', 'empty: ', 'secrets: ', 'limits: ']) {

@@ -22,14 +22,14 @@
  *  over the transcripts, a character-trigram score puts a correct English reply at
  *  0.1687 and a wrong-language Portuguese reply at 0.1718, so any cut refuses good
  *  replies before it catches bad ones. Telling those two apart takes vocabulary, and a
- *  class that needs vocabulary belongs to the judged channel (`lieCheck`), where a desk
- *  opts in — never to engine matching.
+ *  class that needs vocabulary is a class this reader abstains on — never engine
+ *  matching.
  *
  *  What the reader deliberately does not hold: a claim of a read or an act the
  *  record lacks, a required sentence OMITTED, a tense lie beside a true fact, a
  *  refusal for the wrong reason. Detecting a claim takes words, words belong to a
- *  language, and the engine carries none — that whole class is the judged channel's
- *  (`lieCheck`), never a word list here. */
+ *  language, and the engine carries none — never a word list here. A class that needs
+ *  vocabulary is a class this reader abstains on. */
 import type { Act } from '../contract/vocabulary.js';
 
 export type ProseCheck = 'wallEcho' | 'language';

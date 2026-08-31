@@ -2,7 +2,7 @@ import { test, expect } from 'vitest';
 import type { ModelPort } from '../../src/contract/ports.js';
 import type { AgentSpec } from '../../src/cards/cards.js';
 import { AgentFactory } from '../../src/cards/agent-factory.js';
-import { lieCheck } from '../../src/cards/catalog.js';
+import { injectionCheck } from '../../src/cards/catalog.js';
 import { Engine } from '../../src/run/engine.js';
 import { ModelSeat } from '../../src/run/model-seat.js';
 import { ScriptedModel } from '../../src/run/scripted-model.js';
@@ -15,7 +15,7 @@ import { HostileToolPort } from '../fixtures/hostile-tool-port.js';
 // construction. The check runs under its OWN system prompt: the desk's transcript is
 // evidence in the message array, never the voice the answer comes from.
 
-const CHECK: AgentSpec['guards'] = [lieCheck()];
+const CHECK: AgentSpec['guards'] = [injectionCheck()];
 
 function engineOf(spec: AgentSpec, model: ModelPort): Engine {
   return Engine.create({
@@ -56,7 +56,7 @@ test('a desk that declares the judged pass asks its check under its own system',
   expect(check.system).not.toBe(drive.system);
   expect(check.tools).toEqual([]);
   const asked = check.messages.at(-1);
-  expect(asked?.role === 'acts' ? '' : asked?.text).toContain(lieCheck().judgeQuery ?? '');
+  expect(asked?.role === 'acts' ? '' : asked?.text).toContain(injectionCheck().judgeQuery ?? '');
 });
 
 test('the pass fills the compiled judged rows, and buys nothing on its own', () => {
@@ -64,7 +64,7 @@ test('the pass fills the compiled judged rows, and buys nothing on its own', () 
   expect(factory.governed({ ...DESK, judgePass: true }, undefined, BOOKING_SURFACE).judged)
     .toEqual([]);
   expect(factory.governed({ ...DESK, judgePass: true, guards: CHECK }, undefined, BOOKING_SURFACE)
-    .judged.map(g => g.name)).toEqual(['lieCheck']);
+    .judged.map(g => g.name)).toEqual(['injectionCheck']);
   // The ungoverned twin asks no judge, whatever the spec bought.
   expect(factory.ungoverned({ ...DESK, judgePass: true, guards: CHECK }, undefined,
     BOOKING_SURFACE).judged).toEqual([]);

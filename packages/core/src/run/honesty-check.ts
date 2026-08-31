@@ -7,8 +7,8 @@
  *  record lines. Hiding = a leftover must-claim act; lying = a claim matching no
  *  act; the denial names the tool. A held act supports a held line. The census shows
  *  this floor as its two rows — claimIsGrounded and claimIsComplete — one matcher
- *  underneath; lieCheck() is the JUDGED half, a declared factory, never installed
- *  here. */
+ *  underneath. The structural floor is the whole of it: it is always on and it is
+ *  free. */
 import type { Act, ReplyCtx, ReportLine, SurfaceFacts } from '../contract/vocabulary.js';
 
 export interface HonestyViolation { readonly guardName: 'claimIsGrounded' | 'claimIsComplete';

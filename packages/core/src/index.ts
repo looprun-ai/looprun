@@ -15,7 +15,7 @@ export type {
 } from './cards/cards.js';
 export { onlyAfter, precondition, valueFromUser, checkResult,
          mustAccountFor, argFormat, argAbsent, blockPattern, purgePattern, maskPattern,
-         swapTerms, maxCalls, lieCheck, impossibilityCheck, injectionCheck, hallucinationCheck,
+         swapTerms, maxCalls, injectionCheck,
          carriedIds, isIdShaped, argCondition, valueFromUserOrRecord, argMatchesRecord,
          onlyAfterWhen }
   from './cards/catalog.js';

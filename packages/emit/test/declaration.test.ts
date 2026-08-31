@@ -173,7 +173,7 @@ desks:
     tools: [cancelBooking]
     conduct: { declareHonestly: x }
     judged:
-      - factory: lieCheck
+      - factory: injectionCheck
         acts: [cancelBooking]
 `));
     expect(d.contract.guards[0].args).toEqual({ pattern: '[0-9]{13,19}', on: 'reply' });
@@ -186,7 +186,7 @@ desks:
     ]);
     expect(d.contract.wording).toEqual({ status: { held: 'waiting on you' },
       sentence: { deniedByGuard: 'A rule of this house stopped that.' } });
-    expect(d.desks[0].judged).toEqual([{ factory: 'lieCheck', acts: ['cancelBooking'] }]);
+    expect(d.desks[0].judged).toEqual([{ factory: 'injectionCheck', acts: ['cancelBooking'] }]);
   });
 
   test('a rewrite kind and a judged factory the engine does not carry name their line', () => {
@@ -201,7 +201,7 @@ ${tail}`;
     expect(() => readDeclaration(fixture(withTail(`    judged:
       - factory: toneCheck
         acts: [getBooking]
-`)))).toThrow(/desks\[0\]\.judged\[0\]\.factory.*must be one of lieCheck/);
+`)))).toThrow(/desks\[0\]\.judged\[0\]\.factory.*must be one of injectionCheck/);
     expect(() => readDeclaration(fixture(`
 contract:
   name: x

@@ -1,9 +1,9 @@
 import { test, expect } from 'vitest';
-import { hallucinationCheck, impossibilityCheck, injectionCheck, lieCheck,
+import { injectionCheck,
          maskPattern, purgePattern, swapTerms } from '../../src/cards/catalog.js';
 
-test('the four judged factories declare a reply-phase judgeQuery and no deny', () => {
-  for (const g of [lieCheck(), impossibilityCheck(), injectionCheck(), hallucinationCheck()]) {
+test('the judged factory declares a reply-phase judgeQuery and no deny', () => {
+  for (const g of [injectionCheck()]) {
     expect(g.on).toBe('reply');
     expect(typeof g.judgeQuery).toBe('string');
     expect(g.judgeQuery?.length).toBeGreaterThan(10);
