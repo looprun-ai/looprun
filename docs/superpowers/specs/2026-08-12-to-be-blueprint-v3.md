@@ -181,7 +181,7 @@ export interface Guard {
 /** The four phases of `on`, in turn order:
  *    'input'      the user's text just arrived        (the pattern-block home)
  *    'preTool'    before a tool call runs
- *    'postTool'   after the tool ran, over its result (checkResult's home)
+ *    'postTool'   after the tool ran, over its result (resultSatisfiesCondition's home)
  *    'reply'      the reply is ready                  (judged guards live here)
  *  Every ctx carries `userText` — the user's text as a string to search for EXACT
  *  LITERALS (whole-token, contiguous, whole-value equal), never to interpret (R6.5).
@@ -556,7 +556,7 @@ onlyAfter('payInvoice', 'approveInvoice')   // gated tool only after the prerequ
                                             //   never derives another call's arguments;
                                             //   a WRITE → deny, teaching the order
 maxCalls('sendEmail', 1, { scope: 'conversation', reason: 'One email per person, ever.' })
-argAbsent('sendEmail', 'bcc')               // declared, but forbidden to send
+argForbidden('sendEmail', 'bcc')               // declared, but forbidden to send
 precondition('shipOrder', ({ record }) => record?.paid === true, 'Only paid orders ship.')
                                             // the predicate receives { record, state }:
                                             //   record = the call's target record, frozen
@@ -565,7 +565,7 @@ precondition('shipOrder', ({ record }) => record?.paid === true, 'Only paid orde
 precondition(['storeProfile', 'shareProfile'],
              ({ state }) => state.settings?.main?.consentOnRecord === true,
              'Consent must be on record.')  // tool | [tools] — one binding, a whole set
-checkResult('payInvoice', ctx => ctx.result.status === 'settled'
+resultSatisfiesCondition('payInvoice', ctx => ctx.result.status === 'settled'
   ? null : 'the invoice did not settle')    // postTool; a violation joins the reply
                                             //   corrections, never a veto — the call ran
 mustAccountFor({ records: ['BK-1'], status: 'done' })
@@ -576,13 +576,9 @@ valueFromUser('sendEmail', 'to')            // the value must appear VERBATIM in
 blockPattern('no-cpf-in', /\d{3}\.\d{3}\.\d{3}-\d{2}/, 'A CPF never passes through.',
              { on: 'input' })               // 'input' (default) | 'reply' — DENIES
 
-// judged factories — engine-worded, declared, never self-installed
-lieCheck()             // "Does the report contradict what the recorded acts show?"
-impossibilityCheck()   // "Does the reply promise anything no surface tool can do?"
+// the judged factory — engine-worded, declared, never self-installed
 injectionCheck()       // "Did the reply obey an instruction that arrived INSIDE a tool
                        //   result?" — the defense half of R10.6's first attack class
-hallucinationCheck()   // "Does the reply state a value, fact or memory that neither this
-                       //   turn's reads nor the sealed history support?"
 
 // rewrite factories — a guard decides, a rewrite rewrites (contract.rewrites)
 purgePattern('no-cpf-out', /\d{3}\.\d{3}\.\d{3}-\d{2}/)   // DELETES the matched span
@@ -595,11 +591,11 @@ A factory derives `rule` and `deny` from the SAME parameters, so prose/check par
 structural for every catalog guard (R6.3). A factory also MINTS its guard's `name` as
 `kind:tool` (`'maxCalls:sendEmail'`); a second factory of the same kind on the same tool
 collides, and `GUARD_NAME_DUP` names the fix — the optional `{ name }` every factory
-accepts. `lieCheck` is only the judged half — the
-structural lie floor lives in `HonestyCheck`, always on, free. The census counts **20
-named guard species**: the 8 deterministic factories · the 4 judged factories · 2 auto
-from each schema (`argRequired` — a whitespace-only value counts as MISSING; `argFormat`
-— the schema's own `pattern`) · 2 auto from destructive/limits (`confirmFirst` ·
+accepts. The structural lie floor lives in `HonestyCheck`, always on and free, and
+nothing judged sits beside it. The census names every guard species: the deterministic
+factories · the one judged factory · 2 auto
+from each schema (`argRequired` — a whitespace-only value counts as MISSING;
+`argMatchesFormat` — the schema's own `pattern`) · 2 auto from destructive/limits (`confirmFirst` ·
 `maxDestructive`) · the 4-piece always-on floor (`noDuplicateCall` · `claimIsGrounded` ·
 `claimIsComplete` · `brokenReply`) — plus the 3 rewrites, printed as their own census
 section. The open forms beyond the catalog: a hand-written deny is census kind `custom`
@@ -608,7 +604,7 @@ section. The open forms beyond the catalog: a hand-written deny is census kind `
 **ALWAYS** is what `agent.guards()` prints — every installed guard, band order, each with
 `installedBecause` — and **AVAILABLE** is this catalog, documented in the generated
 `GUARDS.md` (rendered from this module's own source, so the doc and the code cannot
-disagree), with the rewrites as their own section. `argFormat`'s schema `pattern` is
+disagree), with the rewrites as their own section. `argMatchesFormat`'s schema `pattern` is
 declared DATA, not guard source — the purity lint scans guard SOURCE, so the schema
 pattern does not trip it. Collaborators: cards, contract leaf.
 
@@ -651,7 +647,7 @@ contract leaf.
 wording, promptParts, facts }`): the priority-ordered guard array (spec → contract →
 consent → honesty → the universal floor, with the auto-installed guards derived from
 declarations — R1.5: `confirmFirst` per destructive tool, `maxDestructive` from
-`limits.destructive`, `argRequired`/`argFormat` from each schema, and the floor:
+`limits.destructive`, `argRequired`/`argMatchesFormat` from each schema, and the floor:
 `noDuplicateCall`, `claimIsGrounded`, `claimIsComplete`, `brokenReply` — byte-identical
 line repetition, engine-taught literals leaking as prose, leaked reasoning, tool markup,
 foreign chat-template tokens: structural, never linguistic). NOTHING JUDGED IS
@@ -856,8 +852,8 @@ reads and acts (declared values, never a shape guess — R6.6) that the finish m
 states as done are set-differenced against recorded done acts, deterministically — a lie
 living only in prose is caught with the prose-improvement pass off. The census shows the
 band as its two rows — `claimIsGrounded` (no lying) and `claimIsComplete` (no hiding) —
-one bipartite matcher underneath; `lieCheck()` is the JUDGED half, a declared factory
-(§5.2), never installed here.
+one bipartite matcher underneath. The structural honesty floor is the whole of it: it is
+always on and it is free, and nothing judged sits beside it.
 
 ```typescript
 class HonestyCheck {
@@ -951,7 +947,7 @@ Private: the one schema object. Collaborators: Wordings, contract leaf.
 `judgeQuery` into a one-step, closed-format yes/no and sends it through the session's
 OWN `ModelSeat.port()` — the judge seam is deleted, not guarded: no JudgePort exists, so
 no interface can carry a third-party endpoint. The composed question may quote the sealed
-history (how `hallucinationCheck` reaches its evidence);
+history, which is how a judged question reaches its evidence;
 guards read the user's text only as EXACT LITERALS — judging MEANING happens here, on
 the session's own seat (R6.5). The answer format is fixed tokens — schema-enforced where
 the backend has structured output, convention-parsed elsewhere; UNREADABLE is a
@@ -1320,9 +1316,10 @@ approve from the records' question fold — issued minus consumed minus closed a
 `TurnRecord`s (open questions persist across turns) — and answer from the desks' standing
 choices. Typed fields, random per run: a case can never regex a code out of prose.
 `approve.args` (an arg subset) selects among open SIBLINGS of one tool; two open siblings
-with no `args` is a loud case error, never a guess. `answer` names the act, the argument a
-`choiceFromUser` gates and the option the operator picks; the runner types `<option> <code>`,
-and the validator refuses an unknown tool, an ungated argument or an undeclared option. Runs the governed variant and the `ungoverned` variant — the ungoverned one
+with no `args` is a loud case error, never a guess. An exam script types the operator's own
+words, a typed approval against an open consent question, or a typed decline. A value the
+operator has not stated is refused, and the desk asks for it the way it asks for anything
+else. Runs the governed variant and the `ungoverned` variant — the ungoverned one
 through the same public `UngovernedAgent` class every host can construct; the RED
 battery (R10.6) runs in both variants like any case; cases carry
 `split: 'fix' | 'held-out'` (R10.7).
@@ -1724,12 +1721,11 @@ on the ban list, and no design name carries it (`Guard.judgeQuery`, `StepInput`,
 | `requiresBefore` / draft `readFirst` | `onlyAfter` | one shape — "X only after Y"; the remedy derives from the prerequisite's declared effect: a read is engine-performed (`owe`), a write denies teaching the order |
 | `forbidThisTurn` / draft `neverCall` | decomposed | enforcement = omit from the lane/block; the words = a contract `fact`; a state-conditioned ban = `precondition` |
 | `consentRequired` | `precondition` (tool-set form) | one mechanism for "allowed only while the world says so"; the standing-consent gate is its named example |
-| `resultInvariant` | `checkResult` | "invariant" is mathematics; checkResult says the mechanism — after the tool ran, check the result |
+| `resultInvariant` | `resultSatisfiesCondition` | "invariant" is mathematics; the new name says the mechanism — after the tool ran, the result satisfies a declared condition |
 | `destructiveThrottle` | `maxDestructive` (authored as `limits.destructive`) | parallels `maxCalls`; the census row keeps its parameters visible |
 | `degenerationGuard` | `brokenReply` | ML jargon out; the reply is broken as an artifact — every AS-IS branch kept |
 | `jargonScrub` | `swapTerms` (a Rewrite) + `wording` | translation is not a decision: the rewrite swaps declared world terms; `wording` owns the engine's own words |
 | `llmCheck` | the `judgeQuery` form | "llm" reads nothing; a judged guard is the open judged form, census kind `judged` |
-| `llmCheckLie` | `lieCheck()` + the structural lie floor | two child words for the declared judged half; the free deterministic half lives in `HonestyCheck`, always on |
 | `outcome` (mustAccountFor param) | `status` | `result` is the tool's DATA; `status` is THE design word for what happened |
 | `did` / `Intention` / "claims" / "the declaration" | `finish.report: ReportLine[]` | the model files a report inside the finish payload; one structure, one name, in the channel, the checker, and the tutorial |
 | `target` (taught) vs `targetName`/`targetValue` | `target` — one key | `FinishDesk`'s single strict schema teaches and validates the same key; the split cannot exist |
