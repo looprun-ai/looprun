@@ -1,4 +1,5 @@
 import { test, expect } from 'vitest';
+import { MockLanguageModelV3 } from 'ai/test';
 import type { AgentSpec, ChatMsg, DeclaredWorld, ForeignExchange, ModelStep, ModelTarget,
               Msg, TurnReturned } from '@looprun-ai/core';
 import { ModelSeat, ScriptedModel, TurnFailure, WorldBuilder, mcpWorld,
@@ -334,6 +335,34 @@ test('endSession drops the routed state and every desk\'s — the next turn is t
 
   expect(fresh.loopRun.turn).toBe(1);
   expect(router.seen[1].system).toContain('The conversation is just opening.');
+});
+
+test('the target\'s declared options ride the front desk AND the desk behind it', async () => {
+  // No portFactory here: the house mints its own front-desk seat, which is the seat
+  // the declaration has to reach as much as the desks do.
+  const seen: unknown[] = [];
+  let call = 0;
+  const model = new MockLanguageModelV3({
+    doGenerate: (opts) => {
+      seen.push((opts as { providerOptions?: unknown }).providerOptions);
+      call += 1;
+      const part = call === 1
+        ? { toolName: 'route', input: JSON.stringify({ desk: 'yard' }) }
+        : { toolName: 'finish',
+            input: JSON.stringify({ message: 'The crew is on it.', report: [], facts: [] }) };
+      return Promise.resolve({
+        finishReason: { unified: 'stop' as const, raw: undefined },
+        usage: { inputTokens: { total: 1, noCache: 1, cacheRead: undefined, cacheWrite: undefined },
+                 outputTokens: { total: 1, text: 1, reasoning: undefined } },
+        content: [{ type: 'tool-call' as const, toolCallId: `c${String(call)}`, ...part }],
+        warnings: [] });
+    }
+  });
+  const agent = RoutedAgent.fromSubject({ specs: DESKS, world: JOBS, model,
+    providerOptions: { llamacpp: { cache_prompt: true } } }) as RoutedAgent;
+  await agent.generate('put a crew on the job', { session: 's1' });
+  expect(seen.length).toBeGreaterThanOrEqual(2);
+  for (const opts of seen) expect(opts).toMatchObject({ llamacpp: { cache_prompt: true } });
 });
 
 test('fromSubject hands back the lone LoopRunAgent when the subject declares one desk', () => {

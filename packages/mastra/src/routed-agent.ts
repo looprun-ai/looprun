@@ -15,8 +15,8 @@
  *  conversations: one session is one queue, so a second message waits for the first to
  *  seal and no history entry is ever written over. */
 import type { AgentSpec, DeclaredWorld, DomainContract, FrontDeskCfg,
-              LlmParams, ModelPort, ModelStep, ProvenanceMark, StepUsage, TurnRecord,
-              TurnReturned, TurnRouting } from '@looprun-ai/core';
+              LlmParams, ModelPort, ModelStep, ProvenanceMark, ProviderOptions, StepUsage,
+              TurnRecord, TurnReturned, TurnRouting } from '@looprun-ai/core';
 import { carriedIds } from '@looprun-ai/core';
 import { CardError, ScriptedModel, TurnFailure, WorldBuilder, composeWindow,
          readDecision } from '@looprun-ai/core';
@@ -119,11 +119,14 @@ function summariesOf(specs: Readonly<Record<string, AgentSpec>>): readonly strin
 }
 
 /** The front desk's own seat: the subject's model, or the subject's script when a script
- *  is what drives it. Temperature 0 — the window declares it and the seat carries it. */
-function routerPort(model: LoopRunModel, params: LlmParams): ModelPort {
+ *  is what drives it. Temperature 0 — the window declares it and the seat carries it.
+ *  The front desk sits at the same target as the desks behind it, so it asks its
+ *  provider for the same things they do. */
+function routerPort(model: LoopRunModel, params: LlmParams,
+                    providerOptions: ProviderOptions): ModelPort {
   return typeof model === 'object' && model !== null && 'scripted' in model
     ? new ScriptedModel(model.scripted.steps)
-    : new MastraModelPort(model, params);
+    : new MastraModelPort(model, params, providerOptions);
 }
 
 /** The house as the wire holds it: the desks, the lines that route to them, and the
@@ -147,6 +150,10 @@ export interface RoutedSubjectCfg {
   readonly world: DeclaredWorld;
   readonly preset?: string;
   readonly model: LoopRunModel;
+  /** What the target asks of its provider on every request — read off
+   *  `tier(alias).providerOptions` for a local seat. One target seats the whole house,
+   *  so the front desk and every desk behind it carry the same declaration. */
+  readonly providerOptions?: ProviderOptions;
 }
 
 interface Decision { readonly desk: string; readonly steps: readonly ModelStep[] }
@@ -178,7 +185,8 @@ export class RoutedAgent {
     const names = Object.keys(cfg.specs);
     if (names.length === 1) {
       return new LoopRunAgent({ spec: cfg.specs[names[0]], contract: cfg.contract,
-                                model: cfg.model, world: cfg.world, preset: cfg.preset });
+                                model: cfg.model, world: cfg.world, preset: cfg.preset,
+                                providerOptions: cfg.providerOptions });
     }
     const description = descriptionsOf(cfg.specs);
     const summaries = summariesOf(cfg.specs);
@@ -194,8 +202,10 @@ export class RoutedAgent {
       Object.fromEntries(names.filter(n => n !== name).map(n => [n, cfg.specs[n].description ?? '']));
     const deskCfg = (name: string): LoopRunConfig => ({
       spec: { ...cfg.specs[name], teammates: others(name) },
-      contract: cfg.contract, model: cfg.model, world: cfg.world, built });
-    const mint = portFactory ?? ((params: LlmParams) => routerPort(cfg.model, params));
+      contract: cfg.contract, model: cfg.model, world: cfg.world, built,
+      providerOptions: cfg.providerOptions });
+    const mint = portFactory
+      ?? ((params: LlmParams) => routerPort(cfg.model, params, cfg.providerOptions ?? {}));
     return new RoutedAgent({
       name: cfg.contract?.name ?? cfg.specs[names[0]].name,
       desks: Object.fromEntries(names.map(n => [n, new LoopRunAgent(deskCfg(n))])),

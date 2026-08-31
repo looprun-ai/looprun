@@ -4,9 +4,9 @@ import { createServer } from 'node:http';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { tier } from '../src/tiers.js';
+import { tier, tiers } from '../src/tiers.js';
 import { Downloader } from '../src/downloader.js';
-import { healthCheck } from '../src/llamacpp.js';
+import { healthCheck, serverArgs } from '../src/llamacpp.js';
 
 test('a tier is declared data; an unknown alias fails loud; ctx takes the env hatch', () => {
   const a3b = tier('a3b');
@@ -16,6 +16,17 @@ test('a tier is declared data; an unknown alias fails loud; ctx takes the env ha
   process.env.LOOPRUN_TIER_A3B_CTX = '4096';
   expect(tier('a3b').ctx).toBe(4096);
   delete process.env.LOOPRUN_TIER_A3B_CTX;
+});
+
+test('a tier that asks for the prompt cache launches with a single slot', () => {
+  // A cache asked for and then split across slots is not reusable turn over turn, so
+  // the two declarations have to agree — on every tier that asks, not just today's.
+  const asking = tiers().filter(row => row.providerOptions['llamacpp']?.['cache_prompt'] === true);
+  expect(asking.length).toBeGreaterThan(0);
+  for (const row of asking) {
+    const args = serverArgs({ ...row, modelPath: '/models/x.gguf', port: 8081 });
+    expect(args[args.indexOf('--parallel') + 1]).toBe('1');
+  }
 });
 
 function artifactServer(body: Buffer): Promise<{ url: string; close(): void;

@@ -38,6 +38,21 @@ export async function healthCheck(baseUrl: string, servedModel: string): Promise
 const HEALTH_TRIES = 60;
 const HEALTH_WAIT_MS = 1000;
 
+/** The launch recipe as data. `--parallel` takes the tier's slot count, and a local
+ *  tier declares ONE: a single slot owns one prompt cache, so the cache a turn leaves
+ *  behind is the cache the next turn finds, instead of being split between sequences
+ *  that evict each other. */
+export function serverArgs(row: LocalTier & { modelPath: string; port: number }): string[] {
+  return [
+    '-m', row.modelPath,
+    '--port', String(row.port),
+    '--ctx-size', String(row.ctx),
+    '--parallel', String(row.slots),
+    '--cache-type-k', row.kv, '--cache-type-v', row.kv,
+    '--slot-save-path', '.slots'
+  ];
+}
+
 export class LlamaCppRuntime {
   private child: ChildProcess | null = null;
 
@@ -49,15 +64,7 @@ export class LlamaCppRuntime {
       throw new Error('LLAMACPP_BIN names the pinned llama-server binary; it is not set');
     }
     const port = row.port ?? 8081;
-    const args = [
-      '-m', row.modelPath,
-      '--port', String(port),
-      '--ctx-size', String(row.ctx),
-      '--parallel', String(row.slots),
-      '--cache-type-k', row.kv, '--cache-type-v', row.kv,
-      '--slot-save-path', '.slots'
-    ];
-    this.child = spawn(bin, args, {
+    this.child = spawn(bin, serverArgs({ ...row, port }), {
       stdio: 'ignore',
       env: { ...process.env, DYLD_LIBRARY_PATH: dirname(bin) }
     });

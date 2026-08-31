@@ -7,8 +7,8 @@
  *  DATA on the model key. */
 import type { MastraModelConfig } from '@mastra/core/llm';
 import type { AgentSpec, BuiltWorld, DeclaredWorld, DomainContract, EngineConfig, LiveTool,
-              LiveWorldCard, McpWorldCard, ModelStep, ModelTarget, SurfaceFacts,
-              SurfaceReport } from '@looprun-ai/core';
+              LiveWorldCard, McpWorldCard, ModelStep, ModelTarget, ProviderOptions,
+              SurfaceFacts, SurfaceReport } from '@looprun-ai/core';
 import { AgentFactory, ModelSeat, ScriptedModel, SurfaceGate, TurnFailure, WorldBuilder,
          factsFromWorld } from '@looprun-ai/core';
 import { MastraModelPort } from './mastra-model-port.js';
@@ -36,6 +36,10 @@ export interface LoopRunConfig {
   /** The scenario the world starts from. Never set beside `built`: an instance already
    *  built has already answered which scenario it holds, and naming it twice refuses. */
   readonly preset?: string;
+  /** What the target asks of its provider on every request — a local tier's own
+   *  declaration, read off `tier(alias).providerOptions`. Omitted = the target asks
+   *  for nothing beyond the engine's own call. */
+  readonly providerOptions?: ProviderOptions;
 }
 
 export interface Assembled { readonly config: EngineConfig; readonly surface: SurfaceReport | null }
@@ -43,7 +47,8 @@ export interface Assembled { readonly config: EngineConfig; readonly surface: Su
 const isScripted = (m: LoopRunModel): m is { scripted: { steps: readonly ModelStep[] } } =>
   typeof m === 'object' && m !== null && 'scripted' in m;
 
-function seatFor(model: LoopRunModel, spec: AgentSpec): ModelSeat {
+function seatFor(model: LoopRunModel, spec: AgentSpec,
+                 providerOptions: ProviderOptions): ModelSeat {
   if (isScripted(model)) {
     const target: ModelTarget = { id: 'scripted', provider: 'scripted', keyEnv: null,
                                   tier: 'cloud', certified: true };
@@ -53,7 +58,8 @@ function seatFor(model: LoopRunModel, spec: AgentSpec): ModelSeat {
     : typeof model === 'object' && model !== null && 'id' in model && typeof model.id === 'string'
       ? model.id : 'host-model';
   const target: ModelTarget = { id, provider: 'mastra', keyEnv: null, tier: 'cloud', certified: true };
-  return ModelSeat.create([target], id, () => new MastraModelPort(model, spec.llmParams ?? {}));
+  return ModelSeat.create([target], id,
+    () => new MastraModelPort(model, spec.llmParams ?? {}, providerOptions));
 }
 
 /** Facts whose card entry declared no schema adopt the live tool's own — the model
@@ -108,7 +114,8 @@ async function build(cfg: LoopRunConfig, armed: boolean): Promise<Assembled> {
   const compiled = armed
     ? factory.governed(cfg.spec, cfg.contract, facts)
     : factory.ungoverned(cfg.spec, cfg.contract, facts);
-  return { config: { compiled, toolPort, recordsPort, seat: seatFor(cfg.model, cfg.spec) }, surface };
+  return { config: { compiled, toolPort, recordsPort,
+    seat: seatFor(cfg.model, cfg.spec, cfg.providerOptions ?? {}) }, surface };
 }
 
 export function assemble(cfg: LoopRunConfig): Promise<Assembled> {

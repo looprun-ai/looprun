@@ -1,10 +1,38 @@
 import { test, expect } from 'vitest';
+import { MockLanguageModelV3 } from 'ai/test';
 import type { LiveWorldCard, McpWorldCard } from '@looprun-ai/core';
 import { BuiltWorld, CardError, Engine, TurnFailure } from '@looprun-ai/core';
 import { assemble, assembleUngoverned } from '../src/agent-assembly.js';
 import { BOOKING, SPEC, callStep, finishStep } from './fixtures/booking-world.js';
 
 const SCRIPTED = { scripted: { steps: [finishStep('Hello.')] } };
+
+/** A host model that closes the turn and records the options every request carried. */
+function closingModel(seen: unknown[]) {
+  return new MockLanguageModelV3({
+    doGenerate: (opts) => {
+      seen.push((opts as { providerOptions?: unknown }).providerOptions);
+      return Promise.resolve({
+        finishReason: { unified: 'stop' as const, raw: undefined },
+        usage: { inputTokens: { total: 1, noCache: 1, cacheRead: undefined, cacheWrite: undefined },
+                 outputTokens: { total: 1, text: 1, reasoning: undefined } },
+        content: [{ type: 'tool-call' as const, toolCallId: 'c1', toolName: 'finish',
+          input: JSON.stringify({ message: 'bk_9 is confirmed for Tuesday.',
+                                  report: [], facts: [] }) }],
+        warnings: []
+      });
+    }
+  });
+}
+
+test('the options a local tier declares reach every request the seated port makes', async () => {
+  const seen: unknown[] = [];
+  const { config } = await assemble({ spec: SPEC, world: BOOKING,
+    model: closingModel(seen), providerOptions: { llamacpp: { cache_prompt: true } } });
+  await Engine.create(config).chat('s1', 'is bk_9 confirmed?');
+  expect(seen.length).toBeGreaterThan(0);
+  for (const opts of seen) expect(opts).toMatchObject({ llamacpp: { cache_prompt: true } });
+});
 
 test('a world card assembles the author door: built world seated, consent armed', async () => {
   const { config, surface } = await assemble({ spec: SPEC, model: SCRIPTED, world: BOOKING });

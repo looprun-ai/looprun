@@ -274,6 +274,12 @@ export interface LlmParams { readonly temperature?: number; readonly topP?: numb
                              readonly maxOutputTokens?: number; readonly preset?: ProviderPreset }
                                               // ONE home: authors read it on the spec card,
                                               //   cards.ts re-exports it
+/** Request options a TARGET declares, namespaced by the provider that understands
+ *  them: the outer key names the provider, the inner keys are that provider's own
+ *  request fields. The engine forwards them to every model call untouched and spells
+ *  no field itself — a local llama.cpp target declares `{ llamacpp: { cache_prompt:
+ *  true } }`, and a cloud target that declares nothing sends nothing. */
+export type ProviderOptions = Readonly<Record<string, Readonly<Record<string, Json>>>>;
 export interface ServingHandle { readonly baseUrl: string; readonly servedModel: string;
                                  stop(): Promise<void> }
 export interface TierSpec { readonly alias: string;

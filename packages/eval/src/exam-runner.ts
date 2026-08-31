@@ -4,7 +4,7 @@
  *  consumed minus closed across ALL prior records); a code is never extracted
  *  from prose. Invariants are priced into the dump as data. */
 import { createHash } from 'node:crypto';
-import type { ApproveRef, ExamCase, Json, Question, ToolMatcher,
+import type { ApproveRef, ExamCase, Json, ProviderOptions, Question, ToolMatcher,
               TurnRecord } from '@looprun-ai/core';
 import { TurnFailure } from '@looprun-ai/core';
 import { LoopRunAgent, RoutedAgent, UngovernedAgent, type LoopRunConfig,
@@ -101,8 +101,12 @@ function checkRoute(c: ExamCase, records: readonly TurnRecord[]): string[] {
 }
 
 export class ExamRunner {
+  /** `providerOptions` is what the declared target asks of its provider on every
+   *  request — `tier(alias).providerOptions` for a local seat. A target that declares
+   *  nothing sends nothing, and its requests are unchanged. */
   async runCase(subject: Subject, c: ExamCase, variant: CaseDump['variant'],
-                model: LoopRunModel, runDir: string): Promise<CaseDump> {
+                model: LoopRunModel, runDir: string,
+                providerOptions: ProviderOptions = {}): Promise<CaseDump> {
     // A case with `route` and no pinned `agent` plays through the routed house — one
     // shared declared world, every desk a certified target. A pinned case still
     // composes the ONE agent it always did, byte-identical.
@@ -136,11 +140,11 @@ export class ExamRunner {
             + 'card can be built and handed to every desk.');
         }
         agent = RoutedAgent.fromSubject({ specs: subject.specs, contract: subject.contract,
-          world: subject.world, model, preset: c.preset });
+          world: subject.world, model, preset: c.preset, providerOptions });
       } else {
         const agentName = c.agent ?? Object.keys(subject.specs)[0];
         const cfg: LoopRunConfig = { spec: subject.specs[agentName], contract: subject.contract,
-          model, world: subject.world, preset: c.preset };
+          model, world: subject.world, preset: c.preset, providerOptions };
         agent = variant === 'governed' ? new LoopRunAgent(cfg) : new UngovernedAgent(cfg);
       }
     } catch (e: unknown) {

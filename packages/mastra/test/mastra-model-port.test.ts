@@ -1,6 +1,6 @@
 import { test, expect } from 'vitest';
 import { MockLanguageModelV3 } from 'ai/test';
-import type { Act, StepInput } from '@looprun-ai/core';
+import type { Act, ProviderOptions, StepInput } from '@looprun-ai/core';
 import { TurnFailure } from '@looprun-ai/core';
 import { MastraModelPort } from '../src/mastra-model-port.js';
 
@@ -99,6 +99,55 @@ test('llmParams verifiably reach the provider call', async () => {
   await port.step(input());
   expect((seen as unknown as GenOpts).temperature).toBe(0.1);
   expect((seen as unknown as GenOpts).maxOutputTokens).toBe(64);
+});
+
+// What a local llama.cpp target declares in packages/models. The port never spells
+// the field itself — it forwards the declaration.
+const LOCAL_LLAMACPP: ProviderOptions = { llamacpp: { cache_prompt: true } };
+
+test('a local target asks for the prompt cache on EVERY call — opening, redrive, close', async () => {
+  const seen: GenOpts[] = [];
+  const port = new MastraModelPort(mock(o => { seen.push(o); }), {}, LOCAL_LLAMACPP);
+  await port.step(input());
+  await port.step(input({ messages: [
+    { role: 'user', text: 'is bk_9 confirmed?' },
+    { role: 'acts', acts: [ACT] }
+  ] }));
+  await port.step(input({ forceFinish: true }));
+  expect(seen).toHaveLength(3);
+  for (const opts of seen) {
+    expect(opts.providerOptions?.llamacpp).toEqual({ cache_prompt: true });
+  }
+});
+
+test('a cloud target carries no cache_prompt — the flag rides local llama.cpp alone', async () => {
+  let seen: GenOpts | null = null;
+  const port = new MastraModelPort(mock(o => { seen = o; }), {});
+  await port.step(input());
+  const opts = seen as unknown as GenOpts;
+  expect(JSON.stringify(opts.providerOptions ?? {})).not.toContain('cache_prompt');
+  expect(opts.providerOptions?.google).toEqual({ thinkingConfig: { thinkingBudget: 0 } });
+});
+
+test('a target\'s own namespace survives the engine\'s: both fields ride, neither erases', async () => {
+  let seen: GenOpts | null = null;
+  const port = new MastraModelPort(mock(o => { seen = o; }), {},
+    { google: { safetySettings: 'BLOCK_NONE' } });
+  await port.step(input());
+  expect((seen as unknown as GenOpts).providerOptions?.google).toEqual({
+    safetySettings: 'BLOCK_NONE',
+    thinkingConfig: { thinkingBudget: 0 }
+  });
+});
+
+test('the thinking-on preset spends thought and still carries the target\'s own options', async () => {
+  let seen: GenOpts | null = null;
+  const port = new MastraModelPort(mock(o => { seen = o; }), { preset: 'gemini:thinking-on' },
+    { google: { safetySettings: 'BLOCK_NONE' } });
+  await port.step(input());
+  const opts = seen as unknown as GenOpts;
+  expect(opts.providerOptions?.google).toEqual({ safetySettings: 'BLOCK_NONE' });
+  expect(JSON.stringify(opts.providerOptions ?? {})).not.toContain('cache_prompt');
 });
 
 test('a provider error rejects as TurnFailure with a single-line detail', async () => {

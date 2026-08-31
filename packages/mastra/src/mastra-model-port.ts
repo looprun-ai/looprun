@@ -7,11 +7,29 @@ import { generateText, jsonSchema, tool,
 import type { LanguageModel } from 'ai';
 import { resolveModelConfig } from '@mastra/core/llm';
 import type { MastraModelConfig } from '@mastra/core/llm';
-import type { Act, LlmParams, ModelStep, RawCall, StepInput } from '@looprun-ai/core';
+import type { Act, Json, LlmParams, ModelStep, ProviderOptions, RawCall,
+  StepInput } from '@looprun-ai/core';
 import { TurnFailure } from '@looprun-ai/core';
 
 const isRecord = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v);
+
+/** Two option sets over one provider keep the fields of both. The outer key names the
+ *  provider, so a whole-namespace overwrite would drop every field the target declared
+ *  under that name — a target's `{ google: { safetySettings } }` and the engine's own
+ *  `{ google: { thinkingConfig } }` are one namespace holding two fields, never two
+ *  namespaces. Where both sets spell the same field, the engine's word wins. */
+function mergeProviderOptions(declared: ProviderOptions,
+                              engine: ProviderOptions): ProviderOptions {
+  const merged: Record<string, Record<string, Json>> = {};
+  for (const [namespace, fields] of Object.entries(declared)) {
+    merged[namespace] = { ...fields };
+  }
+  for (const [namespace, fields] of Object.entries(engine)) {
+    merged[namespace] = { ...merged[namespace], ...fields };
+  }
+  return merged;
+}
 
 /** The identity of one step's model calls — the key the signature cache joins on. */
 function callsKey(calls: readonly { tool: string; args: unknown }[]): string {
@@ -79,11 +97,17 @@ function toMessages(messages: StepInput['messages'],
 export class MastraModelPort {
   private readonly resolved: Promise<LanguageModel>;
   private readonly params: LlmParams;
+  /** What the TARGET declared it asks of its provider, forwarded on every call this
+   *  port makes — the opening step, each redrive, the forced micro-steps and the
+   *  close step alike. The port reads none of it: a local llama.cpp target hands it
+   *  `cache_prompt`, a cloud target hands it nothing. */
+  private readonly providerOptions: ProviderOptions;
   /** The provider's own assistant messages, keyed by the calls they carried —
    *  replayed so reasoning signatures survive the engine's typed record. */
   private readonly replay = new Map<string, ModelMessage>();
 
-  constructor(model: MastraModelConfig, params: LlmParams) {
+  constructor(model: MastraModelConfig, params: LlmParams,
+              providerOptions: ProviderOptions = {}) {
     this.resolved = resolveModelConfig(model).then(m => {
       if ((m as { specificationVersion?: string }).specificationVersion === 'v1') {
         throw new TurnFailure('construction', 'legacy v1 language models are unsupported');
@@ -91,6 +115,7 @@ export class MastraModelPort {
       return m as unknown as LanguageModel;
     });
     this.params = params;
+    this.providerOptions = providerOptions;
   }
 
   async step(input: StepInput): Promise<ModelStep> {
@@ -109,14 +134,17 @@ export class MastraModelPort {
       // THINKING IS OFF BY DEFAULT. A governed turn is priced and measured on the
       // tokens the record carries; thought tokens are billed as output and serve
       // no guarantee, so the engine spends none unless the spec's llmParams says
-      // `preset: 'gemini:thinking-on'` — explicitly, per desk.
+      // `preset: 'gemini:thinking-on'` — explicitly, per desk. The target's own
+      // declared options ride beside that, on this call and every other one.
+      const providerOptions = mergeProviderOptions(this.providerOptions,
+        params.preset === 'gemini:thinking-on'
+          ? {} : { google: { thinkingConfig: { thinkingBudget: 0 } } }
+      ) as unknown as Record<string, Record<string, JSONValue>>;
       const r = await generateText({
         model, system: input.system, messages: toMessages(input.messages, this.replay),
         tools, toolChoice,
         temperature: params.temperature, topP: params.topP,
-        maxOutputTokens: params.maxOutputTokens,
-        ...(params.preset === 'gemini:thinking-on'
-          ? {} : { providerOptions: { google: { thinkingConfig: { thinkingBudget: 0 } } } })
+        maxOutputTokens: params.maxOutputTokens, providerOptions
       });
       const calls: RawCall[] = r.toolCalls.map(c => ({
         tool: c.toolName, args: isRecord(c.input) ? c.input : {}
