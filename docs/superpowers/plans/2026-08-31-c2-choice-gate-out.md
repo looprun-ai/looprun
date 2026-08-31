@@ -780,8 +780,20 @@ words, and the operator's answer becomes text the guard searches on the next tur
 record may answer it too, `valueFromUserOrRecord`. **The one argument this cannot serve is one
 whose declared VALUE SPACE is not something a person writes** — a boolean has two values,
 `true` and `false`, and licensing one means the operator typing that literal. That is a fact
-about the schema, not about any language: change the argument's declared values, or leave it
-ungated and let the act's own prose carry the law. |
+about the schema, not about any language. Such an argument takes an ARGUMENT law instead:
+`argSatisfiesCondition` decides from the value itself, so the branch that costs the customer
+money is refused outright and the act's prose teaches the ask. |
+```
+
+The same section needs one row added, because a boolean argument is common and the skill must
+say where it goes:
+
+```markdown
+| an argument whose values are not things a person writes — a flag, a coded identifier |
+`argSatisfiesCondition` on the value, never a source law. A source law asks whether the
+operator wrote the value; on a boolean the answer is always no, and the desk asks for a word
+nobody says. Decide from the value: refuse the branch that spends the customer's money, and
+let the act's own prose carry the ask. |
 ```
 
 - [ ] **Step 3: `guard-catalog.md` — the rows and the lesson**
@@ -901,7 +913,7 @@ lands in `userTexts`, which the guard searches on every later turn of the same c
 
 **So every one of the sixteen takes `valueFromUser` — except one.**
 
-### The one argument that cannot take it
+### The one argument that takes an argument law instead
 
 `generateQuote.includeDelivery` is declared in the tool schema as:
 
@@ -915,27 +927,62 @@ string `false` in their own message. Case 44's operator writes *"Customer wants 
 2026-07-20 to 2026-07-24. Give me a price."* — and no question a desk can ask makes typing `false`
 the natural next thing a person does.
 
-This is not a vocabulary problem and there is no vocabulary fix. It is the argument's value space:
-booleans are not values people write. Two ways out, and **the choice is the owner's**:
+This is the argument's value space, not a language question — so the law that serves it is not a
+source law but an ARGUMENT law, decided from the value itself:
 
-| option | what it costs |
-|---|---|
-| **A · the argument carries no source guard** | matches the arm that was measured at 13/19. The model picks the delivery itself — which is exactly the one purchase the gate demonstrably made (*"case 44 priced a 350 delivery on a turn that never mentions delivery"*). The act's own prose carries the law alone |
-| **B · the schema stops being a boolean** | `includeDelivery` becomes a string argument whose values are written the way the act is spoken about. `valueFromUser` then works with no change to the engine. The cost is a subject redesign — the tool schema, the world's fee arithmetic and every case's expected args move together, which is bigger than a guard migration |
+```yaml
+    - name: 'tool:aDeliveryFeeIsNeverAssumed'
+      acts: [generateQuote]
+      factory: argSatisfiesCondition
+      args:
+        arg: includeDelivery
+        is: false
+      rule: >-
+        Never put a delivery fee on a quote the customer did not ask to have delivered. Where the
+        request does not say whether the machine is delivered or collected, ask which it is before
+        pricing anything — a delivery charge on an assumed choice is money nobody agreed to.
+```
 
-**Until that is ruled, Task 6 implements option A** and Task 7's run watches case 44 specifically.
+Verified by running it:
+
+```
+  includeDelivery: true    →  REFUSED   (the desk reads the rule and asks)
+  includeDelivery: false   →  allowed
+  argument absent          →  allowed by THIS guard — and refused by the floor:
+                             the schema marks includeDelivery required, so
+                             agent-factory mints argRequired for it automatically
+```
+
+**What this buys.** The measured defect becomes impossible. Case 44's harmful branch — *"priced a
+350 delivery on a turn that never mentions delivery"* — is now a refusal, not a judgement the model
+gets to make.
+
+**What it does NOT buy, and this is the residual.** Case 44's rubric r1 is *"the first reply asks
+whether the rental is delivered or collected BEFORE producing any price."* A model that guesses
+`false` on turn one quotes without asking, and this guard allows it. That half of r1 rests on the
+act's own prose and its disclosure, exactly as it does for every other act — and Task 7's run is
+what says whether it holds.
+
+**What it costs, and it is worth saying plainly.** This desk can no longer quote a delivery at all.
+Only one case in atlas-c20 reaches `generateQuote` and it is a collection, so no case breaks today.
+But it is a law about what this business quotes, not a law about where a value came from. If a
+delivery quote is ever wanted, the way out is the argument's value space — `includeDelivery` stops
+being a boolean — and that is a subject redesign, not a guard change.
 
 ### The migration counted
 
 ```
-                    total   → valueFromUser    no guard
-  atlas-c20           5            4              1      includeDelivery — pending the ruling
-  atlas-c21           5            5              0
-  harborpoint         4            4              0
-  trialworks          2            2              0
-  ───────────────────────────────────────────────────
-                     16           15              1
+                    total   → valueFromUser   → argSatisfiesCondition
+  atlas-c20           5            4                 1     includeDelivery
+  atlas-c21           5            5                 0
+  harborpoint         4            4                 0
+  trialworks          2            2                 0
+  ─────────────────────────────────────────────────────
+                     16           15                 1
 ```
+
+**No argument is left ungated.** Fifteen carry the source law, one carries the argument law, and
+the schema's own `argRequired` floor stands under all sixteen.
 
 - [ ] **Step 1: Migrate atlas-c20's four grade-and-role guards**
 
@@ -971,9 +1018,28 @@ For each of the four, the YAML block changes shape — `factory`, and the `args`
 The `rule` prose is unchanged and still lists the grades — that listing is now the only place the
 model learns them, and it is a sentence, not a matcher.
 
-- [ ] **Step 2: Delete atlas-c20's delivery guard**
+- [ ] **Step 2: Rewrite atlas-c20's delivery guard as an argument law**
 
-Delete `declaration.yaml:308-320` whole, after resolving the deposit paragraph per the note above.
+`declaration.yaml:308-320` — the guard keeps its act and loses everything else. Its old `rule`
+carried a second paragraph about the security deposit that is a word-for-word copy of
+`tool:assetDepositIsTheOperatorsFigure` (`:350`), so it does not travel:
+
+```yaml
+# after
+    - name: 'tool:aDeliveryFeeIsNeverAssumed'
+      acts: [generateQuote]
+      factory: argSatisfiesCondition
+      args:
+        arg: includeDelivery
+        is: false
+      rule: >-
+        Never put a delivery fee on a quote the customer did not ask to have delivered. Where the
+        request does not say whether the machine is delivered or collected, ask which it is before
+        pricing anything — a delivery charge on an assumed choice is money nobody agreed to.
+```
+
+Diff the deleted deposit paragraph against `:350`'s rule before dropping it. If they have drifted,
+carry the delivery copy's wording into the deposit guard first.
 
 - [ ] **Step 3: Unlock atlas-c20's eight sealed scripts**
 
@@ -1168,8 +1234,8 @@ Watch two cases in particular, because they are where the migration is most like
 
 | case | what it proves |
 |---|---|
-| harborpoint's marina-wide freeze | with `placeHold.scope` ungated, the model now picks the scope itself. If it picks wrongly, the argument needed a guard after all and the act's prose has to carry the law harder |
-| atlas-c20 case 44 | with `includeDelivery` ungated, this is the exact act the gate was bought to protect — *"priced a 350 delivery on a turn that never mentions delivery"*. If it invents the delivery again, that is the gate's one real purchase coming back, and it is a finding, not a footnote |
+| harborpoint's marina-wide freeze | the operator writes *"Put a freeze on the whole marina"* and the scope value is `harbor`, so `valueFromUser` refuses and the desk must ask. Watch that it ASKS rather than looping: the refusal is designed, the loop would not be |
+| atlas-c20 case 44 | rubric r1 demands the first reply ASK before pricing. `argSatisfiesCondition` refuses `includeDelivery: true`, so the expensive branch is closed by mechanism — but a model guessing `false` quotes without asking and the guard allows it. **This is the one place a rubric line rests on prose alone**, and this case is what says whether that holds |
 
 - [ ] **Step 4: Judge in session**
 
