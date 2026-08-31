@@ -1883,12 +1883,14 @@ export function seamUnreached(subjectDir: string, cases: readonly ExamCase[],
  *  refuses never reaches the world. Three shapes that look like protection are not here.
  *
  *  An `onlyAfter` owes a read rather than deciding a call: a desk that runs the prerequisite walks
- *  straight through it. A `resultSatisfiesCondition` runs after the call returned — the record has already
+ *  straight through it, and `onlyAfterWhen` owes the same read wherever its condition holds. A
+ *  `resultSatisfiesCondition` runs after the call returned — the record has already
  *  moved, and the finding it raises is a correction on the reply. A reply-bound check —
  *  `mustAccountFor`, a judged query, a `blockPattern` on the reply — reads words the desk wrote
  *  once the act was over. */
 const DENYING_FACTORIES = ['precondition', 'valueFromUser', 'argMatchesFormat',
-  'argForbidden', 'maxCalls'];
+  'argForbidden', 'maxCalls', 'argSatisfiesCondition', 'valueFromUserOrRecord',
+  'argMatchesRecord'];
 
 /** The words that say why the mechanisms an act carries cannot refuse its call. */
 const NOTHING_DECIDES = 'none of those decides the call — an order is cleared by reading it, and '
