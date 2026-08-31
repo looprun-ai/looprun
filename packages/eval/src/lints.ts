@@ -1794,7 +1794,7 @@ function worldAnswerCode(world: DeclaredWorld, preset: string | undefined, act: 
   if (executor === undefined) return null;
   try {
     const records = new WorldBuilder().build(world, preset).snapshot();
-    const out = executor({ args, records, mintId: entity => `${entity}_probe` });
+    const out = executor({ args, records, mintId: entity => `${entity}_lint` });
     return 'refuse' in out ? refusalCode(out.refuse) : null;
   } catch {
     return null;
