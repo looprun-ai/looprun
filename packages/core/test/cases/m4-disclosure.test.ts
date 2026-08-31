@@ -4,10 +4,10 @@ import { caseRig } from '../fixtures/case-rig.js';
 
 // M4 — the three tenses end to end: the ENGINE performs the declared read before the
 // question (origin engine, audited), the before-tense fills its slots on the consent
-// question beside the simulated result, the after-tense rides the licensed act's
-// record line, and the later-tense stands in a following turn.
+// question, the after-tense rides the licensed act's record line, and the later-tense
+// stands in a following turn.
 
-test('M4 — before with slots + simulated result, after on execution, later standing', async () => {
+test('M4 — before with slots, after on execution, later standing', async () => {
   const model = payingDesk([
     callStep('cancelBooking', { id: 'bk_9' }),
     { calls: [], text: '' },
@@ -33,7 +33,6 @@ test('M4 — before with slots + simulated result, after on execution, later sta
   expect(r1.acts.map(a => [a.call.tool, a.origin])).toEqual(
     [['getBooking', 'engine'], ['cancelBooking', 'model']]);
   expect(r1.text).toContain('Cancelling room 12 on Tuesday is permanent.');
-  expect(r1.text).toContain('simulated result');
   expect(world.snapshot().bookings.bk_9).toBeDefined();
 
   const code = r1.questions.issued[0].code;

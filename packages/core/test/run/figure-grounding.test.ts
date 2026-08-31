@@ -36,6 +36,9 @@ test('a canonical form of a recorded figure does not fire', async () => {
 test('a report the settled record contradicts is corrected, never delivered', async () => {
   const model = payingDesk([
     callStep('cancelBooking', { id: 'bk_66' }),
+    { calls: [], text: '' },
+    { calls: [], text: '' },
+    { calls: [], text: '' },
     finishStep('The cancellation went through.',
       [{ tool: 'cancelBooking', target: 'bk_66', word: 'done' }]),
     finishStep('The cancellation could not run — the booking is under maintenance.',
@@ -45,7 +48,8 @@ test('a report the settled record contradicts is corrected, never delivered', as
   ]);
   const { engine } = caseRig({ model });
 
-  const r = await engine.chat('s1', 'cancel bk_66');
+  const r1 = await engine.chat('s1', 'cancel bk_66');
+  const r = await engine.chat('s1', r1.questions.issued[0].code);
   expect(r.corrections.some(c => c.kind === 'redrive'
     && c.guardName === 'reportContradictsRecord')).toBe(true);
   expect(r.text).not.toContain('went through');

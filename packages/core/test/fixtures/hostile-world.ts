@@ -20,8 +20,7 @@ export const HOSTILE = world({
   },
   destructive: {
     cancelBooking: { form: 'remove', entity: 'bookings', label: 'Cancel the booking',
-      gates: [{ kind: 'stateIs', field: 'status', value: 'CONFIRMED' }],
-      simulation: true }
+      gates: [{ kind: 'stateIs', field: 'status', value: 'CONFIRMED' }] }
   },
   writes: {
     compRoom: { form: 'run', entity: 'bookings', label: 'Comp a room upgrade' }

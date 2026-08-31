@@ -46,8 +46,6 @@ export class Session {
   readonly consent: ConsentDesk;
   /** The choice question lifecycle: one standing question per coded argument. */
   readonly choices = new ChoiceDesk();
-  /** Tools whose simulation mutated state — they fall back to plain consent here. */
-  readonly revokedSimulations = new Set<string>();
   private turnIndex = 1;
   private tail: Promise<unknown> = Promise.resolve();
 

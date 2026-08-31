@@ -26,7 +26,7 @@ test('M2 — NO plus the code has no effect: the question stands, the notice is 
   expect(r2.text).toContain('To confirm, reply with only the code — nothing else.');
   expect(r2.text).toContain(code);
   expect(world.snapshot().bookings.bk_9).toBeDefined();
-  expect(world.audit().every(row => row.call.args.simulate === true)).toBe(true);
+  expect(world.audit().some(row => row.call.tool === 'cancelBooking')).toBe(false);
 });
 
 test('M2 — an ignored question expires by the sweep, delivered; a stale code consumes nothing', async () => {
@@ -51,6 +51,6 @@ test('M2 — an ignored question expires by the sweep, delivered; a stale code c
   const r3 = await engine.chat('s1', `approve ${code}`);
   expect(r3.questions.consumed).toHaveLength(0);
   expect(r3.acts).toHaveLength(0);
-  expect(world.audit().every(row => row.call.args.simulate === true)).toBe(true);
+  expect(world.audit().some(row => row.call.tool === 'cancelBooking')).toBe(false);
   expect(world.snapshot().bookings.bk_9).toBeDefined();
 });

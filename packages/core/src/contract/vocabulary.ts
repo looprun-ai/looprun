@@ -28,7 +28,6 @@ export type Patch =
   | { readonly entity: string; readonly id: string; readonly remove: true };
 
 /** The call as the executor receives it: the tool name and the coerced REAL args — nothing else.
- *  A simulation downgrade exists only as the tool's OWN declared parameter set inside args.
  *  No other field exists: no options, no flags, no attestation override. */
 export interface ReadyCall { readonly tool: string; readonly args: Readonly<Record<string, Json>> }
 
@@ -41,8 +40,8 @@ export interface CanonicalCallData { readonly tool: string;
 export type Verdict =
   | { readonly kind: 'allow' }
   | { readonly kind: 'refuse'; readonly guardName: string; readonly detail: string }
-  | { readonly kind: 'hold'; readonly guardName: string;    // consent: hold-and-ask; a declared
-      readonly sentence: string }                           //   simulation rides the hold route
+  | { readonly kind: 'hold'; readonly guardName: string;    // consent: hold-and-ask
+      readonly sentence: string }
   | { readonly kind: 'restate'; readonly actId: string }      // duplicate call: the first result restated
   | { readonly kind: 'owe'; readonly guardName: string;       // rule-owed reads the ENGINE performs,
       readonly rule: string;                                  //   refused in the owing guard's own
@@ -56,7 +55,6 @@ export type Correction =
   | { readonly kind: 'postToolFinding'; readonly guardName: string; readonly detail: string }
   | { readonly kind: 'earlyFinish' } | { readonly kind: 'staleFinish' } | { readonly kind: 'forcedFinish' }
   | { readonly kind: 'recordCorrected'; readonly actId: string; readonly said: Done }   // snapshot diff overruled the executor
-  | { readonly kind: 'simulationRevoked'; readonly tool: string }
   | { readonly kind: 'judgeUnreadable'; readonly guardName: string }
   | { readonly kind: 'proseReader';                                // the delivered words failed the
       readonly check: 'wallEcho' | 'language';                     // reader at the seal
@@ -83,7 +81,7 @@ export interface Act {
                    readonly text: string } | null;
                                               // the words the operator is owed for this
                                               // act; null on reads and teaching frames
-  readonly result: Json;                      // masked; on a held call with simulation: the simulated result
+  readonly result: Json;                      // masked
   readonly questionId: string | null;         // the consent question this act raised or served
   readonly guard: string | null;              // the guard whose verdict shaped this act; null = none
 }
@@ -254,7 +252,7 @@ export interface GuardCensus { readonly guards: readonly InstalledGuard[];      
                                               //   the resolved limits
 export type EngineSentenceKey = 'approvalInstruction' | 'exhaustionClosure' | 'unknownStatus'
                               | 'questionExpired' | 'questionSuperseded' | 'questionDeclined'
-                              | 'deniedByGuard' | 'simulatedResult';
+                              | 'deniedByGuard';
 /** The fully-resolved wording table: every engine sentence and every user-facing
  *  status word present, defaults filled — the table never carries a hole. */
 export interface ResolvedWording {
@@ -296,7 +294,6 @@ export interface ToolFact { readonly name: string; readonly label: string | null
                             readonly target: string | null;   // the arg naming the record id
                             readonly entity: string | null;   // the records table the tool acts on
                             readonly schema: Json;
-                            readonly simulation: { readonly arg: string; readonly value: Json } | null;
                             readonly destructiveWhen: ConsentWhen | null;   // the destructive branch; null = every call
                             readonly proxy: string | { readonly compose: readonly string[] } | null }
 /** The whole declared surface as facts, keyed by tool name. */
@@ -335,8 +332,7 @@ export interface WorldToolEntry { readonly form: ActionForm; readonly entity: st
                                   readonly schema?: Json;
                                   /** The target arg; omitted = the form's own. */
                                   readonly target?: string;
-                                  readonly when?: ConsentWhen;
-                                  readonly simulation?: true }
+                                  readonly when?: ConsentWhen }
 /** The declarative world: records + the three effect blocks + presets. Closed data —
  *  no functions, no regexes, no clock inside the card; custom executors pass OUTSIDE. */
 export interface WorldCard { readonly records: StateSnapshot;
@@ -410,7 +406,6 @@ export interface ExamCase { readonly id: string;
 export interface RemoteToolEntry { readonly label: string; readonly target?: string;
                                    readonly proxy?: string | { readonly compose: readonly string[] };
                                    readonly when?: ConsentWhen;
-                                   readonly simulation?: true;
                                    readonly does?: string; readonly schema?: Json }
 /** The MCP sibling: the same effect blocks over remote entries — no records, no gates. */
 export interface McpWorldCard { readonly reads?: Readonly<Record<string, RemoteToolEntry>>;

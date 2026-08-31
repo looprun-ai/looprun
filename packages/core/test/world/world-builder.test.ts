@@ -22,14 +22,6 @@ test('a gated CONFIRMED record removes for real; done answered from the world wr
   expect(w.audit().at(-1)).toMatchObject({ done: 'yes', executor: 'declared' });
 });
 
-test('simulate runs the shared path and commits nothing', async () => {
-  const w = build();
-  const a = await w.call({ tool: 'cancelBooking', args: { id: 'bk_9', simulate: true } });
-  expect(a.done).toBe('yes');
-  expect(w.snapshot().bookings.bk_9).toBeDefined();
-  expect(w.audit().at(-1)?.call.args.simulate).toBe(true);
-});
-
 test('an unknown tool and a missing record are honest refusals, never throws', async () => {
   const w = build();
   expect((await w.call({ tool: 'ghost', args: {} })).done).toBe('no');

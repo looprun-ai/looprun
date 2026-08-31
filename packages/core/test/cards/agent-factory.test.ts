@@ -87,7 +87,7 @@ test('the contract wording override resolves once at compile', () => {
   const c = f.governed({ name: 'a', persona: 'p' },
     { name: 'd', wording: { status: { held: 'awaiting your say-so' } } }, FACTS);
   expect(c.wording.status.held).toBe('awaiting your say-so');
-  expect(c.wording.sentence.simulatedResult).toContain('simulated result');
+  expect(c.wording.sentence.approvalInstruction).toContain('code');
 });
 
 test('rewrites ride the compiled agent in declared order', () => {

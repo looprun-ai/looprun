@@ -2,12 +2,12 @@
  *  the SAME method: coerce against the declared schema, canonical identity, Rulebook
  *  verdict, route by verdict kind, StatusClerk grading, masking on record — the
  *  stored form is the only stored form. */
-import type { Act, CallCtx, CanonicalCallData, Json, OwedRead, RawCall, StateSnapshot,
-              ToolAnswer } from '../contract/vocabulary.js';
+import type { Act, CallCtx, CanonicalCallData, Json, OwedRead, RawCall,
+              StateSnapshot } from '../contract/vocabulary.js';
 import { TurnFailure } from '../contract/vocabulary.js';
 import type { ToolFact } from '../contract/vocabulary.js';
 import type { ToolPort, RecordsPort } from '../contract/ports.js';
-import { CanonicalCall, canonicalJson, isJson } from '../contract/canonical-call.js';
+import { CanonicalCall, isJson } from '../contract/canonical-call.js';
 import { deepFreeze } from '../contract/freeze.js';
 import type { CompiledAgent } from '../cards/cards.js';
 import type { Rulebook } from './rulebook.js';
@@ -49,12 +49,10 @@ export interface CallRunnerDeps {
   readonly consent: ConsentDesk;
   /** The per-session choice desk; the ask route opens its questions and mints their codes. */
   readonly choices: ChoiceDesk;
-  /** The record-seam masker: stored calls, results and the simulated line. */
+  /** The record-seam masker: stored calls and results. */
   readonly masker: Masker;
   /** The compiled disclosure recipes; the hold route reads and renders through it. */
   readonly disclosure: DisclosureDesk;
-  /** Tools whose simulation mutated state this session — plain consent for them. */
-  readonly revoked: Set<string>;
   /** ONE forced micro-step on the session's own seat: the model fills the owed
    *  read's args over a single-tool surface. null = the model produced no usable
    *  call. The Turn supplies it — model I/O stays the sequencer's job. */
@@ -185,21 +183,8 @@ export class CallRunner {
             owed: { kind: 'refusal', text: emptySentence }, result: null
           }, undefined, null, 'empty');
         }
-        // The rehearsal outranks the ask: the held call runs against a throwaway
-        // copy of the world first, and a refusal there IS the answer — the desk
-        // never asks about an act the world would refuse.
-        const rehearsed = await this.rehearse(call, fact, draft);
-        if (rehearsed.refusal !== null) {
-          return this.record(draft, {
-            origin, call: call.data(v => this.deps.masker.maskData(v)), effect: fact.effect,
-            said: null, status: 'not-done', reason: 'blocked', evidence: 'engine',
-            sentence: `${this.head(call, fact)} — not-done (${rehearsed.refusal})`,
-            owed: { kind: 'refusal', text: rehearsed.refusal }, result: null
-          }, undefined, null, 'rehearsal');
-        }
         const tenses = this.deps.disclosure.tenses(call.tool, ctx.call, reads);
-        let sentence = tenses.before ?? verdict.sentence;
-        sentence += rehearsed.line;
+        const sentence = tenses.before ?? verdict.sentence;
         const question = this.deps.consent.hold(call, targetValue, sentence, draft,
           { after: tenses.after, later: tenses.later });
         const grade = clerk.grade({ verdict, actId: '' }, fact.effect, state, state, draft);
@@ -248,46 +233,6 @@ export class CallRunner {
     }
   }
 
-  /** The rehearsal on hold. A world with a rehearse seam answers directly — pure
-   *  executors over a throwaway copy, invisible to the model. A tool that instead
-   *  declares its OWN simulate parameter is called with it, snapshots around it;
-   *  a mutating simulation revokes itself for the session and the question falls
-   *  back to the plain sentence. Either way a refusal cancels the ask, and a tool
-   *  that declares simulation carries its successful result on the question. */
-  private async rehearse(call: CanonicalCall, fact: ToolFact, draft: TurnDraft):
-    Promise<{ refusal: string | null; line: string }> {
-    const answer = await this.rehearsalAnswer(call, fact, draft);
-    if (answer === null) return { refusal: null, line: '' };
-    if (answer.done === 'no') return { refusal: refusedSentence(answer.result), line: '' };
-    if (fact.simulation === null) return { refusal: null, line: '' };
-    return { refusal: null, line: `\n${this.deps.compiled.wording.sentence.simulatedResult} ${
-      JSON.stringify(this.deps.masker.maskData(answer.result))}` };
-  }
-
-  private async rehearsalAnswer(call: CanonicalCall, fact: ToolFact,
-                                draft: TurnDraft): Promise<ToolAnswer | null> {
-    const { recordsPort, toolPort } = this.deps;
-    if (toolPort.rehearse !== undefined) {
-      return toolPort.rehearse({ tool: call.tool, args: call.args });
-    }
-    if (fact.simulation === null || this.deps.revoked.has(call.tool)) return null;
-    const before = recordsPort?.snapshot() ?? null;
-    let answer: ToolAnswer | null = null;
-    try {
-      answer = await toolPort.call({ tool: call.tool,
-        args: { ...call.args, [fact.simulation.arg]: fact.simulation.value } });
-    } catch {
-      answer = null;
-    }
-    const after = recordsPort?.snapshot() ?? null;
-    if (before !== null && after !== null && canonicalJson(before) !== canonicalJson(after)) {
-      draft.corrections.push({ kind: 'simulationRevoked', tool: call.tool });
-      this.deps.revoked.add(call.tool);
-      return null;
-    }
-    return answer;
-  }
-
   private async execute(call: CanonicalCall, fact: ToolFact, origin: Act['origin'],
                         before: StateSnapshot | null, draft: TurnDraft): Promise<Act> {
     const { clerk, recordsPort, toolPort, rulebook } = this.deps;
@@ -320,8 +265,14 @@ export class CallRunner {
       sentence: afterTense === null
         ? `${this.head(call, fact)} — ${grade.status}`
         : `${this.head(call, fact)} — ${grade.status}. ${afterTense}`,
-      owed: grade.status === 'done' && fact.effect !== 'read' && afterTense !== null
-        ? { kind: 'receipt', text: afterTense } : null,
+      // The operator is owed the words either way: the after-tense receipt on a
+      // done write, and on a refusal the world's OWN sentence — the act ran, and
+      // what the surface answered is the only account of why it did not land.
+      owed: grade.status === 'done'
+        ? (fact.effect !== 'read' && afterTense !== null
+            ? { kind: 'receipt', text: afterTense } : null)
+        : grade.said === 'no'
+          ? { kind: 'refusal', text: refusedSentence(result) } : null,
       result: this.deps.masker.maskData(result)
     }, id);
     // The act ran on the operator's answer, so the question that licensed it is spent: the

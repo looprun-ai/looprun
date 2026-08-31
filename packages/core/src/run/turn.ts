@@ -278,7 +278,7 @@ export class Turn {
       toolPort: this.deps.toolPort, recordsPort: this.deps.recordsPort,
       consent: desk, choices: session.choices, masker,
       disclosure: new DisclosureDesk(compiled.disclosureBindings),
-      revoked: session.revokedSimulations, microStep });
+      microStep });
 
     // The operator's message is read against every OPEN choice question before any call
     // runs: the answer names an option on the question that asked for it, and nothing else

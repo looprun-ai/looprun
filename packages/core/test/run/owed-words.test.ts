@@ -23,15 +23,22 @@ test('a read owes nothing, and a held act owes nothing — the ask lives on the 
   expect(r1.questions.issued).toHaveLength(1);
 });
 
-test('a world-refused hold owes the refusal in words, frame-free', async () => {
+test('a world-refused licensed act owes the refusal in words, frame-free', async () => {
   const model = payingDesk([
     callStep('cancelBooking', { id: 'bk_66' }),
+    { calls: [], text: '' },
+    { calls: [], text: '' },
+    { calls: [], text: '' },
     finishStep('That booking is under maintenance and cannot be cancelled.',
       [{ tool: 'cancelBooking', target: 'bk_66', word: 'refused' }]),
+    { calls: [], text: '' },
+    { calls: [], text: '' },
+    { calls: [], text: '' }
   ]);
   const { engine } = caseRig({ model });
   const r1 = await engine.chat('s1', 'cancel bk_66');
-  const act = r1.acts.find(a => a.call.tool === 'cancelBooking');
+  const r2 = await engine.chat('s1', r1.questions.issued[0].code);
+  const act = r2.acts.find(a => a.call.tool === 'cancelBooking');
   expect(act?.status).toBe('not-done');
   expect(act?.owed?.kind).toBe('refusal');
   expect(act?.owed?.text.length).toBeGreaterThan(0);

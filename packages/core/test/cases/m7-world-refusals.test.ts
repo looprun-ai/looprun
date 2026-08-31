@@ -3,26 +3,9 @@ import { callStep, finishStep, payingDesk } from '../fixtures/scripted-model.js'
 import { precondition } from '../../src/cards/catalog.js';
 import { caseRig } from '../fixtures/case-rig.js';
 
-// M7 — three refusal sources, each with its own evidence: the WORLD's gate caught
-// at the rehearsal (the ask is never born for an act the world refuses), a contract
-// precondition over the target record (engine veto), and the custom executor's
-// audited patches.
-
-test('M7 — the world refuses a MAINTENANCE cancel at the rehearsal; the ask is never born', async () => {
-  const model = payingDesk([
-    callStep('cancelBooking', { id: 'bk_66' }),
-    finishStep('The hotel refused it.', [{ tool: 'cancelBooking', target: 'bk_66', word: 'refused' }]),
-    { calls: [], text: '' },
-    { calls: [], text: '' }
-  ]);
-  const { engine, world } = caseRig({ model });
-
-  const r = await engine.chat('s1', 'cancel the maintenance room booking bk_66');
-  expect(r.acts[0]).toMatchObject({ call: { tool: 'cancelBooking' },
-    status: 'not-done', reason: 'blocked', evidence: 'engine' });
-  expect(r.questions.issued).toHaveLength(0);
-  expect(world.snapshot().bookings.bk_66).toBeDefined();
-});
+// M7 — two refusal sources, each with its own evidence: a contract precondition
+// over the target record (engine veto, before consent asks), and the custom
+// executor's audited patches.
 
 test('M7 — a contract precondition vetoes before consent even asks', async () => {
   const model = payingDesk([

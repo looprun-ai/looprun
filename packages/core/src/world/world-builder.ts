@@ -1,8 +1,8 @@
 /** Interprets a WorldCard into a per-session BuiltWorld. Reception coerces declared
  *  args (a non-coercible value is a refusal, never a stringified object), gates run
- *  on EVERY tool kind against the declared target record, simulate ≡ act by shared
- *  code path against a throwaway store, refusals are honest results, every call that
- *  reaches an entry is an audit row, and done is answered from the world's own write.
+ *  on EVERY tool kind against the declared target record, refusals are honest results,
+ *  every call that reaches an entry is an audit row, and done is answered from the
+ *  world's own write.
  *  A preset never half-applies. The world's verdicts are engine-independent. */
 import type { DeclaredWorld, Json, ReadyCall, StateSnapshot, ToolAnswer, AuditRow,
               WorldToolEntry, Effect } from '../contract/vocabulary.js';
@@ -69,25 +69,10 @@ export class BuiltWorld {
     if (typeof coerced === 'string') return Promise.resolve(refusal(coerced));
     const ready: ReadyCall = { tool: call.tool, args: coerced };
 
-    const simulated = entry.simulation === true && coerced.simulate === true;
-    const target = simulated ? new Store(this.store.snapshot()) : this.store;
-    const answer = this.perform(entry, call.tool, ready, target);
+    const answer = this.perform(entry, call.tool, ready, this.store);
     this.trail.push({ call: ready, done: answer.done,
                       executor: entry.form === 'run' ? 'custom' : 'declared' });
     return Promise.resolve(answer);
-  }
-
-  /** The rehearsal: the shared act path against a throwaway copy of the store.
-   *  Pure executors make it always safe; no audit row — the engine records the
-   *  outcome as its own act. */
-  rehearse(call: ReadyCall): Promise<ToolAnswer> {
-    const found = findEntry(this.declared, call.tool);
-    if (found === null) return Promise.resolve(refusal(`No such tool: ${call.tool}.`));
-    const coerced = this.coerce(found.entry, call.args);
-    if (typeof coerced === 'string') return Promise.resolve(refusal(coerced));
-    const ready: ReadyCall = { tool: call.tool, args: coerced };
-    return Promise.resolve(this.perform(found.entry, call.tool, ready,
-      new Store(this.store.snapshot())));
   }
 
   snapshot(): StateSnapshot {
@@ -111,16 +96,10 @@ export class BuiltWorld {
       if (typeof id === 'object' && id !== null) return `The '${targetArg}' argument is not a plain value.`;
       out[targetArg] = typeof id === 'string' ? id : String(id);
     }
-    if ('simulate' in args) {
-      const s = args.simulate;
-      if (s === true || s === 'true') out.simulate = true;
-      else if (s === false || s === 'false') out.simulate = false;
-      else return `The 'simulate' argument is not a boolean.`;
-    }
     return out;
   }
 
-  /** The one shared act path — a simulated run walks it against a throwaway store. */
+  /** The one act path: the gates, then the form's own effect on the store. */
   private perform(entry: WorldToolEntry, tool: string, ready: ReadyCall, store: Store): ToolAnswer {
     const targetArg = entry.target ?? (entry.schema === undefined ? 'id' : null);
     const raw = targetArg === null ? undefined : ready.args[targetArg];

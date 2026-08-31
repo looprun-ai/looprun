@@ -46,21 +46,6 @@ test('precondition binds the tool OWN entity — two entities share the id x_1, 
   expect(r.acts[0]).toMatchObject({ status: 'not-done', reason: 'held' });
 });
 
-test('the simulated-result wording is a contract override away', async () => {
-  const model = new ScriptedModel([
-    callStep('cancelBooking', { id: 'bk_9' }),
-    { calls: [], text: '' },
-    { calls: [], text: '' },
-    finishStep('Approval needed.', [{ tool: 'cancelBooking', target: 'bk_9', word: 'held' }])
-  ]);
-  const { engine } = caseRig({ model, contract: {
-    wording: { sentence: { simulatedResult: 'A dry look at the outcome:' } } } });
-
-  const r = await engine.chat('s1', 'cancel bk_9');
-  expect(r.text).toContain('A dry look at the outcome:');
-  expect(r.text).not.toContain('simulated result');
-});
-
 test('a contract rewrite fires on the delivered reply even with no secret declared', async () => {
   const model = new ScriptedModel([
     callStep('getBooking', { id: 'bk_66' }),

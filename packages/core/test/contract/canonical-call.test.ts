@@ -5,7 +5,7 @@ import type { Json } from '../../src/contract/vocabulary.js';
 
 function fact(name: string, schema: Json): ToolFact {
   return { name, label: null, does: 'a test tool', effect: 'read', target: null, entity: null,
-           schema, simulation: null, destructiveWhen: null, proxy: null };
+           schema, destructiveWhen: null, proxy: null };
 }
 
 const getBooking = fact('getBooking', {

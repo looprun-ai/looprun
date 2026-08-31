@@ -25,7 +25,6 @@ function formSchema(entry: WorldToolEntry): Json {
     properties.fields = { type: 'object' };
     required.push('fields');
   }
-  if (entry.simulation === true) properties.simulate = { type: 'boolean' };
   return { type: 'object', properties, required };
 }
 
@@ -40,7 +39,6 @@ function declaredFact(name: string, entry: WorldToolEntry, effect: Effect): Tool
     target: entry.target ?? (targeted && entry.schema === undefined ? 'id' : null),
     entity: entry.entity,
     schema: entry.schema ?? formSchema(entry),
-    simulation: entry.simulation === true ? { arg: 'simulate', value: true } : null,
     destructiveWhen: entry.when ?? null,
     proxy: null
   };
@@ -55,7 +53,6 @@ function remoteFact(name: string, entry: RemoteToolEntry, effect: Effect): ToolF
     target: entry.target ?? null,
     entity: null,
     schema: entry.schema ?? EMPTY_SCHEMA,
-    simulation: entry.simulation === true ? { arg: 'simulate', value: true } : null,
     destructiveWhen: entry.when ?? null,
     proxy: entry.proxy ?? null
   };
