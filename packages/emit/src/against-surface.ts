@@ -408,6 +408,30 @@ function checkDisclosureNeedsInLane(declaration: Declaration, facts: SurfaceFact
   return refusals;
 }
 
+/** A `needs` guard owes a read, and the ENGINE runs that read from the seat holding the act. A desk
+ *  that holds the act without the read cannot run it, so the guard denies the act on every call of
+ *  it, for the whole conversation, and the operator meets a refusal naming a read nobody at that
+ *  desk can make. */
+function checkGuardNeedsInLane(declaration: Declaration, facts: SurfaceFacts): readonly string[] {
+  const refusals: string[] = [];
+  declaration.contract.guards.forEach((guard, guardIndex) => {
+    if (guard.factory !== 'needs') return;
+    const read = guard.args?.read;
+    if (typeof read !== 'string' || facts.tools[read] === undefined) return;
+    for (const act of guard.acts) {
+      if (facts.tools[act] === undefined) continue;
+      for (const desk of declaration.desks) {
+        if (!desk.tools.includes(act) || desk.tools.includes(read)) continue;
+        refusals.push(`contract.guards[${guardIndex}].args.read names '${read}', and the `
+          + `'${desk.name}' desk holds '${act}' without it — the desk cannot run the owed read, `
+          + `so the guard refuses '${act}' on every call it makes. Put '${read}' in the `
+          + `${desk.name} lane, or scope the guard to the acts the lanes carrying '${read}' hold.`);
+      }
+    }
+  });
+  return refusals;
+}
+
 /** Every `after` states something the call itself came back with. The after-tense is the sentence
  *  the operator reads once the act has run, and it is filled from the held call's own args, the
  *  owed reads and the executed result — the first two were in hand before the call, so an `after`
@@ -563,6 +587,7 @@ export function checkAgainstSurface(declaration: Declaration, facts: SurfaceFact
     ...checkDisclosureNeedsToolExists(declaration, facts),
     ...checkDisclosureNeedsResolvable(declaration, facts),
     ...checkDisclosureNeedsInLane(declaration, facts),
+    ...checkGuardNeedsInLane(declaration, facts),
     ...checkAfterSpeaksResult(declaration),
     ...checkEmptyFillable(declaration),
     ...checkSeamRows(declaration, facts, seam),

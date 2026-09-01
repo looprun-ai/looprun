@@ -58,7 +58,7 @@ describe('checkAgainstSurface', () => {
     expect(checkAgainstSurface(decl({ disclosure: { ...AFTERS, issueRefund: {
       ...AFTERS.issueRefund, needs: { freezes: { tool: 'listHolds', args: {} } },
       before: 'Say what stands frozen before refunding.' } },
-      desks: [{ name: 'a', persona: 'p', tools: ['issueRefund', 'listHolds'],
+      desks: [{ name: 'a', persona: 'p', tools: ['issueRefund', 'listHolds', 'getInvoice'],
                 conduct: { declareHonestly: 'x' } }] }), READS, SEAM)).toEqual([]);
   });
 
@@ -81,10 +81,14 @@ describe('checkAgainstSurface', () => {
         description: 'refunds', summary: 'the desk', },
       { name: 'records', persona: 'p', tools: ['issueRefund', 'getInvoice'],
         conduct: SIX_VOICES, description: 'invoice lookups', summary: 'the desk', }] }), FACTS, SEAM);
-    expect(refusals).toEqual([expect.stringContaining(
-      "contract.disclosure.issueRefund.needs.invoice names 'getInvoice'")]);
-    expect(refusals[0]).toContain("the 'billing' desk holds 'issueRefund'");
-    expect(refusals[0]).toContain('the empty tense would fire with a false reason');
+    const disclosureRefusal = refusals.find(r => r.startsWith('contract.disclosure.'));
+    expect(disclosureRefusal).toContain(
+      "contract.disclosure.issueRefund.needs.invoice names 'getInvoice'");
+    expect(disclosureRefusal).toContain("the 'billing' desk holds 'issueRefund'");
+    expect(disclosureRefusal).toContain('the empty tense would fire with a false reason');
+    // The guard that owes the same read answers for the same lane, in its own words.
+    expect(refusals.find(r => r.startsWith('contract.guards')))
+      .toContain("the 'billing' desk holds 'issueRefund' without it");
   });
 
   test('a needs read every desk holding the act also holds is no refusal', () => {
