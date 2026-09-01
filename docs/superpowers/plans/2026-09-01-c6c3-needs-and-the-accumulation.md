@@ -225,6 +225,7 @@ takes (read `agent-factory.ts` first); the assertion stands.
 ### Task 10: The skill (same session as the engine tasks)
 
 - [ ] **`agentspec/skill/references/`: guard-catalog.md (the needs section: read · renames · pick · when; the authored-condition law; the read-it-first refusal), author.md, evals.md, norms.md, resume.md, spec-template.ts — every old-factory naming moves.**
+- [ ] **The probe teaching lands where conditions are taught: a condition over an answer is born from a REAL sample — probe the read with the case's own args (and every variant the condition's branches touch: found, not-found, empty list, refusal shape), store the sample beside the declaration, write the condition against it, pin it with a deterministic probe test. A declared output schema is a hint, never verification. Every edge — `undefined`, `null`, empty, not-found, refusal — is handled IN the condition and refuses in words, never throws, never silently allows.**
 - [ ] **`references/check-subject.test.ts` parity lists learn `needs`; `pnpm gate` in agentspec green; commit** `docs(skill): the owed read is one declaration`
 
 ### Task 11: The escada — 12 then 40, judged, each shown

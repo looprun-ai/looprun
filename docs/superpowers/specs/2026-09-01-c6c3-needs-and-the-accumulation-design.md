@@ -192,9 +192,26 @@ Six reference files name the old factories (`guard-catalog.md` ×9, `author.md`,
 `norms.md`, `resume.md`, `spec-template.ts`) and `references/check-subject.test.ts` carries
 the parity lists. All move to `needs` in the same session: the catalog section teaches the one
 declaration (read · renames · pick · when), the conditional-read teaching states the
-after-the-answer semantics of `when`, and the authored-condition law is stated where
+accumulation semantics of `when`, and the authored-condition law is stated where
 preconditions are taught: *your condition reads your own surface's answers; the engine walks
 only declared paths*.
+
+**The probe path — how an authored condition is born (ruled: case-by-case, never a census).**
+A condition over an answer is written only against a REAL sample: at authoring time the skill
+CALLS the read with the case's own arguments, stores the answer beside the declaration, writes
+the condition against that sample, and pins it with a deterministic probe test — no model run
+spent. A surface-declared output schema is harvested as a hint, never as verification — the
+sample is the truth and the regression pin: a vendor shape change breaks the probe loudly,
+before any case runs. The variants a condition's own branches touch demand their own samples —
+found and not-found, the empty list, the refusal shape — so what to capture is decided by the
+condition, not by an inventory.
+
+**IMPORTANT — failures and edge cases are part of the condition.** An authored condition
+handles the whole family an answer can be: `undefined` where the path finds nothing, `null`,
+the empty list, the not-found answer, the refusal envelope. An edge the condition does not
+recognize REFUSES IN WORDS (the condition returns the sentence — *the read did not carry what
+this condition needs*), never throws and never silently allows; each handled edge has its own
+probe sample.
 
 ## Acceptance
 
@@ -208,7 +225,10 @@ only declared paths*.
 ## Fresh design decisions this spec carries (for the owner's review)
 
 1. **Authored conditions read their own surface** — the no-shape law binds the ENGINE, not
-   the subject author's code.
+   the subject author's code. RULED: the shape is learned case-by-case by PROBING at
+   authoring time (no schema-census step); the sample lives beside the declaration and the
+   condition handles every edge — undefined, null, empty, not-found, refusal — refusing in
+   words, never throwing.
 2. **`when` verifies from the read's own answer, after it** — with no answer the read is owed
    unconditionally, because nothing is knowable before a call.
 3. **`facts.note` and `facts.tail` die with the snapshot** — the world loses its sentence
