@@ -231,8 +231,186 @@ takes (read `agent-factory.ts` first); the assertion stands.
 ### Task 11: The escada — 12 then 40, judged, each shown
 
 - [ ] **Step 1: Directed 12 on atlas-c20** (state-guard + needs-chain cases + case 18 + the four: 39, 47, 51, 55) into `subjects/atlas-c20/test/<date>-c6c3-directed12`; judge in session; SHOW the owner.
-- [ ] **Step 2: On the owner's word, the 40 stratified rung; judge; SHOW.** Bar: no regression outside the *licensed-from-an-unread-row* class; the NOTE-channel cases priced explicitly.
+- [ ] **Step 2: On the owner's word, the 40 stratified rung; judge; SHOW.** Bar: no regression outside the *licensed-from-an-unread-row* class; the NOTE-channel cases priced explicitly. Tasks 12–14 come first: the 40 measures a build whose declared path carries every repair.
 
-### Task 12: The FULL RULER — the program's certification (only after the owner sees the 40)
+### Task 12: The declared path carries what the hand carries
+
+The role gate the emitter writes is behind the one the hand wrote beside it: it reads the newest
+`getMember` instead of the acting one, and it refuses without naming a member who holds the
+capability. An author who runs the skill today receives both defects.
+
+**Files:**
+- Modify: `packages/emit/src/write-cards.ts` — `LAWFUL_ARGS.role`, `roleLines`, the emitted helper block
+- Modify: `packages/emit/test/write-cards.test.ts`, `packages/emit/test/argument-law-surface.test.ts`
+- Modify: `agentspec-bench/subjects/atlas-c20/declaration.yaml` — the nine role rows, and the
+  `tool:terminalExitReadsTheAsset` row's missing rename
+
+**Interfaces:**
+- Produces: the `role` factory's declared arguments become
+  `{ read, at, in, roster: { read, at, role, label, key } }` — the acting read and its path, the
+  values that carry the capability, and the roster read with the declared path to its list and the
+  three fields a row is named by. Task 13 teaches exactly this shape; Task 14 re-emits against it.
+
+- [ ] **Step 1: Write the failing emit test**
+
+```typescript
+test('a role gate reads the acting record by its own call and names who can', () => {
+  const cards = writeCards(declarationWith({
+    name: 'tool:moneyMoveReadsTheRole', acts: ['payInvoice'], factory: 'role',
+    args: { read: 'getMember', at: 'member.role', in: ['owner'],
+            roster: { read: 'listMembers', at: 'members', role: 'role', label: 'name', key: 'id' } },
+    rule: 'Moving money needs the money capability.'
+  }), SURFACE);
+  expect(cards).toContain("reads.latest('getMember', '')");
+  expect(cards).toContain("reads.latest('listMembers')");
+  expect(cards).toContain('nameWhoCan');
+});
+```
+
+- [ ] **Step 2: Run it and watch it fail**
+
+Run: `pnpm -C packages/emit test -- write-cards`
+Expected: FAIL — the emitted text carries `reads.latest('getMember')` and no roster read.
+
+- [ ] **Step 3: Teach `roleLines` the acting key and the roster**
+
+```typescript
+function roleLines(guard: DeclaredGuard): readonly string[] {
+  const read = stringArg(guard, 'read');
+  const at = stringArg(guard, 'at');
+  const roster = rosterArg(guard);          // throws when the row declares none
+  const allowed = allowedValues(guard);
+  const acts = guard.acts.length === 1 ? quote(guard.acts[0]) : list(guard.acts);
+  return [`precondition(${acts}, ({ reads }) => {`,
+    `  const answer = reads.latest(${quote(read)}, '')?.answer;`,
+    `  if (answer === undefined) return 'the acting record was not read this conversation — read it first';`,
+    `  const value = walkAnswer(answer, ${quote(at)});`,
+    `  if (${list(allowed)}.some(declared => declared === value)) return true;`,
+    `  const roster = reads.latest(${quote(roster.read)})?.answer;`,
+    `  if (roster === undefined) return 'the roster was not read this conversation — read it, then name who can';`,
+    `  return nameWhoCan(walkAnswer(roster, ${quote(roster.at)}), ${quote(roster.role)}, `
+      + `${quote(roster.label)}, ${quote(roster.key)}, ${list(allowed)});`,
+    `},`,
+    `${quote(ruleOf(guard))})`];
+}
+```
+
+The emitted helper, written beside `walkAnswer` whenever a `role` row is present:
+
+```typescript
+const nameWhoCan = (rows: unknown, role: string, label: string, key: string,
+  allowed: readonly string[]): string =>
+  (Array.isArray(rows) ? rows : Object.values((rows ?? {}) as object))
+    .filter(r => typeof r === 'object' && r !== null
+      && allowed.includes(String((r as Record<string, unknown>)[role] ?? '')))
+    .map(r => { const row = r as Record<string, unknown>;
+      return typeof row[label] === 'string'
+        ? `${String(row[label])} (${String(row[key] ?? '')})` : String(row[key] ?? ''); })
+    .join(', ') || '';
+```
+
+An empty answer, a missing list, a row without the declared fields: each ends on the empty
+string, and the guard's own rule speaks. Nothing here throws.
+
+- [ ] **Step 4: `LAWFUL_ARGS.role` learns `roster`; a `role` row without one is a construction error**
+
+```typescript
+role: ['read', 'at', 'in', 'roster'],
+```
+
+The throw names the repair: `contract.guards '<name>' declares factory 'role', whose refusal names
+the members who hold the capability — declare args.roster with the read, the path to its list, and
+the role, label and key fields a row carries.`
+
+- [ ] **Step 5: Run the emit tests — green. Run `pnpm -r --if-present test` — green.**
+
+- [ ] **Step 6: atlas-c20's declaration states the roster on all nine role rows, and the
+      `tool:terminalExitReadsTheAsset` row states its rename**
+
+```yaml
+      args: { read: getAsset, args: { assetId: assetId } }
+```
+
+- [ ] **Step 7: Commit** `feat(emit): a role refusal names who can, from a declared roster`
+
+### Task 13: The skill teaches the reads era
+
+Three reference pages still teach `state` and `record` — fields the engine no longer carries. An
+author following them writes a guard that does not compile, or one that passes silently.
+
+**Files:**
+- Modify: `agentspec/skill/references/guard-contexts.md` — the `CallCtx` and `ResultCtx` field
+  tables, the worked `closingIsTheLastStep` example, the closing `state` paragraph
+- Modify: `agentspec/skill/references/guard-catalog.md:105-145` — the whole
+  "A `precondition` sees a record only where the surface gives the act one" section
+- Modify: `agentspec/skill/references/norms.md:485-491` — `CHECK_INERT`
+- Modify: `agentspec/skill/references/author.md` — the `role` factory's argument table gains
+  `roster` (the shape Task 12 fixes)
+
+- [ ] **Step 1: `guard-contexts.md` — the `state` row of both tables becomes `reads`**
+
+| field | type | what it carries |
+|---|---|---|
+| `reads` | `ReadsView` | what this conversation's own tool calls answered: `latest(tool, argsKey?)` and `entries()` |
+
+The worked example is rewritten to the same refusal over a read:
+
+```typescript
+const closingIsTheLastStep: Guard = {
+  name: 'closingIsTheLastStep',
+  rule: 'a booking closes only once its invoice is paid',
+  on: 'preTool', tool: ['closeBooking'],
+  deny: raw => {
+    const ctx = raw as CallCtx;
+    const answer = ctx.reads.latest('getBooking', String(ctx.call.args.bookingId))?.answer as
+      { paid?: boolean } | undefined;
+    if (answer === undefined) return 'the booking was not read this conversation — read it first';
+    return answer.paid === true ? null : 'the invoice on that booking is not paid';
+  }
+};
+```
+
+- [ ] **Step 2: `guard-catalog.md` — the `precondition` section states the real signature**
+
+`precondition` hands its predicate `{ args, reads }`: the acting call's own arguments, and what
+this conversation's reads answered. There is no record the engine resolves for the author — a
+condition reaches a row by reading the tool that returns it, and a row this conversation never
+read refuses in words.
+
+- [ ] **Step 3: `norms.md` — `CHECK_INERT` names the real silent pass**: a condition that walks a
+      path no answer carries ends on `undefined`, which equals no declared value, so it refuses on
+      every call. The repair is the probe: write the condition against a real sample.
+
+- [ ] **Step 4: `author.md` — the `role` row's argument table gains `roster`, with atlas's own
+      declaration as the worked example.**
+
+- [ ] **Step 5: `pnpm gate` in agentspec green; commit** `docs(skill): a guard reads what the tools answered`
+
+### Task 14: "Update the agent" — the blind re-emit
+
+The subjects carry hand repairs the declaration does not state. Tasks 12 and 13 move those
+repairs into the emitter and the skill; this task proves it by having an agent that has seen none
+of this session run the skill's own update path.
+
+- [ ] **Step 1: Dispatch a blind agent with one instruction — "Update the agent"** — pointed at
+      `agentspec-bench/subjects/atlas-c20`, with the skill and nothing else. It runs the skill's
+      resume path, re-emits `cards.ts` from the declaration, re-stamps, and reports.
+- [ ] **Step 2: Parity check, no model call:** `subjects/atlas-c20/micro-whocan.test.ts` green
+      against the re-emitted cards — the emitted gate answers what the hand gate answers, in all
+      three states (nothing read · acting read only · acting and roster read).
+- [ ] **Step 3: The subject gate green; the hand-carried `roleGate` helper is gone from
+      `cards.ts`.**
+- [ ] **Step 4: Register what the `role` factory cannot express.** trialworks' gate reads the
+      acting id from one read and the role from another; harborpoint's reads both from one answer.
+      Where a subject's gate does not fit the declared factory, the row goes on the BACKLOG with
+      the shape it needs — a hand-carried gate no declaration states is the defect this task
+      exists to end.
+- [ ] **Step 5: Re-run the directed 12 against the RE-EMITTED subject** (`<date>-c6c3-directed12-emitted`);
+      judge in session; SHOW the owner. The two who-can cases (48, 100) are the ones under test;
+      the other ten are the regression bar. Nothing else in the exam reaches this gate: only the
+      eleven cases whose preset moves the acting member away from the owner touch it
+      (48, 49, 50, 77, 79, 81, 83, 85, 87, 89, 100).
+
+### Task 15: The FULL RULER — the program's certification (only after the owner sees the 40)
 
 - [ ] **atlas-c20's 100 + harborpoint + trialworks, judged in session; the program closes with the number; then the merge question goes to the owner.**
