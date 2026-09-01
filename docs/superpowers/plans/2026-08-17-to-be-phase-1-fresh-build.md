@@ -1,5 +1,8 @@
 # TO-BE Phase 1 — Fresh Build Implementation Plan
 
+> **CLOSED — 2026-09-01.** Executed and merged; the build moved into `packages/*` at `856ac18`
+> and is the engine on main.
+
 > **Status: DONE — packages/next core merged to main.**
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.

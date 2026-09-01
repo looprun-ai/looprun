@@ -1,6 +1,9 @@
 # TO-BE Phase 5 Plan — the measurement
 
-> **Status: OPEN — unexecuted; parked with the phases 3–6 design.**
+> **SUPERSEDED — 2026-09-01.** The deliverables were built directly on `packages/*` after the
+> `856ac18` move (CLI facade, mastra adapter, server, eval's two halves, models, the phase-5
+> closing driver) — this route died with the tree it targeted. The standing map remains
+> `2026-08-12-to-be-blueprint-v3.md` as amended by the review resolution.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: superpowers:executing-plans, inline. This phase builds ~no code: it RUNS.
 

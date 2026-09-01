@@ -1,6 +1,9 @@
 # TO-BE Phase 4b Implementation Plan — eval's execution half + models
 
-> **Status: OPEN — unexecuted; parked with the phases 3–6 design.**
+> **SUPERSEDED — 2026-09-01.** The deliverables were built directly on `packages/*` after the
+> `856ac18` move (CLI facade, mastra adapter, server, eval's two halves, models, the phase-5
+> closing driver) — this route died with the tree it targeted. The standing map remains
+> `2026-08-12-to-be-blueprint-v3.md` as amended by the review resolution.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 

@@ -1,5 +1,8 @@
 # TO-BE Implementation — Phase 1 Build Design
 
+> **CLOSED — 2026-09-01.** Executed and merged; the build moved into `packages/*` at `856ac18`
+> and is the engine on main.
+
 > **CLOSED — merged to `main` (`4996432`).** The phases after it built on this base.
 
 The TO-BE design itself is `2026-08-12-to-be-blueprint-v3.md` (amended, adversarially

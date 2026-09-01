@@ -1,5 +1,8 @@
 # TO-BE Phase 2 Build Design — consent · honesty · disclosure · masking, the compile, the world
 
+> **CLOSED — 2026-09-01.** Executed and merged; the build moved into `packages/*` at `856ac18`
+> and is the engine on main.
+
 > **Status: CLOSED — phase 2 merged; the 132-proof gate held.**
 
 The second phase of the fresh build (`packages/next/core`): the four run/ desks plus the
