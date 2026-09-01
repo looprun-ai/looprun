@@ -1,5 +1,6 @@
 /** The ordered deterministic guard pipe: four frozen arrays built at construction,
- *  one per phase; first non-allow verdict wins on input/preTool; postTool and reply
+ *  one per phase; first non-allow verdict wins on input; preTool walks its covering
+ *  rows twice — everything the records settle, then any question; postTool and reply
  *  collect ALL violations (a postTool violation joins the reply corrections — the
  *  call already ran). Pure — judged guards are not here. The census IS the code:
  *  guards() returns the same arrays the four phase checks iterate. */
@@ -62,9 +63,14 @@ export class Rulebook {
     return { kind: 'allow' };
   }
 
+  /** Two walks of the same covering rows. The first walk carries everything the
+   *  records already settle — a duplicate to restate, a read owed, a refusal — and
+   *  it finishes ACROSS rows before the second walk puts any question to the
+   *  operator. So a call any rule refuses is refused by whichever row sees it, and
+   *  the operator is never asked to approve an act that is already dead. */
   checkPreTool(ctx: CallCtx): Verdict {
-    for (const guard of this.preTool) {
-      if (!this.covers(guard, ctx.call.tool)) continue;
+    const covering = this.preTool.filter(g => this.covers(g, ctx.call.tool));
+    for (const guard of covering) {
       if (guard.restate) {
         const actId = guard.restate(ctx);
         if (actId !== null) return { kind: 'restate', actId };
@@ -73,12 +79,14 @@ export class Rulebook {
         const reads = guard.owe(ctx);
         if (reads !== null) return { kind: 'owe', guardName: guard.name, rule: guard.rule, reads };
       }
+      const detail = guard.deny(ctx);
+      if (detail !== null) return { kind: 'refuse', guardName: guard.name, detail };
+    }
+    for (const guard of covering) {
       if (guard.hold) {
         const sentence = guard.hold(ctx);
         if (sentence !== null) return { kind: 'hold', guardName: guard.name, sentence };
       }
-      const detail = guard.deny(ctx);
-      if (detail !== null) return { kind: 'refuse', guardName: guard.name, detail };
     }
     return { kind: 'allow' };
   }
