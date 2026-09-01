@@ -125,7 +125,7 @@ export class AgentFactory {
     const lane = spec.tools === undefined ? facts
       : { tools: Object.fromEntries(Object.entries(facts.tools)
           .filter(([name]) => spec.tools?.includes(name))),
-          tail: facts.tail ?? null, note: facts.note ?? null };
+        };
 
     const limits = { ...DEFAULT_LIMITS, ...contract?.limits, ...spec.limits };
     const guards: CompiledGuard[] = [];

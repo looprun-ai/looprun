@@ -76,11 +76,10 @@ export class PromptWriter {
   /** Only the tail varies across turns. The owed facts ride last, numbered: the desk
    *  reads them before it writes, and the ids are the engine's labels — a reply that
    *  prints one has bolted an internal token onto the operator's words. */
-  tail(userText: string, state: StateSnapshot | string | null, open: readonly Question[],
+  tail(userText: string, reads: string | null, open: readonly Question[],
        owed: readonly DeliveryFact[]): string {
     const parts: string[] = [];
-    if (typeof state === 'string') { if (state !== '') parts.push(`STATE: ${state}`); }
-    else if (state !== null) parts.push(`STATE: ${JSON.stringify(state)}`);
+    if (reads !== null && reads !== '') parts.push(`READS: ${reads}`);
     for (const q of open) parts.push(`OPEN QUESTION [${q.code}]: ${q.sentence}`);
     if (owed.length > 0) {
       parts.push('OWED FACTS — the records of what this turn did, each one numbered. Every one '

@@ -293,13 +293,7 @@ export interface SurfaceFacts { readonly tools: Readonly<Record<string, ToolFact
                                 /** The birth register: the acts that mint a record
                                  *  that did not exist, whatever effect block they
                                  *  sit in; null = the card names none. */
-                                readonly creates?: readonly string[] | null;
-                                /** null = the whole snapshot rides the tail. */
-                                readonly tail?: readonly string[] | null;
-                                /** The state NOTE: when declared, it replaces the
-                                 *  record dump — the world speaks its whole-turn
-                                 *  conditions in sentences, identifiers withheld. */
-                                readonly note?: ((records: StateSnapshot) => string) | null }
+                                readonly creates?: readonly string[] | null }
 
 /** The world vocabulary — crossing types for the three surface-card kinds.
  *  world/world.ts re-exports them for authors, the way cards.ts re-exports LlmParams;
@@ -336,16 +330,6 @@ export interface WorldCard { readonly records: StateSnapshot;
                               *  this list is its birth register, and a consented act
                               *  that mints on every call belongs on it too. */
                              readonly creates?: readonly string[];
-                             /** Entities the STATE TAIL shows the model every turn —
-                              *  what disqualifies whole turns and no read answers.
-                              *  Omitted = every entity (small worlds). Everything
-                              *  else stays behind the reads. */
-                             readonly tail?: readonly string[];
-                             /** Renders the turn-head state note from the live records:
-                              *  only what disqualifies a whole turn and what no read
-                              *  answers, never an identifier. Declared = the note rides
-                              *  the tail instead of any record dump. */
-                             readonly note?: (records: StateSnapshot) => string;
                              readonly presets?: Readonly<Record<string, readonly Patch[]>> }
 /** One typed approval: the tool whose open question this turn licenses; args only
  *  to split open SIBLINGS of one tool — a code is never extracted from prose. */

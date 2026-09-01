@@ -51,8 +51,9 @@ test('the micro-step pays the debt: single-tool surface, model-filled args, engi
   expect(micro.tools.map(t => t.name)).toEqual(['getBooking']);
   const microLast = micro.messages.at(-1);
   expect(microLast?.role === 'acts' ? '' : microLast?.text).toContain('call getBooking now');
-  expect(micro.system).toContain('STATE: ');
-  expect(micro.system).toContain('c_42');
+  // Before any read there is no tail: the micro-step's head carries no record dump.
+  expect(micro.system).not.toContain('STATE:');
+  expect(micro.system).not.toContain('c_42');
   expect(port.log).toEqual([
     { tool: 'getBooking', args: { bookingRef: 'bk_9' } },
     { tool: 'cancelBooking', args: { id: 'bk_9' } }

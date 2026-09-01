@@ -25,7 +25,7 @@ test('every step of every turn shares one byte-identical system prefix; only the
   await engine.chat('s1', 'bye');
 
   expect(model.seen.length).toBeGreaterThanOrEqual(4);
-  const prefixes = model.seen.map(s => s.system.split('\nSTATE: ')[0]);
+  const prefixes = model.seen.map(s => s.system.split('\nREADS: ')[0]);
   for (const p of prefixes) expect(p).toBe(prefixes[0]);
   const tails = model.seen.map(s => s.system.slice(prefixes[0].length));
   expect(tails[0]).not.toBe(tails[2]);

@@ -178,6 +178,14 @@ export class Turn {
     const returnable = opts.returnable === true;
     const history = session.history;
     const desk = session.consent;
+    // What this conversation read, as the head shows it: every answer still inside
+    // its life, labeled by the read that fetched it — before any read there is no
+    // tail, and the records themselves are never in it.
+    const readsBlock = (): string | null => {
+      const rows = session.reads.entries();
+      if (rows.length === 0) return null;
+      return rows.map(r => `${r.tool}(${r.argsKey}) → ${JSON.stringify(r.answer)}`).join(' · ');
+    };
     const draft = session.draft();
     draft.userText = userText;
     draft.servedBy = seat.serving();
@@ -253,18 +261,10 @@ export class Turn {
       const card = pw.toolCards().find(t => t.name === read.tool);
       if (!card) return null;
       const instruction = `A rule requires ${read.tool} to run before ${held.tool}. `
-        + `Choose the arguments from the conversation, the state, and the held call `
+        + `Choose the arguments from the conversation, the reads, and the held call `
         + `${held.tool} ${JSON.stringify(held.args)}, and call ${read.tool} now — nothing else.`;
-      const microRaw = this.deps.recordsPort?.snapshot() ?? null;
-      const microNote = this.deps.compiled.facts.note ?? null;
-      const microVisible = this.deps.compiled.facts.tail ?? null;
-      const microShown = microRaw === null ? null
-        : microVisible === null ? microRaw
-        : Object.fromEntries(Object.entries(microRaw).filter(([e]) => microVisible.includes(e)));
-      const microState = microRaw !== null && microNote !== null ? microNote(microRaw)
-        : microShown === null ? null : masker.maskState(microShown);
       // The micro-step writes no reply, so it is owed no facts: one read, nothing else.
-      const microTail = pw.tail(userText, microState, desk.open(), []);
+      const microTail = pw.tail(userText, readsBlock(), desk.open(), []);
       const step = await port.step(deepFreeze({
         system: microTail === '' ? pw.system() : `${pw.system()}\n${microTail}`,
         messages: [...messages, { role: 'user' as const, text: instruction }],
@@ -309,22 +309,12 @@ export class Turn {
     let opening = true;
 
     for (;;) {
-      const raw = this.deps.recordsPort?.snapshot() ?? null;
-      // The declared NOTE outranks any record dump: the world speaks its
-      // whole-turn conditions in sentences, identifiers withheld.
-      const note = compiled.facts.note ?? null;
-      const visible = compiled.facts.tail ?? null;
-      const shown = raw === null ? null
-        : visible === null ? raw
-        : Object.fromEntries(Object.entries(raw).filter(([entity]) => visible.includes(entity)));
-      const state = raw !== null && note !== null ? note(raw)
-        : shown === null ? null : masker.maskState(shown);
       const owed = owedNow();
-      const tail = pw.tail(userText, state, desk.open(), owed);
+      const tail = pw.tail(userText, readsBlock(), desk.open(), owed);
       // The close step carries this same prefix WITHOUT the owed block. Its one
       // numbered list is the post-call list the closing order prints, so the facts
       // are stated once, under one numbering, in the request that asks for them.
-      const closeTail = pw.tail(userText, state, desk.open(), []);
+      const closeTail = pw.tail(userText, readsBlock(), desk.open(), []);
       const closeSystem = closeTail === '' ? pw.system() : `${pw.system()}\n${closeTail}`;
       const stepInput = deepFreeze({
         system: tail === '' ? pw.system() : `${pw.system()}\n${tail}`,
