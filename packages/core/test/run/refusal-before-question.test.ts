@@ -1,5 +1,6 @@
 import { test, expect } from 'vitest';
 import type { Act, CallCtx } from '../../src/contract/vocabulary.js';
+import { NO_READS } from '../../src/contract/vocabulary.js';
 import { AgentFactory } from '../../src/cards/agent-factory.js';
 import { needs, precondition } from '../../src/cards/catalog.js';
 import { factsFromWorld } from '../../src/cards/facts.js';
@@ -19,7 +20,7 @@ const spent: Act = { id: 'a_1', call: { tool: 'cancelBooking', args: { id: 'bk_9
 
 const call = (tool: string, args: Record<string, string>, key: string,
               turnActs: readonly Act[] = []): CallCtx => ({
-  call: { tool, args, key }, effect: 'destructive', consented: false, state: null,
+  call: { tool, args, key }, effect: 'destructive', consented: false, reads: NO_READS,
   userText: 'cancel bk_9 and bk_2', userTexts: ['cancel bk_9 and bk_2'], turnActs, pastActs: [] });
 
 test('a later deny beats an earlier hold — the budget refuses before consent asks', () => {

@@ -51,7 +51,7 @@ function installedAt<C extends GuardCtx>(seed: SeedGuard, home: 'spec' | 'contra
 }
 
 /** The one owed-read declaration: the gated tool runs only after its declared read
- *  SUCCEEDED this conversation. The ENGINE arms the read itself — each read arg a
+ *  SUCCEEDED this conversation. The ENGINE fills and runs the read itself — each read arg a
  *  declared rename of the held call's own values — so no model call is spent where
  *  the relation is declared; the forced micro-step survives only for a read whose
  *  args the declaration does not carry. A WRITE prerequisite denies, teaching the

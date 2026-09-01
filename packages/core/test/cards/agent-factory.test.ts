@@ -1,5 +1,6 @@
 import { test, expect } from 'vitest';
 import type { Act } from '../../src/contract/vocabulary.js';
+import { NO_READS } from '../../src/contract/vocabulary.js';
 import { AgentFactory } from '../../src/cards/agent-factory.js';
 import { injectionCheck, maskPattern, needs } from '../../src/cards/catalog.js';
 import { factsFromWorld } from '../../src/cards/facts.js';
@@ -37,14 +38,14 @@ test('a re-proposed destructive call restates its first result; the budget refus
     sentence: 'cancelBooking(bk_9) — done' } as unknown as Act;
   const rerun = rulebook.checkPreTool({
     call: { tool: 'cancelBooking', args: { id: 'bk_9' }, key: 'cancel:bk_9' },
-    effect: 'destructive', consented: false, state: null,
+    effect: 'destructive', consented: false, reads: NO_READS,
     userText: 'cancel bk_9', userTexts: ['cancel bk_9'],
     turnActs: [first], pastActs: [] });
   expect(rerun).toEqual({ kind: 'restate', actId: 'a_1' });
 
   const fresh = rulebook.checkPreTool({
     call: { tool: 'cancelBooking', args: { id: 'bk_2' }, key: 'cancel:bk_2' },
-    effect: 'destructive', consented: true, state: null,
+    effect: 'destructive', consented: true, reads: NO_READS,
     userText: 'cancel bk_2 too', userTexts: ['cancel bk_9', 'cancel bk_2 too'],
     turnActs: [first], pastActs: [] });
   expect(fresh).toMatchObject({ kind: 'refuse', guardName: 'maxDestructive' });
@@ -107,7 +108,7 @@ test('ungoverned: promptParts and facts byte-identical; every check answers allo
   expect(u.judged).toEqual([]);
   expect(u.rewrites).toEqual([]);
   const ctx = { call: { tool: 'cancelBooking', args: { id: 'bk_9' }, key: 'k' },
-    effect: 'destructive' as const, consented: false, state: null, userText: '', userTexts: [],
+    effect: 'destructive' as const, consented: false, reads: NO_READS, userText: '', userTexts: [],
     turnActs: [], pastActs: [] };
   for (const guard of u.guards) {
     expect(guard.deny(ctx)).toBeNull();

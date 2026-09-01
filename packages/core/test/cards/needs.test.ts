@@ -1,5 +1,6 @@
 import { test, expect } from 'vitest';
 import type { Act, CallCtx } from '../../src/contract/vocabulary.js';
+import { NO_READS } from '../../src/contract/vocabulary.js';
 import { AgentFactory } from '../../src/cards/agent-factory.js';
 import { needs } from '../../src/cards/catalog.js';
 import { factsFromWorld } from '../../src/cards/facts.js';
@@ -7,14 +8,14 @@ import { Rulebook } from '../../src/run/rulebook.js';
 import { HOSTILE } from '../fixtures/hostile-world.js';
 
 // The one owed-read declaration: the read, its args as declared renames of the held
-// call's own values, the pick, and the condition — the engine arms the read itself.
+// call's own values, the pick, and the condition — the engine fills and runs the read itself.
 
 const FACTS = factsFromWorld(HOSTILE);
 const f = new AgentFactory();
 
 const ctx = (turnActs: readonly Act[] = []): CallCtx => ({
   call: { tool: 'cancelBooking', args: { id: 'bk_9' }, key: 'cancel:bk_9' },
-  effect: 'destructive', consented: false, state: null,
+  effect: 'destructive', consented: false, reads: NO_READS,
   userText: 'cancel bk_9', userTexts: ['cancel bk_9'], turnActs, pastActs: [] });
 
 const gated = (extra: Parameters<typeof needs>[1] = { read: 'getBooking', args: { bookingId: 'id' } }) =>

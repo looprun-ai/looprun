@@ -199,7 +199,7 @@ export class CallRunner {
         }
         let paid = false;
         for (const read of verdict.reads) {
-          // A declared relation arms the read engine-side: the args are the held
+          // A declared relation fills the read engine-side: the args are the held
           // call's own values under declared renames — no model call. The forced
           // micro-step survives only for an undeclared surface, whose read wants
           // arguments the declaration does not carry.
