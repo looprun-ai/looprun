@@ -228,10 +228,9 @@ takes (read `agent-factory.ts` first); the assertion stands.
 - [ ] **The probe teaching lands where conditions are taught: a condition over an answer is born from a REAL sample — probe the read with the case's own args (and every variant the condition's branches touch: found, not-found, empty list, refusal shape), store the sample beside the declaration, write the condition against it, pin it with a deterministic probe test. A declared output schema is a hint, never verification. Every edge — `undefined`, `null`, empty, not-found, refusal — is handled IN the condition and refuses in words, never throws, never silently allows.**
 - [ ] **`references/check-subject.test.ts` parity lists learn `needs`; `pnpm gate` in agentspec green; commit** `docs(skill): the owed read is one declaration`
 
-### Task 11: The escada — 12 then 40, judged, each shown
+### Task 11: The directed 12 on the hand-carried build
 
-- [ ] **Step 1: Directed 12 on atlas-c20** (state-guard + needs-chain cases + case 18 + the four: 39, 47, 51, 55) into `subjects/atlas-c20/test/<date>-c6c3-directed12`; judge in session; SHOW the owner.
-- [ ] **Step 2: On the owner's word, the 40 stratified rung; judge; SHOW.** Bar: no regression outside the *licensed-from-an-unread-row* class; the NOTE-channel cases priced explicitly. Tasks 12–14 come first: the 40 measures a build whose declared path carries every repair.
+- [ ] **Directed 12 on atlas-c20** (state-guard + needs-chain cases + case 18 + the four: 39, 47, 51, 55) into `subjects/atlas-c20/test/<date>-c6c3-directed12`; judge in session; SHOW the owner. This rung measures the cards the hand wrote; the escada proper runs on the emitted build, after Tasks 12–14.
 
 ### Task 12: The declared path carries what the hand carries
 
@@ -324,14 +323,11 @@ the role, label and key fields a row carries.`
 
 - [ ] **Step 5: Run the emit tests — green. Run `pnpm -r --if-present test` — green.**
 
-- [ ] **Step 6: atlas-c20's declaration states the roster on all nine role rows, and the
-      `tool:terminalExitReadsTheAsset` row states its rename**
+- [ ] **Step 6: Commit** `feat(emit): a role refusal names who can, from a declared roster`
 
-```yaml
-      args: { read: getAsset, args: { assetId: assetId } }
-```
-
-- [ ] **Step 7: Commit** `feat(emit): a role refusal names who can, from a declared roster`
+The subject declarations are NOT edited here. Stating the roster on a role row is authoring, and
+Task 14 is where an agent that learned it from the skill alone does it — a declaration this
+session writes proves the emitter and teaches nothing about the page that had to teach it.
 
 ### Task 13: The skill teaches the reads era
 
@@ -394,7 +390,16 @@ of this session run the skill's own update path.
 
 - [ ] **Step 1: Dispatch a blind agent with one instruction — "Update the agent"** — pointed at
       `agentspec-bench/subjects/atlas-c20`, with the skill and nothing else. It runs the skill's
-      resume path, re-emits `cards.ts` from the declaration, re-stamps, and reports.
+      resume path: the emit refuses the role rows until the declaration states the roster each
+      refusal names people from, so the agent authors those rows from the skill's pages alone,
+      re-emits `cards.ts`, re-stamps, and reports. What it gets wrong is a defect in the pages —
+      fix the page, dispatch a fresh blind agent, repeat until the emitted cards are right.
+- [ ] **Step 1b: The same pass states the rename the owed read needs**, or the audit below
+      records that the pages never taught it:
+
+```yaml
+      args: { read: getAsset, args: { assetId: assetId } }
+```
 - [ ] **Step 2: Parity check, no model call:** `subjects/atlas-c20/micro-whocan.test.ts` green
       against the re-emitted cards — the emitted gate answers what the hand gate answers, in all
       three states (nothing read · acting read only · acting and roster read).

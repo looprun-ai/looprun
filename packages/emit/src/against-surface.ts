@@ -116,10 +116,18 @@ function checkJudgedActs(declaration: Declaration, facts: SurfaceFacts): readonl
 
 /** The arguments that name an ACT rather than configure one. A factory is pointed at the act it
  *  covers through `acts`, and some are pointed at a second act through their configuration — the
- *  read `needs` waits for. Both name the same namespace, `facts.tools`. */
+ *  read `needs` waits for. Both name the same namespace, `facts.tools`. A dotted name reaches a
+ *  read declared inside a block, the way a role gate declares the roster it names people from. */
 const ACT_ARGS: Readonly<Record<string, readonly string[]>> = {
-  needs: ['read'], precondition: ['read'], role: ['read'],
+  needs: ['read'], precondition: ['read'], role: ['read', 'roster.read'],
   valueFromUserOrRecord: ['read'], argMatchesRecord: ['read'] };
+
+/** The value a dotted argument name reaches, over the blocks a declaration nests. */
+function argAt(args: Readonly<Record<string, unknown>> | undefined, path: string): unknown {
+  return path.split('.').reduce<unknown>((at, step) =>
+    typeof at === 'object' && at !== null && !Array.isArray(at)
+      ? (at as { readonly [k: string]: unknown })[step] : undefined, args);
+}
 
 /** Every act a guard's CONFIGURATION names exists on the surface. A prerequisite spelled one
  *  letter off is never a call anyone can make, so the guard it configures denies the act it
@@ -130,7 +138,7 @@ function checkGuardArgActsExist(declaration: Declaration, facts: SurfaceFacts): 
   const refusals: string[] = [];
   declaration.contract.guards.forEach((guard, guardIndex) => {
     for (const argName of ACT_ARGS[guard.factory] ?? []) {
-      const named = guard.args?.[argName];
+      const named = argAt(guard.args, argName);
       if (typeof named !== 'string' || facts.tools[named] !== undefined) continue;
       const near = closestName(named, toolNames);
       const suggestion = near === null ? '' : ` — did you mean '${near}'?`;

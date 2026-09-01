@@ -507,37 +507,62 @@ describe('writeCards', () => {
       .toThrow('contract.rewrites[0] declares name');
   });
 
-  test('a role gate emits one precondition over the acting read, and the walk beside it', () => {
+  const ROSTER = { read: 'getInvoice', at: 'members', role: 'grade', label: 'name', key: 'id' };
+
+  test('a role gate reads the acting record by its own call, and names who can from the roster', () => {
     const declaration = decl({ guards: [{ name: 'tool:moneyGate',
       acts: ['issueRefund', 'closeBooking'], factory: 'role',
-      args: { read: 'getInvoice', at: 'grade', in: ['owner', 'billing'] },
+      args: { read: 'getInvoice', at: 'grade', in: ['owner', 'billing'], roster: ROSTER },
       wide: 'oneLawEveryAct',
       rule: 'Moving money needs the money capability, and the acting member\'s recorded grade does not carry it.' }] });
     const out = writeCards(declaration, FACTS);
     expect(out).toContain("{ ...precondition(['issueRefund', 'closeBooking'], ({ reads }) => {");
-    expect(out).toContain("const answer = reads.latest('getInvoice')?.answer;");
+    expect(out).toContain("const answer = reads.latest('getInvoice', '')?.answer;");
     expect(out).toContain("const value = walkAnswer(answer, 'grade');");
     expect(out).toContain("['owner', 'billing'].some(declared => declared === value)");
+    expect(out).toContain("const roster = reads.latest('getInvoice')?.answer;");
+    expect(out).toContain("nameWhoCan(walkAnswer(roster, 'members'), 'grade', 'name', 'id', "
+      + "['owner', 'billing'])");
     expect(out).toContain('const walkAnswer = (answer: unknown, path: string): unknown =>');
+    expect(out).toContain('const nameWhoCan = (');
     expect(out).toContain("name: 'tool:moneyGate' }");
     // The factory takes every act itself, so the literal around it adds no second scope.
     expect(out).not.toContain("tool: ['issueRefund', 'closeBooking']");
+  });
+
+  test('a role gate asks for each read it decides on before it decides on nothing', () => {
+    const declaration = decl({ guards: [{ name: 'tool:moneyGate', acts: ['issueRefund'],
+      factory: 'role', args: { read: 'getInvoice', at: 'grade', in: ['owner'], roster: ROSTER },
+      rule: 'Moving money needs the money capability.' }] });
+    const out = writeCards(declaration, FACTS);
+    expect(out).toContain('the acting record was not read this conversation');
+    expect(out).toContain('the roster was not read this conversation');
   });
 
   test('a role gate states the values its field may carry, and refuses without them', () => {
     const gate = (args: Readonly<Record<string, unknown>>): Declaration =>
       decl({ guards: [{ name: 'tool:moneyGate', acts: ['issueRefund'], factory: 'role', args,
         rule: 'Moving money needs the money capability.' }] });
-    const walk = { read: 'getInvoice', at: 'grade' };
+    const walk = { read: 'getInvoice', at: 'grade', roster: ROSTER };
     expect(() => writeCards(gate({ ...walk, in: [] }), FACTS)).toThrow('args.in');
     expect(() => writeCards(gate({ ...walk, in: [7] }), FACTS)).toThrow('args.in');
-    expect(() => writeCards(gate({ at: 'grade', in: ['owner'] }), FACTS))
+    expect(() => writeCards(gate({ at: 'grade', in: ['owner'], roster: ROSTER }), FACTS))
       .toThrow('args.read');
+  });
+
+  test('a role gate states the roster its refusal names people from, and refuses without it', () => {
+    const gate = (roster: unknown): Declaration =>
+      decl({ guards: [{ name: 'tool:moneyGate', acts: ['issueRefund'], factory: 'role',
+        args: { read: 'getInvoice', at: 'grade', in: ['owner'], roster },
+        rule: 'Moving money needs the money capability.' }] });
+    expect(() => writeCards(gate(undefined), FACTS)).toThrow('args.roster');
+    expect(() => writeCards(gate({ read: 'getInvoice', at: 'members' }), FACTS))
+      .toThrow('args.roster');
   });
 
   test('a role gate states its law in the card\'s own words, and refuses without them', () => {
     const declaration = decl({ guards: [{ name: 'tool:moneyGate', acts: ['issueRefund'],
-      factory: 'role', args: { read: 'getInvoice', at: 'grade', in: ['owner'] } }] });
+      factory: 'role', args: { read: 'getInvoice', at: 'grade', in: ['owner'], roster: ROSTER } }] });
     expect(() => writeCards(declaration, FACTS)).toThrow('declare the `rule` it states');
   });
 
@@ -580,7 +605,9 @@ describe('writeCards', () => {
             rule: 'The invoice named is not on file; read the number back and stop there.' },
           { name: 'tool:moneyGate', acts: ['issueRefund', 'closeBooking'], factory: 'role',
             wide: 'oneLawEveryAct',
-            args: { read: 'getInvoice', at: 'clerkGrade', in: ['keeper', 'treasury'] },
+            args: { read: 'getInvoice', at: 'clerkGrade', in: ['keeper', 'treasury'],
+                    roster: { read: 'getInvoice', at: 'clerks', role: 'clerkGrade',
+                              label: 'name', key: 'id' } },
             rule: 'Moving money needs the treasury capability; read the clerk record and name a clerk whose grade can.' },
           { name: 'amountAsTheCustomerSaidIt', acts: ['issueRefund'], factory: 'valueFromUser',
             args: { arg: 'invoiceId' } },

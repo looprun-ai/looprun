@@ -82,7 +82,7 @@ function commaJoin(blocks: readonly (readonly string[])[]): readonly string[] {
 const LAWFUL_ARGS: Readonly<Record<DeclaredGuard['factory'], readonly string[]>> = {
   needs: ['read', 'args', 'pick'],
   precondition: ['reads', 'read', 'field', 'is', 'in'],
-  role: ['read', 'at', 'in'],
+  role: ['read', 'at', 'in', 'roster'],
   valueFromUser: ['arg'],
   argMatchesFormat: ['arg', 'pattern'],
   argForbidden: ['arg'],
@@ -316,20 +316,48 @@ function allowedValues(guard: DeclaredGuard): readonly string[] {
   return declared as readonly string[];
 }
 
-/** A gate on the acting member's own record: the acts it covers, the declared path over the
- *  read that answers who is acting, and the sentence it refuses with. The check is a
- *  `precondition` over the reads — an unanswered read refuses in words, and the rule teaches
- *  naming who can. */
+/** The roster a role refusal names people from: the read that answers it, the declared path to
+ *  the rows inside that answer, and the three fields a row is named by. A refusal that says a
+ *  capability is missing without naming anybody who holds it sends the operator nowhere, so the
+ *  factory is configured from this and refuses to compile without it. An `at` of `''` says the
+ *  answer is the rows themselves, the shape a list read of a whole entity returns. */
+function rosterArg(guard: DeclaredGuard): { readonly read: string; readonly at: string;
+  readonly role: string; readonly label: string; readonly key: string } {
+  const declared = guard.args?.roster as Readonly<Record<string, unknown>> | undefined;
+  const fields = ['read', 'at', 'role', 'label', 'key'] as const;
+  if (typeof declared !== 'object' || declared === null || Array.isArray(declared)
+    || fields.some(field => typeof declared[field] !== 'string')) {
+    throw new Error(`contract.guards '${guard.name}' declares factory 'role', whose refusal names `
+      + `the members who hold the capability — declare args.roster with the read that answers the `
+      + `roster, the path to its rows, and the role, label and key fields a row carries`);
+  }
+  return declared as unknown as { read: string; at: string; role: string; label: string; key: string };
+}
+
+/** A gate on the acting member's own record: the acts it covers, the declared path over the read
+ *  that answers who is acting, the roster its refusal names people from, and the sentence it
+ *  refuses with. The check is a `precondition` over the reads — the acting read is keyed to the
+ *  call that carries no target, so a look-up of somebody else never stands in for it, and each
+ *  read the gate decides on asks for itself before the gate decides on nothing. */
 function roleLines(guard: DeclaredGuard): readonly string[] {
   const read = stringArg(guard, 'read');
   const at = stringArg(guard, 'at');
+  const roster = rosterArg(guard);
   const allowed = allowedValues(guard);
   const acts = guard.acts.length === 1 ? quote(guard.acts[0]) : list(guard.acts);
   return [`precondition(${acts}, ({ reads }) => {`,
-    `  const answer = reads.latest(${quote(read)})?.answer;`,
-    `  if (answer === undefined) return false;`,
+    `  const answer = reads.latest(${quote(read)}, '')?.answer;`,
+    `  if (answer === undefined) {`,
+    `    return 'the acting record was not read this conversation — read it first';`,
+    `  }`,
     `  const value = walkAnswer(answer, ${quote(at)});`,
-    `  return ${list(allowed)}.some(declared => declared === value);`,
+    `  if (${list(allowed)}.some(declared => declared === value)) return true;`,
+    `  const roster = reads.latest(${quote(roster.read)})?.answer;`,
+    `  if (roster === undefined) {`,
+    `    return 'the roster was not read this conversation — read it, then name who can';`,
+    `  }`,
+    `  return nameWhoCan(${roster.at === '' ? 'roster' : `walkAnswer(roster, ${quote(roster.at)})`}, `
+      + `${quote(roster.role)}, ${quote(roster.label)}, ${quote(roster.key)}, ${list(allowed)});`,
     `},`,
     `${quote(ruleOf(guard))})`];
 }
@@ -868,6 +896,7 @@ export function writeCards(declaration: Declaration, facts: SurfaceFacts): strin
     || seam.length > 0;
   const walksAnswers = declaration.contract.guards.some(guard =>
     guard.factory === 'role' || guard.factory === 'precondition');
+  const namesWhoCan = declaration.contract.guards.some(guard => guard.factory === 'role');
   const readsResults = declaration.contract.guards.some(guard => guard.factory === 'resultSatisfiesCondition');
   const helperBlocks: readonly (readonly string[])[] = [
     ...(teaches ? [[
@@ -883,6 +912,23 @@ export function writeCards(declaration: Declaration, facts: SurfaceFacts): strin
       '  path.split(\'.\').reduce<unknown>((at, step) =>',
       '    typeof at === \'object\' && at !== null && !Array.isArray(at)',
       '      ? (at as { readonly [k: string]: unknown })[step] : undefined, answer);'
+    ]] : []),
+    ...(namesWhoCan ? [[
+      '/** The people a refusal names: every row of the declared roster whose role field carries a',
+      ' *  value the gate allows, named by its label and its key. Rows the answer does not carry, a',
+      ' *  row without the declared fields, and a roster nobody on it can act, all end on the empty',
+      ' *  string — and the guard\'s own rule is what speaks. */',
+      'const nameWhoCan = (rows: unknown, role: string, label: string, key: string,',
+      '  allowed: readonly string[]): string =>',
+      '  (Array.isArray(rows) ? rows : Object.values((rows ?? {}) as object))',
+      '    .filter(row => typeof row === \'object\' && row !== null',
+      '      && allowed.includes(String((row as { readonly [k: string]: unknown })[role] ?? \'\')))',
+      '    .map(row => {',
+      '      const named = row as { readonly [k: string]: unknown };',
+      '      return typeof named[label] === \'string\'',
+      '        ? `${String(named[label])} (${String(named[key] ?? \'\')})` : String(named[key] ?? \'\');',
+      '    })',
+      '    .join(\', \');'
     ]] : []),
     ...(readsResults ? [[
       '/** A result that is a block of named fields — the one shape a field can be read off. */',

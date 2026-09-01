@@ -16,7 +16,8 @@ export const subjectWorld = world({
   },
   reads: {
     getInvoice: { form: 'get', entity: 'invoices', label: 'Look up one invoice' },
-    getMember: { form: 'get', entity: 'members', label: 'Look up the acting member' }
+    getMember: { form: 'get', entity: 'members', label: 'Look up the acting member' },
+    listMembers: { form: 'list', entity: 'members', label: 'List the members' }
   },
   writes: {
     closeBooking: { form: 'make', entity: 'auditLog', label: 'Write the closing note' }

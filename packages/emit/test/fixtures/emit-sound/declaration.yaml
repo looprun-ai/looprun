@@ -21,7 +21,8 @@ contract:
     - name: theClosingNoteIsTheAuditDesksOwn
       acts: [closeBooking]
       factory: role
-      args: { read: getMember, at: role, in: [owner, auditor] }
+      args: { read: getMember, at: role, in: [owner, auditor],
+              roster: { read: listMembers, at: '', role: role, label: name, key: id } }
       rule: The closing note is written by a member the roster records as an owner or an auditor, and by nobody else.
   disclosure:
     issueRefund:
