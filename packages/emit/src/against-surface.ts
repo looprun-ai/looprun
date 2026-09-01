@@ -118,7 +118,8 @@ function checkJudgedActs(declaration: Declaration, facts: SurfaceFacts): readonl
  *  covers through `acts`, and some are pointed at a second act through their configuration — the
  *  read `needs` waits for. Both name the same namespace, `facts.tools`. */
 const ACT_ARGS: Readonly<Record<string, readonly string[]>> = {
-  needs: ['read'] };
+  needs: ['read'], precondition: ['read'], role: ['read'],
+  valueFromUserOrRecord: ['read'], argMatchesRecord: ['read'] };
 
 /** Every act a guard's CONFIGURATION names exists on the surface. A prerequisite spelled one
  *  letter off is never a call anyone can make, so the guard it configures denies the act it
@@ -302,37 +303,6 @@ function checkMutatingAfter(declaration: Declaration, facts: SurfaceFacts): read
   return refusals;
 }
 
-/** Whether a guard's law walks to the row the CALL is about: the target argument names the row,
- *  and an act that names no target hands the walk nothing to find. */
-function walksTheCallsRow(guard: DeclaredGuard): boolean {
-  if (guard.factory === 'precondition') return guard.args?.reads === 'record';
-  return guard.factory === 'argMatchesRecord';
-}
-
-/** A guard whose law reads the call's own row names an act that can HAND IT ONE. The walk takes
- *  two facts of the act and needs both: the target names the row, and the entity names the family
- *  the row is filed in — a target with no entity points at a row in no family at all. Either one
- *  missing and the law reads `null` on every call: `precondition` decides against nothing and
- *  `argMatchesRecord` refuses every call by an id the records DO carry. Nothing downstream sees
- *  it — the act carries a check, and the check simply never reaches a record. */
-function checkPreconditionTarget(declaration: Declaration, facts: SurfaceFacts): readonly string[] {
-  const refusals: string[] = [];
-  declaration.contract.guards.forEach((guard, guardIndex) => {
-    if (!walksTheCallsRow(guard)) return;
-    for (const act of guard.acts) {
-      const fact = facts.tools[act];
-      if (fact === undefined) continue;
-      const missing = fact.target === null || fact.target === undefined ? 'no target'
-        : fact.entity === null || fact.entity === undefined ? 'no entity' : null;
-      if (missing === null) continue;
-      refusals.push(`contract.guards[${guardIndex}] reads the row '${act}' is about, and ${act} `
-        + `names ${missing} — the walk to that row takes the target that names it and the entity `
-        + `it is filed under, and an act missing either hands the law no record on any call. `
-        + `Declare what '${act}' is missing on the world card, or drop the record read.`);
-    }
-  });
-  return refusals;
-}
 
 /** A disclosure `needs` alias names a tool the surface actually declares — checked for
  *  every alias regardless of the held act's target, because a typo names no tool no
@@ -582,7 +552,6 @@ export function checkAgainstSurface(declaration: Declaration, facts: SurfaceFact
     ...checkDestructiveDisclosed(declaration, facts),
     ...checkCreatesLawAndAfter(declaration, facts),
     ...checkMutatingAfter(declaration, facts),
-    ...checkPreconditionTarget(declaration, facts),
     ...checkDisclosureNeedsToolExists(declaration, facts),
     ...checkDisclosureNeedsResolvable(declaration, facts),
     ...checkDisclosureNeedsInLane(declaration, facts),

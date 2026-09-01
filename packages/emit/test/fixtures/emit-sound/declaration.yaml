@@ -11,7 +11,7 @@ contract:
     - name: refundOnlyWhatIsOpen
       acts: [issueRefund]
       factory: precondition
-      args: { reads: record }
+      args: { reads: record, read: getInvoice }
       rule: Refund an invoice while it is still open, and never one already settled.
     - name: closingNoteReadsTheInvoice
       acts: [closeBooking]
@@ -21,7 +21,7 @@ contract:
     - name: theClosingNoteIsTheAuditDesksOwn
       acts: [closeBooking]
       factory: role
-      args: { anchor: workspace, by: actingMemberId, from: members, field: role, in: [owner, auditor] }
+      args: { read: getMember, at: role, in: [owner, auditor] }
       rule: The closing note is written by a member the roster records as an owner or an auditor, and by nobody else.
   disclosure:
     issueRefund:

@@ -46,10 +46,8 @@ contract:
       factory: role
       wide: oneLawEveryAct
       args:
-        anchor: workspace
-        by: actingMemberId
-        from: members
-        field: role
+        read: getMember
+        at: role
         in: [owner, admin, dispatcher, billing]
       rule: >-
         Opening, moving or cancelling a hire needs a member who is not read-only, and the acting
@@ -61,10 +59,8 @@ contract:
       factory: role
       wide: oneLawEveryAct
       args:
-        anchor: workspace
-        by: actingMemberId
-        from: members
-        field: role
+        read: getMember
+        at: role
         in: [owner, admin, dispatcher]
       rule: >-
         Handing a machine over and taking it back both move equipment on the yard, and the acting
@@ -76,10 +72,8 @@ contract:
       factory: role
       wide: oneLawEveryAct
       args:
-        anchor: workspace
-        by: actingMemberId
-        from: members
-        field: role
+        read: getMember
+        at: role
         in: [owner, admin, dispatcher]
       rule: >-
         Putting a technician on a job and standing one down both need the dispatch capability, and
@@ -92,10 +86,8 @@ contract:
       factory: role
       wide: oneLawEveryAct
       args:
-        anchor: workspace
-        by: actingMemberId
-        from: members
-        field: role
+        read: getMember
+        at: role
         in: [owner, billing]
       rule: >-
         This act moves money, so it needs the money capability, and the acting member's recorded
@@ -106,10 +98,8 @@ contract:
       acts: [closeBooking]
       factory: role
       args:
-        anchor: workspace
-        by: actingMemberId
-        from: members
-        field: role
+        read: getMember
+        at: role
         in: [owner, admin, billing]
       rule: >-
         Finishing a hire closes its money off, and the acting member's recorded role does not
@@ -121,10 +111,8 @@ contract:
       factory: role
       wide: oneLawEveryAct
       args:
-        anchor: workspace
-        by: actingMemberId
-        from: members
-        field: role
+        read: getMember
+        at: role
         in: [owner, admin, dispatcher, billing]
       rule: >-
         Filing a claim and attaching evidence to one both write on the claim register, and the
@@ -136,10 +124,8 @@ contract:
       factory: role
       wide: oneLawEveryAct
       args:
-        anchor: workspace
-        by: actingMemberId
-        from: members
-        field: role
+        read: getMember
+        at: role
         in: [owner, admin]
       rule: >-
         Placing a freeze and lifting one are both reserved to an authorized member, and the acting
@@ -152,10 +138,8 @@ contract:
       factory: role
       wide: oneLawEveryAct
       args:
-        anchor: workspace
-        by: actingMemberId
-        from: members
-        field: role
+        read: getMember
+        at: role
         in: [owner, admin]
       rule: >-
         Changing the equipment register needs the fleet-management capability, and the acting
@@ -167,10 +151,8 @@ contract:
       factory: role
       wide: oneLawEveryAct
       args:
-        anchor: workspace
-        by: actingMemberId
-        from: members
-        field: role
+        read: getMember
+        at: role
         in: [owner, admin]
       rule: >-
         Changing who is on this workspace needs the member-management capability, and the acting
@@ -181,10 +163,8 @@ contract:
       acts: [changePlan]
       factory: role
       args:
-        anchor: workspace
-        by: actingMemberId
-        from: members
-        field: role
+        read: getMember
+        at: role
         in: [owner]
       rule: >-
         Moving the workspace to another plan tier is owner-only, and the acting member's recorded

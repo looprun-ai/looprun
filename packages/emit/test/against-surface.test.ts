@@ -14,10 +14,10 @@ describe('checkAgainstSurface', () => {
       .toEqual([expect.stringContaining("issueRefund is destructive and declares no `before`")]);
   });
 
-  test('a precondition reading the record over an act with no target', () => {
+  test('a precondition naming a read the surface does not declare', () => {
     expect(checkAgainstSurface(decl({ guards: [{ name: 'g', acts: ['closeBooking'], factory: 'precondition',
-                                                 args: { reads: 'record' } }] }), FACTS, SEAM))
-      .toEqual([expect.stringContaining("names no target")]);
+                                                 args: { reads: 'record', read: 'getInvioce' } }] }), FACTS, SEAM))
+      .toEqual([expect.stringContaining("args.read names 'getInvioce'")]);
   });
 
   test('a judged check naming an act the surface does not declare', () => {

@@ -108,7 +108,7 @@ describe('writeCards', () => {
             args: { read: 'getInvoice' },
             rule: 'Read the invoice before a refund: what can still go back is what was paid minus what has already gone back.' },
           { name: 'moneyStandsOnARecord', acts: ['issueRefund', 'getInvoice'], factory: 'precondition',
-            args: { reads: 'record' }, wide: 'sameRefusal',
+            args: { reads: 'record', read: 'getInvoice' }, wide: 'sameRefusal',
             rule: 'The record this act names is not on file, so nothing here can act on it; read it back to the guest and stop.' }
         ],
         disclosure: {
@@ -303,28 +303,28 @@ describe('writeCards', () => {
     const gate = (args: Readonly<Record<string, unknown>>): Declaration =>
       decl({ guards: [{ name: 'refundOnlyWhileOpen', acts: ['issueRefund'], factory: 'precondition',
         args, rule: 'A settled invoice takes no refund; read its state and say what it carries.' }] });
-    const single = writeCards(gate({ reads: 'record', field: 'settled', is: false }), FACTS);
-    expect(single).toContain("{ ...precondition('issueRefund', ({ record }) => record?.settled === false,");
-    const several = writeCards(gate({ reads: 'record', field: 'state', in: ['open', 'partial'] }), FACTS);
+    const single = writeCards(gate({ reads: 'record', read: 'getInvoice', field: 'settled', is: false }), FACTS);
+    expect(single).toContain("walkAnswer(answer, 'settled') === false");
+    const several = writeCards(gate({ reads: 'record', read: 'getInvoice', field: 'state', in: ['open', 'partial'] }), FACTS);
     expect(several).toContain(
-      "{ ...precondition('issueRefund', ({ record }) => ['open', 'partial'].some(declared => declared === record?.state),");
-    const figure = writeCards(gate({ reads: 'record', field: 'balanceDue', is: 0 }), FACTS);
-    expect(figure).toContain('record?.balanceDue === 0,');
+      "['open', 'partial'].some(declared => declared === walkAnswer(answer, 'state'))");
+    const figure = writeCards(gate({ reads: 'record', read: 'getInvoice', field: 'balanceDue', is: 0 }), FACTS);
+    expect(figure).toContain("walkAnswer(answer, 'balanceDue') === 0");
   });
 
   test('a field with no value, two values or a block for a value is refused by its path', () => {
     const gate = (args: Readonly<Record<string, unknown>>): Declaration =>
       decl({ guards: [{ name: 'refundOnlyWhileOpen', acts: ['issueRefund'], factory: 'precondition',
         args, rule: 'A settled invoice takes no refund.' }] });
-    expect(() => writeCards(gate({ reads: 'record', field: 'state' }), FACTS))
+    expect(() => writeCards(gate({ reads: 'record', read: 'getInvoice', field: 'state' }), FACTS))
       .toThrow('this declaration carries neither');
-    expect(() => writeCards(gate({ reads: 'record', field: 'state', is: 'open', in: ['open'] }), FACTS))
+    expect(() => writeCards(gate({ reads: 'record', read: 'getInvoice', field: 'state', is: 'open', in: ['open'] }), FACTS))
       .toThrow('this declaration carries both');
-    expect(() => writeCards(gate({ reads: 'record', field: 'state', is: { open: true } }), FACTS))
+    expect(() => writeCards(gate({ reads: 'record', read: 'getInvoice', field: 'state', is: { open: true } }), FACTS))
       .toThrow('declares args.is as a block of its own');
-    expect(() => writeCards(gate({ reads: 'record', field: 'state', in: [] }), FACTS))
+    expect(() => writeCards(gate({ reads: 'record', read: 'getInvoice', field: 'state', in: [] }), FACTS))
       .toThrow('declares args.in');
-    expect(() => writeCards(gate({ reads: 'record', is: 'open' }), FACTS))
+    expect(() => writeCards(gate({ reads: 'record', read: 'getInvoice', is: 'open' }), FACTS))
       .toThrow('declares args.is and no args.field');
   });
 
@@ -507,42 +507,37 @@ describe('writeCards', () => {
       .toThrow('contract.rewrites[0] declares name');
   });
 
-  test('a role gate emits one precondition over the acting record, and the walk beside it', () => {
+  test('a role gate emits one precondition over the acting read, and the walk beside it', () => {
     const declaration = decl({ guards: [{ name: 'tool:moneyGate',
       acts: ['issueRefund', 'closeBooking'], factory: 'role',
-      args: { anchor: 'accounts', by: 'actingStaffId', from: 'staff', field: 'grade',
-              in: ['owner', 'billing'] },
+      args: { read: 'getInvoice', at: 'grade', in: ['owner', 'billing'] },
       wide: 'oneLawEveryAct',
       rule: 'Moving money needs the money capability, and the acting member\'s recorded grade does not carry it.' }] });
     const out = writeCards(declaration, FACTS);
-    expect(out).toContain("{ ...precondition(['issueRefund', 'closeBooking'], ({ state }) =>");
-    expect(out).toContain("['owner', 'billing'].includes(actingField(state, 'accounts', 'actingStaffId', 'staff', 'grade'))");
-    // The gate holds the records it decides on, so its refusal names who else carries a
-    // value it allows — a permission is not somebody the operator can go to.
-    expect(out).toContain("|| whoCan(state, 'staff', 'grade', ['owner', 'billing']),");
-    expect(out).toContain('const whoCan = (state: StateSnapshot, from: string, field: string,');
+    expect(out).toContain("{ ...precondition(['issueRefund', 'closeBooking'], ({ reads }) => {");
+    expect(out).toContain("const answer = reads.latest('getInvoice')?.answer;");
+    expect(out).toContain("const value = walkAnswer(answer, 'grade');");
+    expect(out).toContain("['owner', 'billing'].some(declared => declared === value)");
+    expect(out).toContain('const walkAnswer = (answer: unknown, path: string): unknown =>');
     expect(out).toContain("name: 'tool:moneyGate' }");
     // The factory takes every act itself, so the literal around it adds no second scope.
     expect(out).not.toContain("tool: ['issueRefund', 'closeBooking']");
-    expect(out).toContain('const actingField = (state: StateSnapshot');
-    expect(out).toContain('StateSnapshot } from \'@looprun-ai/core\';');
   });
 
   test('a role gate states the values its field may carry, and refuses without them', () => {
     const gate = (args: Readonly<Record<string, unknown>>): Declaration =>
       decl({ guards: [{ name: 'tool:moneyGate', acts: ['issueRefund'], factory: 'role', args,
         rule: 'Moving money needs the money capability.' }] });
-    const walk = { anchor: 'accounts', by: 'actingStaffId', from: 'staff', field: 'grade' };
+    const walk = { read: 'getInvoice', at: 'grade' };
     expect(() => writeCards(gate({ ...walk, in: [] }), FACTS)).toThrow('args.in');
     expect(() => writeCards(gate({ ...walk, in: [7] }), FACTS)).toThrow('args.in');
-    expect(() => writeCards(gate({ by: 'actingStaffId', from: 'staff', field: 'grade', in: ['owner'] }), FACTS))
-      .toThrow('args.anchor');
+    expect(() => writeCards(gate({ at: 'grade', in: ['owner'] }), FACTS))
+      .toThrow('args.read');
   });
 
   test('a role gate states its law in the card\'s own words, and refuses without them', () => {
     const declaration = decl({ guards: [{ name: 'tool:moneyGate', acts: ['issueRefund'],
-      factory: 'role', args: { anchor: 'accounts', by: 'actingStaffId', from: 'staff',
-                               field: 'grade', in: ['owner'] } }] });
+      factory: 'role', args: { read: 'getInvoice', at: 'grade', in: ['owner'] } }] });
     expect(() => writeCards(declaration, FACTS)).toThrow('declare the `rule` it states');
   });
 
@@ -578,15 +573,14 @@ describe('writeCards', () => {
           { name: 'refundReadsTheInvoice', acts: ['issueRefund'], factory: 'needs',
             args: { read: 'getInvoice' } },
           { name: 'refundWhileTheInvoiceStands', acts: ['issueRefund'], factory: 'precondition',
-            args: { reads: 'record', field: 'settled', is: false },
+            args: { reads: 'record', read: 'getInvoice', field: 'settled', is: false },
             rule: 'A settled invoice takes no refund; read what it carries and say that instead.' },
           { name: 'invoiceIsOnFile', acts: ['getInvoice'], factory: 'precondition',
-            args: { reads: 'record' },
+            args: { reads: 'record', read: 'getInvoice' },
             rule: 'The invoice named is not on file; read the number back and stop there.' },
           { name: 'tool:moneyGate', acts: ['issueRefund', 'closeBooking'], factory: 'role',
             wide: 'oneLawEveryAct',
-            args: { anchor: 'counters', by: 'actingClerkId', from: 'clerks', field: 'grade',
-                    in: ['keeper', 'treasury'] },
+            args: { read: 'getInvoice', at: 'clerkGrade', in: ['keeper', 'treasury'] },
             rule: 'Moving money needs the treasury capability; read the clerk record and name a clerk whose grade can.' },
           { name: 'amountAsTheCustomerSaidIt', acts: ['issueRefund'], factory: 'valueFromUser',
             args: { arg: 'invoiceId' } },

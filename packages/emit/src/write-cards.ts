@@ -81,8 +81,8 @@ function commaJoin(blocks: readonly (readonly string[])[]): readonly string[] {
  *  would drop it, and the author would read a rule on the card that the engine never enforces. */
 const LAWFUL_ARGS: Readonly<Record<DeclaredGuard['factory'], readonly string[]>> = {
   needs: ['read', 'args', 'pick'],
-  precondition: ['reads', 'field', 'is', 'in'],
-  role: ['anchor', 'by', 'from', 'field', 'in'],
+  precondition: ['reads', 'read', 'field', 'is', 'in'],
+  role: ['read', 'at', 'in'],
   valueFromUser: ['arg'],
   argMatchesFormat: ['arg', 'pattern'],
   argForbidden: ['arg'],
@@ -91,8 +91,8 @@ const LAWFUL_ARGS: Readonly<Record<DeclaredGuard['factory'], readonly string[]>>
   mustAccountFor: ['records', 'status'],
   blockPattern: ['pattern', 'on'],
   argSatisfiesCondition: ['arg', 'is', 'in'],
-  valueFromUserOrRecord: ['arg', 'from', 'field'],
-  argMatchesRecord: ['arg', 'field'],
+  valueFromUserOrRecord: ['arg', 'read', 'at'],
+  argMatchesRecord: ['arg', 'read', 'at'],
   prose: ['why'],
   deny: []
 };
@@ -279,19 +279,27 @@ function testedField(guard: DeclaredGuard): string | null {
   return field;
 }
 
-/** A `precondition` reading the record: the acts it covers, the check its declared reading
- *  compiles to, and the sentence it refuses with. `reads: record` alone tests that the row is
- *  there; a `field` beside it tests what that row carries, and a row that is absent answers
- *  `undefined` — which no declared value equals, so the act refuses either way. */
+/** A `precondition` reading a returned answer: the acts it covers, the read whose last valid
+ *  answer the law walks, and the sentence it refuses with. An answer this conversation does
+ *  not hold refuses on the rule alone — the rule teaches the read. `reads: record` alone
+ *  tests that the answer is there; a `field` beside it tests what the answer carries at that
+ *  declared path. */
 function preconditionLines(guard: DeclaredGuard): readonly string[] {
   if (guard.args?.reads !== 'record') {
     throw new Error(`contract.guards '${guard.name}' declares factory 'precondition' with a `
       + `reading this emitter has no check for — the one it writes is \`reads: record\``);
   }
+  const read = stringArg(guard, 'read');
   const field = testedField(guard);
-  const test = field === null ? 'record !== null' : fieldTest(guard, fieldAccess('record', field));
+  const test = field === null ? 'true'
+    : fieldTest(guard, `walkAnswer(answer, ${quote(field)})`);
   const acts = guard.acts.length === 1 ? quote(guard.acts[0]) : list(guard.acts);
-  return [`precondition(${acts}, ({ record }) => ${test},`, `${quote(ruleOf(guard))})`];
+  return [`precondition(${acts}, ({ reads }) => {`,
+    `  const answer = reads.latest(${quote(read)})?.answer;`,
+    `  if (answer === undefined) return false;`,
+    `  return ${test};`,
+    `},`,
+    `${quote(ruleOf(guard))})`];
 }
 
 /** The values `args.in` names: the ones the acting record's field may carry for the act to run.
@@ -308,18 +316,21 @@ function allowedValues(guard: DeclaredGuard): readonly string[] {
   return declared as readonly string[];
 }
 
-/** A gate on the acting member's own record: the acts it covers, the walk from the anchor row to
- *  the field that decides, and the sentence it refuses with. The check is a `precondition` over
- *  the state — the record the acts are about decides nothing here, the member acting does. */
+/** A gate on the acting member's own record: the acts it covers, the declared path over the
+ *  read that answers who is acting, and the sentence it refuses with. The check is a
+ *  `precondition` over the reads — an unanswered read refuses in words, and the rule teaches
+ *  naming who can. */
 function roleLines(guard: DeclaredGuard): readonly string[] {
-  const walk = ['anchor', 'by', 'from', 'field'].map(name => quote(stringArg(guard, name)));
+  const read = stringArg(guard, 'read');
+  const at = stringArg(guard, 'at');
   const allowed = allowedValues(guard);
   const acts = guard.acts.length === 1 ? quote(guard.acts[0]) : list(guard.acts);
-  const from = quote(stringArg(guard, 'from'));
-  const field = quote(stringArg(guard, 'field'));
-  return [`precondition(${acts}, ({ state }) =>`,
-    `${list(allowed)}.includes(actingField(state, ${walk.join(', ')}))`,
-    `  || whoCan(state, ${from}, ${field}, ${list(allowed)}),`,
+  return [`precondition(${acts}, ({ reads }) => {`,
+    `  const answer = reads.latest(${quote(read)})?.answer;`,
+    `  if (answer === undefined) return false;`,
+    `  const value = walkAnswer(answer, ${quote(at)});`,
+    `  return ${list(allowed)}.some(declared => declared === value);`,
+    `},`,
     `${quote(ruleOf(guard))})`];
 }
 
@@ -406,7 +417,7 @@ function argSatisfiesConditionLines(guard: DeclaredGuard): readonly string[] {
  *  search, so the declaration states only where the records answer. */
 function valueFromUserOrRecordLines(guard: DeclaredGuard, act: string): readonly string[] {
   return [`valueFromUserOrRecord(${quote(act)}, ${quote(stringArg(guard, 'arg'))}, `
-    + `${quote(stringArg(guard, 'from'))}, ${quote(stringArg(guard, 'field'))},`,
+    + `{ read: ${quote(stringArg(guard, 'read'))}, at: ${quote(stringArg(guard, 'at'))} },`,
     `${quote(ruleOf(guard))})`];
 }
 
@@ -415,7 +426,8 @@ function valueFromUserOrRecordLines(guard: DeclaredGuard, act: string): readonly
  *  else. */
 function argMatchesRecordLines(guard: DeclaredGuard, act: string): readonly string[] {
   return [`argMatchesRecord(${quote(act)}, ${quote(stringArg(guard, 'arg'))}, `
-    + `${quote(stringArg(guard, 'field'))},`, `${quote(ruleOf(guard))})`];
+    + `{ read: ${quote(stringArg(guard, 'read'))}, at: ${quote(stringArg(guard, 'at'))} },`,
+    `${quote(ruleOf(guard))})`];
 }
 
 /** The one owed-read declaration: the read the act waits for, the read's args as declared
@@ -854,7 +866,8 @@ export function writeCards(declaration: Declaration, facts: SurfaceFacts): strin
   const teaches = declaration.desks.some(desk => Object.keys(desk.conduct).length > 0)
     || declaration.contract.guards.some(guard => guard.factory === 'prose')
     || seam.length > 0;
-  const gatesOnRole = declaration.contract.guards.some(guard => guard.factory === 'role');
+  const walksAnswers = declaration.contract.guards.some(guard =>
+    guard.factory === 'role' || guard.factory === 'precondition');
   const readsResults = declaration.contract.guards.some(guard => guard.factory === 'resultSatisfiesCondition');
   const helperBlocks: readonly (readonly string[])[] = [
     ...(teaches ? [[
@@ -862,34 +875,14 @@ export function writeCards(declaration: Declaration, facts: SurfaceFacts): strin
       ' *  system prefix of that desk, and the desk reads it before it decides anything. */',
       'const prose = (name: string, rule: string): Guard => ({ name, rule, on: \'reply\' });'
     ]] : []),
-    ...(gatesOnRole ? [[
-      '/** The value one field of the acting record carries. The first row of the anchor entity',
-      ' *  names who is acting through a field of its own, that name keys a row of the entity the',
-      ' *  actors live in, and the field asked for is read off that row. A step the records do not',
-      ' *  answer ends the walk on the empty string, which no list of values carries. */',
-      'const actingField = (state: StateSnapshot, anchor: string, by: string, from: string,',
-      '  field: string): string => {',
-      '  const anchorRow = Object.values(state[anchor] ?? {})[0];',
-      '  const acting = anchorRow?.[by];',
-      '  const record = typeof acting === \'string\' ? state[from]?.[acting] : undefined;',
-      '  const value = record?.[field];',
-      '  return typeof value === \'string\' ? value : \'\';',
-      '};',
-      '',
-      '/** Who else may act, read off the same records the gate decides on: every row of the',
-      ' *  actors entity whose deciding field carries a value the gate allows, named by its own',
-      ' *  key and, where the row carries one, its name. The refusal names people, because a',
-      ' *  permission is not somebody the operator can go to. */',
-      'const whoCan = (state: StateSnapshot, from: string, field: string,',
-      '  allowed: readonly string[]): string => {',
-      '  const named = Object.entries(state[from] ?? {})',
-      '    .filter(([, row]) => allowed.includes(String(row?.[field])))',
-      '    .map(([key, row]) => (typeof row?.[\'name\'] === \'string\'',
-      '      ? `${String(row[\'name\'])} (${key})` : key));',
-      '  return named.length === 0',
-      '    ? \'No record here carries a value that can.\'',
-      '    : `${named.join(\', \')} can.`;',
-      '};'
+    ...(walksAnswers ? [[
+      '/** A declared path into an answer this conversation holds: each step a field name,',
+      ' *  walked over whatever shape the surface returned. A step the answer does not carry',
+      ' *  ends the walk on undefined — which no declared value equals. */',
+      'const walkAnswer = (answer: unknown, path: string): unknown =>',
+      '  path.split(\'.\').reduce<unknown>((at, step) =>',
+      '    typeof at === \'object\' && at !== null && !Array.isArray(at)',
+      '      ? (at as { readonly [k: string]: unknown })[step] : undefined, answer);'
     ]] : []),
     ...(readsResults ? [[
       '/** A result that is a block of named fields — the one shape a field can be read off. */',
@@ -904,7 +897,7 @@ export function writeCards(declaration: Declaration, facts: SurfaceFacts): strin
   ];
   const helpers = helperBlocks.flatMap((block, at) => at === 0 ? [...block] : ['', ...block]);
   const types = ['AgentSpec', 'DomainContract', ...(teaches ? ['Guard'] : []),
-    ...(readsResults ? ['Json'] : []), ...(gatesOnRole ? ['StateSnapshot'] : [])];
+    ...(readsResults ? ['Json'] : [])];
   const imported = [
     ...declaration.contract.guards.map(guard => factoryCall(guard).imported)
       .filter((name): name is string => name !== null),

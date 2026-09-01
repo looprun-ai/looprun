@@ -19,20 +19,20 @@ test('argSatisfiesCondition is emitted as a law over the value the call carries'
   expect(text).toContain('import { argSatisfiesCondition } from \'@looprun-ai/core\';');
 });
 
-test('valueFromUserOrRecord is emitted with the entity and the field it reads', () => {
+test('valueFromUserOrRecord is emitted with the read and the path it walks', () => {
   const text = cards({ name: 'refundAmountIsSomebodys', acts: ['issueRefund'],
-    factory: 'valueFromUserOrRecord', args: { arg: 'amount', from: 'invoices', field: 'total' },
+    factory: 'valueFromUserOrRecord', args: { arg: 'amount', read: 'getInvoice', at: 'total' },
     rule: 'Refund the figure you were given or the one on the invoice.' });
   expect(text).toContain(
-    'valueFromUserOrRecord(\'issueRefund\', \'amount\', \'invoices\', \'total\',');
+    "valueFromUserOrRecord('issueRefund', 'amount', { read: 'getInvoice', at: 'total' },");
   expect(text).toContain('Refund the figure you were given or the one on the invoice.');
 });
 
-test('argMatchesRecord is emitted with the field the target row fixes', () => {
+test('argMatchesRecord is emitted with the read and the path that fixes the value', () => {
   const text = cards({ name: 'refundCurrencyIsTheInvoices', acts: ['issueRefund'],
-    factory: 'argMatchesRecord', args: { arg: 'currency', field: 'currency' },
+    factory: 'argMatchesRecord', args: { arg: 'currency', read: 'getInvoice', at: 'currency' },
     rule: 'Refund in the currency the invoice was raised in.' });
-  expect(text).toContain('argMatchesRecord(\'issueRefund\', \'currency\', \'currency\',');
+  expect(text).toContain("argMatchesRecord('issueRefund', 'currency', { read: 'getInvoice', at: 'currency' },");
 });
 
 test('needs is emitted with its declared renames and pick', () => {
@@ -50,10 +50,10 @@ test('argSatisfiesCondition declared with neither is nor in is refused by the ke
     .toThrow(/args.is|args.in/);
 });
 
-test('valueFromUserOrRecord declared without its entity is refused by that key', () => {
+test('valueFromUserOrRecord declared without its read is refused by that key', () => {
   expect(() => cards({ name: 'refundAmountIsSomebodys', acts: ['issueRefund'],
-    factory: 'valueFromUserOrRecord', args: { arg: 'amount', field: 'total' }, rule: 'r' }))
-    .toThrow(/args.from/);
+    factory: 'valueFromUserOrRecord', args: { arg: 'amount', at: 'total' }, rule: 'r' }))
+    .toThrow(/args.read/);
 });
 
 test('needs declared without its read is refused', () => {
@@ -64,7 +64,7 @@ test('needs declared without its read is refused', () => {
 
 test('a key no argument-shaped factory reads is refused by name', () => {
   expect(() => cards({ name: 'refundCurrencyIsTheInvoices', acts: ['issueRefund'],
-    factory: 'argMatchesRecord', args: { arg: 'currency', field: 'currency', after: 'getInvoice' },
+    factory: 'argMatchesRecord', args: { arg: 'currency', read: 'getInvoice', at: 'currency', after: 'x' },
     rule: 'r' })).toThrow(/args.after/);
 });
 

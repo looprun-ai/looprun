@@ -57,11 +57,11 @@ test('valueFromUserOrRecord naming a record family no act targets emits', () => 
     { arg: 'amount', from: 'members', field: 'role' }))).toEqual([]);
 });
 
-test('a row-walking rung over an act with no target row is named back', () => {
+test('a record rung names a read the surface must declare', () => {
   const names = (guardDeclared: DeclaredGuard): string =>
-    surface(guardDeclared).filter(refusal => refusal.includes('names no target')).join('\n');
-  expect(names(guard('argMatchesRecord', { arg: 'ref', field: 'total' }, ['closeBooking'])))
-    .toContain('closeBooking names no target');
+    surface(guardDeclared).filter(refusal => refusal.includes('no such act')).join('\n');
+  expect(names(guard('argMatchesRecord', { arg: 'ref', read: 'getInvoyce', at: 'total' },
+    ['closeBooking']))).toContain("args.read names 'getInvoyce'");
 });
 
 /** The whole point of `in:`: the values the argument may carry, and no others. */
@@ -73,27 +73,3 @@ test('argSatisfiesCondition with in: tests the CALL\'s argument, never itself', 
   expect(text).toContain('.some(declared => declared === value)');
 });
 
-/** A target names the row inside the act's OWN record family, so the two are one fact: an act
- *  that names a target and no entity points at a row in no family at all. The walk then finds
- *  nothing on every call — a record law decides against a row it never reached, and the refusal
- *  it writes names an id the records DO carry. */
-const TARGET_NO_ENTITY = { tools: {
-  ...FACTS.tools,
-  stampInvoice: { name: 'stampInvoice', effect: 'write', target: 'id', entity: undefined,
-    schema: { type: 'object', properties: { id: {}, total: {} }, required: ['id', 'total'] } }
-} } as never;
-
-test('a row-walking rung over an act that names no entity is named back', () => {
-  const over = (factory: DeclaredGuard['factory'], args: Record<string, unknown>): string =>
-    checkAgainstSurface(decl({ guards: [{ name: 'theLaw', acts: ['stampInvoice'], factory, args,
-      rule: 'The law this guard states.' }] }), TARGET_NO_ENTITY, SEAM)
-      .filter(refusal => refusal.includes('guards[0]')).join('\n');
-
-  for (const [factory, args] of [
-    ['argMatchesRecord', { arg: 'total', field: 'total' }],
-    ['precondition', { reads: 'record', field: 'status', is: 'OPEN' }]
-  ] as const) {
-    const refusal = over(factory, args);
-    expect(refusal, factory).toContain('stampInvoice names no entity');
-  }
-});
