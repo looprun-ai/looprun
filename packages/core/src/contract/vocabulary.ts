@@ -213,11 +213,18 @@ export interface ReplyCtx  { readonly message: string; readonly report: readonly
                                               //   A state predicate on a stateless surface is a
                                               //   construction error, never a silent null-pass
 export type StateSnapshot = { readonly [entity: string]: { readonly [id: string]: Readonly<Record<string, Json>> } };
+
+/** What this conversation's tool calls answered, as a guard consults it: the last
+ *  valid answer of a read, opaque — a condition walks it with its own declared
+ *  knowledge of the surface, and the engine walks only declared paths. */
+export interface ReadsView {
+  latest(tool: string, argsKey?: string): { readonly answer: Json; readonly at: number } | null;
+}
 export interface InstalledGuard { readonly name: string; readonly rule: string;
                                   readonly home: 'spec' | 'contract' | 'engine';
                                   readonly on: 'input' | 'preTool' | 'postTool' | 'reply';
                                   readonly tools: readonly string[];
-                                  readonly kind: string;     // the species: 'onlyAfter' · 'argRequired'
+                                  readonly kind: string;     // the species: 'needs' · 'argRequired'
                                                              //   · 'custom' · 'judged' · 'prose' · …
                                   readonly judged: boolean;
                                   readonly installedBecause: string }

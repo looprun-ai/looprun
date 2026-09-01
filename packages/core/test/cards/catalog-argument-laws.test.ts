@@ -4,7 +4,7 @@
 import { test, expect } from 'vitest';
 import type { CallCtx, Json, StateSnapshot } from '../../src/contract/vocabulary.js';
 import { TurnFailure } from '../../src/contract/vocabulary.js';
-import { argSatisfiesCondition, argMatchesRecord, onlyAfterWhen,
+import { argSatisfiesCondition, argMatchesRecord, needs,
          valueFromUserOrRecord } from '../../src/cards/catalog.js';
 import { factsFromWorld } from '../../src/cards/facts.js';
 import { HOSTILE } from '../fixtures/hostile-world.js';
@@ -96,24 +96,22 @@ test('argMatchesRecord refuses where the records hold no row for the call', () =
   expect(g.deny(callCtx('cancelBooking', { id: 'bk_404', room: '12' }))).toContain('bk_404');
 });
 
-test('onlyAfterWhen demands the read where the record condition holds', () => {
-  const g = onlyAfterWhen('cancelBooking', 'getBooking',
-    ({ record }) => record?.status === 'MAINTENANCE',
-    'Read a booking under maintenance before you cancel it.').compile('contract', FACTS);
+test('needs owes its read with the declared renames resolved from the call', () => {
+  const g = needs('cancelBooking', { read: 'getBooking', args: { bookingId: 'id' } })
+    .compile('contract', FACTS);
   const debt = g.owe?.(callCtx('cancelBooking', { id: 'bk_66' }));
-  expect(debt).toEqual([{ alias: 'getBooking', tool: 'getBooking', args: {} }]);
+  expect(debt).toEqual([{ alias: 'getBooking', tool: 'getBooking', args: { bookingId: 'bk_66' } }]);
 });
 
-test('onlyAfterWhen stands aside where the record condition does not hold', () => {
-  const g = onlyAfterWhen('cancelBooking', 'getBooking',
-    ({ record }) => record?.status === 'MAINTENANCE', 'r').compile('contract', FACTS);
+test('a needs when that answers false stands the guard aside', () => {
+  const g = needs('cancelBooking', { read: 'getBooking', when: () => false })
+    .compile('contract', FACTS);
   expect(g.owe?.(callCtx('cancelBooking', { id: 'bk_9' }))).toBeNull();
   expect(g.deny(callCtx('cancelBooking', { id: 'bk_9' }))).toBeNull();
 });
 
-test('onlyAfterWhen is satisfied once the prerequisite has succeeded', () => {
-  const g = onlyAfterWhen('cancelBooking', 'getBooking',
-    ({ record }) => record?.status === 'MAINTENANCE', 'r').compile('contract', FACTS);
+test('needs is satisfied once the read has succeeded', () => {
+  const g = needs('cancelBooking', { read: 'getBooking' }).compile('contract', FACTS);
   const ctx = { ...callCtx('cancelBooking', { id: 'bk_66' }), pastActs: [done('getBooking')] };
   expect(g.owe?.(ctx)).toBeNull();
   expect(g.deny(ctx)).toBeNull();
@@ -130,12 +128,11 @@ test('argSatisfiesCondition over a declared list refuses a value outside it', ()
   expect(g.deny(callCtx('cancelBooking', { id: 'bk_9', reason: '' }))).toBe('');
 });
 
-test('onlyAfterWhen on a stateless surface is loud, never a silent stand-aside', () => {
-  const g = onlyAfterWhen('cancelBooking', 'getBooking',
-    ({ record }) => record?.status === 'MAINTENANCE', 'r').compile('contract', FACTS);
-  const ctx = callCtx('cancelBooking', { id: 'bk_66' }, null);
-  expect(() => g.deny(ctx)).toThrow(TurnFailure);
-  expect(() => g.owe?.(ctx)).toThrow(TurnFailure);
+test('a needs when that cannot tell yet binds fail-closed', () => {
+  const g = needs('cancelBooking', { read: 'getBooking', when: () => null })
+    .compile('contract', FACTS);
+  const debt = g.owe?.(callCtx('cancelBooking', { id: 'bk_66' }));
+  expect(debt).toEqual([{ alias: 'getBooking', tool: 'getBooking', args: {} }]);
 });
 
 test('argMatchesRecord names what is missing rather than reporting an empty value', () => {

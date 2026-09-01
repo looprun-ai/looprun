@@ -1,5 +1,5 @@
 import { test, expect } from 'vitest';
-import { onlyAfter } from '../../src/cards/catalog.js';
+import { needs } from '../../src/cards/catalog.js';
 import { fact } from '../fixtures/compiled-agents.js';
 import { callStep, finishStep, payingDesk } from '../fixtures/scripted-model.js';
 import { testEngine } from '../fixtures/compiled-agents.js';
@@ -32,8 +32,8 @@ const BEHAVIORS = {
 };
 
 const guards = () => [
-  onlyAfter('cancelBooking', 'getBooking').compile('contract', TWO_GATES),
-  onlyAfter('cancelBooking', 'getPolicy').compile('contract', TWO_GATES)
+  needs('cancelBooking', { read: 'getBooking' }).compile('contract', TWO_GATES),
+  needs('cancelBooking', { read: 'getPolicy' }).compile('contract', TWO_GATES)
 ];
 
 test('every prerequisite is paid in one turn — one micro-step per debt, then the call runs', async () => {

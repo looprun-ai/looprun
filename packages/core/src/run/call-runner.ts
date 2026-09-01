@@ -198,6 +198,15 @@ export class CallRunner {
         }
         let paid = false;
         for (const read of verdict.reads) {
+          // A declared relation arms the read engine-side: the args are the held
+          // call's own values under declared renames — no model call. The forced
+          // micro-step survives only for an undeclared surface, whose read wants
+          // arguments the declaration does not carry.
+          if (Object.keys(read.args).length > 0 || !this.requiresArgs(read.tool)) {
+            await this.runChecked({ tool: read.tool, args: read.args }, 'engine', draft, 0);
+            paid = true;
+            continue;
+          }
           if (draft.microTried.includes(read.tool)) continue;
           const filled = await this.deps.microStep(read, ctx.call);
           if (filled === null || filled.tool !== read.tool) {
@@ -286,6 +295,14 @@ export class CallRunner {
         text: `${debt.rule} The required read did not succeed this conversation.`.trim() },
       result: null
     });
+  }
+
+  /** Whether a read's declared schema requires any argument at all. */
+  private requiresArgs(tool: string): boolean {
+    const schema = this.deps.compiled.facts.tools[tool]?.schema;
+    if (typeof schema !== 'object' || schema === null || Array.isArray(schema)) return false;
+    const required = (schema as { readonly required?: Json }).required;
+    return Array.isArray(required) && required.length > 0;
   }
 
   private callCtx(call: CanonicalCall, fact: ToolFact, origin: Act['origin'],

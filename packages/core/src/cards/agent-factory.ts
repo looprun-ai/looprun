@@ -6,6 +6,7 @@
  *  judged rows are filled only for a spec that declares the judged pass. Compiled
  *  once, deep-frozen; the runtime never re-reads the authored form. */
 import type { Json, SurfaceFacts, ToolFact } from '../contract/vocabulary.js';
+import { TurnFailure } from '../contract/vocabulary.js';
 import { deepFreeze } from '../contract/freeze.js';
 import type { AgentSpec, CompiledAgent, CompiledGuard, Disclosure, DisclosureBinding,
               DomainContract, Guard, JudgedGuard, MaskKey } from './cards.js';
@@ -52,6 +53,33 @@ function compileMaskKeys(secrets: DomainContract['secrets']): readonly MaskKey[]
   return (secrets ?? []).map(s => typeof s === 'string'
     ? { path: s.split('.'), mode: 'mask' as const }
     : { path: s.path.split('.'), mode: s.mode });
+}
+
+/** A needs guard's declared relation, carried on its seed for the disclosure merge. */
+interface NeedsRelation { readonly read: string; readonly args: Readonly<Record<string, string>>;
+  readonly pick?: { readonly list: string; readonly by: string; readonly key: string } }
+
+/** Every needs guard whose relation declares its args serves the consent disclosure
+ *  too: the relation lands on the act's binding under the read's alias. One
+ *  declaration, one home — an alias already on the disclosure block throws. */
+function mergeNeedsRelations(bindings: Record<string, DisclosureBinding>,
+                             contract: DomainContract | undefined): void {
+  for (const g of contract?.guards ?? []) {
+    const seed = g as { kind?: string; tool?: string | readonly string[];
+                        relation?: NeedsRelation | null };
+    if (seed.kind !== 'needs' || seed.relation == null) continue;
+    const tool = typeof seed.tool === 'string' ? seed.tool : seed.tool?.[0];
+    if (tool === undefined) continue;
+    const binding = bindings[tool] ?? { needs: {}, before: null, after: null,
+      later: null, cap: null, empty: null };
+    if (binding.needs[seed.relation.read] !== undefined) {
+      throw new TurnFailure('construction',
+        `one declaration, one home: '${seed.relation.read}' is declared on both the needs guard and the disclosure of '${tool}'`);
+    }
+    bindings[tool] = { ...binding, needs: { ...binding.needs,
+      [seed.relation.read]: { tool: seed.relation.read, args: { ...seed.relation.args },
+        ...(seed.relation.pick === undefined ? {} : { pick: seed.relation.pick }) } } };
+  }
 }
 
 function compileDisclosure(disclosure: Readonly<Record<string, Disclosure>>,
@@ -149,6 +177,9 @@ export class AgentFactory {
     guards.push(brokenReply().compile('engine', lane));
     guards.push(questionAnswered().compile('engine', lane));
 
+    const disclosureBindings = compileDisclosure(contract?.disclosure ?? {}, lane);
+    mergeNeedsRelations(disclosureBindings, contract);
+
     const armedGuards = armed ? guards : guards.map(g => ({
       ...g,
       deny: () => null,
@@ -165,7 +196,7 @@ export class AgentFactory {
       rewrites: armed ? [...contract?.rewrites ?? []] : [],
       limits,
       maskKeys: compileMaskKeys(contract?.secrets),
-      disclosureBindings: compileDisclosure(contract?.disclosure ?? {}, lane),
+      disclosureBindings: disclosureBindings,
       wording: resolveWording(contract?.wording),
       promptParts: {
         persona: spec.persona,

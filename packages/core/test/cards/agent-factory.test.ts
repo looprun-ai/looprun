@@ -1,7 +1,7 @@
 import { test, expect } from 'vitest';
 import type { Act } from '../../src/contract/vocabulary.js';
 import { AgentFactory } from '../../src/cards/agent-factory.js';
-import { injectionCheck, maskPattern, onlyAfter } from '../../src/cards/catalog.js';
+import { injectionCheck, maskPattern, needs } from '../../src/cards/catalog.js';
 import { factsFromWorld } from '../../src/cards/facts.js';
 import { Rulebook } from '../../src/run/rulebook.js';
 import { HOSTILE } from '../fixtures/hostile-world.js';
@@ -13,11 +13,11 @@ test('the guard walk prints spec → contract → consent → floor, each row wi
   const c = f.governed(
     { name: 'concierge', persona: 'You are the desk.',
       guards: [{ name: 'spec-rule', rule: 'Answer briefly.', on: 'reply', deny: () => null }] },
-    { name: 'grandhotel', guards: [onlyAfter('cancelBooking', 'getBooking')] },
+    { name: 'grandhotel', guards: [needs('cancelBooking', { read: 'getBooking' })] },
     FACTS);
   const names = c.guards.map(g => `${g.home}:${g.kind}`);
   expect(names[0]).toBe('spec:custom');
-  expect(names[1]).toBe('contract:onlyAfter');
+  expect(names[1]).toBe('contract:needs');
   const consentAt = names.indexOf('engine:confirmFirst');
   const floorAt = names.indexOf('engine:noDuplicateCall');
   expect(consentAt).toBeGreaterThan(1);
@@ -99,7 +99,7 @@ test('rewrites ride the compiled agent in declared order', () => {
 test('ungoverned: promptParts and facts byte-identical; every check answers allow', () => {
   const spec = { name: 'a', persona: 'You are the desk.' };
   const contract = { name: 'd', voice: 'Warm.', facts: ['Bookings live in the store.'],
-    guards: [onlyAfter('cancelBooking', 'getBooking')] };
+    guards: [needs('cancelBooking', { read: 'getBooking' })] };
   const g = f.governed(spec, contract, FACTS);
   const u = f.ungoverned(spec, contract, FACTS);
   expect(JSON.stringify(u.promptParts)).toBe(JSON.stringify(g.promptParts));

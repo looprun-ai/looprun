@@ -4,8 +4,8 @@
  *  structural. A factory MINTS its guard's name as kind:tool. Author regex exists
  *  ONLY inside blockPattern, purgePattern and maskPattern; argMatchesFormat evaluates the
  *  schema's own declared pattern. */
-import type { Act, CallCtx, ConsentWhen, InputCtx, Json, OwedRead, ReplyCtx, ReportWord, ResultCtx,
-              Rewrite, StateSnapshot, SurfaceFacts } from '../contract/vocabulary.js';
+import type { Act, CallCtx, ConsentWhen, InputCtx, Json, OwedRead, ReadsView, ReplyCtx, ReportWord,
+              ResultCtx, Rewrite, StateSnapshot, SurfaceFacts } from '../contract/vocabulary.js';
 import { TurnFailure } from '../contract/vocabulary.js';
 import type { CompiledGuard, Guard, GuardCtx } from './cards.js';
 
@@ -50,42 +50,64 @@ function installedAt<C extends GuardCtx>(seed: SeedGuard, home: 'spec' | 'contra
   };
 }
 
-/** The gated tool runs only after the prerequisite SUCCEEDED this conversation. A
- *  READ prerequisite raises the owe verdict: the engine pays the debt with ONE
- *  forced micro-step where the session's own model fills the read's args over a
- *  single-tool surface — the engine never derives another call's arguments. A WRITE
- *  prerequisite denies, teaching the order. A read already attempted this turn
- *  without success denies the same way — the debt is paid at most once per turn. */
-export function onlyAfter(tool: string, prerequisite: string): SeedGuard {
+/** The one owed-read declaration: the gated tool runs only after its declared read
+ *  SUCCEEDED this conversation. The ENGINE arms the read itself — each read arg a
+ *  declared rename of the held call's own values — so no model call is spent where
+ *  the relation is declared; the forced micro-step survives only for a read whose
+ *  args the declaration does not carry. A WRITE prerequisite denies, teaching the
+ *  order. A read already attempted this turn without success denies the same way —
+ *  the debt is paid at most once per turn. `when` consults the accumulation: false
+ *  stands the guard down, true binds, and null — the answers that would tell are
+ *  themselves unread — binds fail-closed, because a condition that cannot answer
+ *  never waives a read. Declared `args` (even empty) also serve the consent
+ *  disclosure: the relation lands on the act's binding under the read's alias. */
+export interface NeedsSpec {
+  readonly read: string;
+  readonly args?: Readonly<Record<string, string>>;
+  readonly pick?: { readonly list: string; readonly by: string; readonly key: string };
+  readonly when?: (reads: ReadsView) => boolean | null;
+  readonly rule?: string;
+}
+
+export function needs(tool: string, spec: NeedsSpec): SeedGuard {
+  const read = spec.read;
   const satisfied = (ctx: CallCtx): boolean =>
-    [...ctx.pastActs, ...ctx.turnActs].some(a => a.call.tool === prerequisite && a.status === 'done');
+    [...ctx.pastActs, ...ctx.turnActs].some(a => a.call.tool === read && a.status === 'done');
   const attemptedThisTurn = (ctx: CallCtx): boolean =>
-    ctx.turnActs.some(a => a.call.tool === prerequisite && a.status !== 'done');
+    ctx.turnActs.some(a => a.call.tool === read && a.status !== 'done');
+  const emptyView: ReadsView = { latest: () => null };
+  const standsDown = (): boolean => spec.when !== undefined && spec.when(emptyView) === false;
   return {
-    name: `onlyAfter:${tool}`,
-    rule: `Run ${prerequisite} before ${tool}.`,
+    name: `needs:${tool}`,
+    rule: spec.rule ?? `Run ${read} before ${tool}.`,
     tool,
     on: 'preTool',
-    kind: 'onlyAfter',
+    kind: 'needs',
+    relation: spec.args === undefined ? null
+      : { read, args: { ...spec.args },
+          ...(spec.pick === undefined ? {} : { pick: spec.pick }) },
     compile(home, facts) {
-      const prereqFact = facts.tools[prerequisite];
-      const isRead = prereqFact?.effect === 'read';
+      const readFact = facts.tools[read];
+      const isRead = readFact?.effect === 'read';
+      const armed = (ctx: CallCtx): Readonly<Record<string, Json>> =>
+        Object.fromEntries(Object.entries(spec.args ?? {})
+          .map(([readArg, heldArg]) => [readArg, ctx.call.args[heldArg] ?? null]));
       return installed(this, home, {
         owe: ctx => {
-          if (!isRead || satisfied(ctx) || attemptedThisTurn(ctx)) return null;
-          return [{ alias: prerequisite, tool: prerequisite, args: {} }];
+          if (!isRead || standsDown() || satisfied(ctx) || attemptedThisTurn(ctx)) return null;
+          return [{ alias: read, tool: read, args: armed(ctx) }];
         },
         deny: ctx => {
-          if (satisfied(ctx)) return null;
+          if (standsDown() || satisfied(ctx)) return null;
           if (isRead) {
             return attemptedThisTurn(ctx)
-              ? `${prerequisite} did not succeed this conversation` : null;
+              ? `${read} did not succeed this conversation` : null;
           }
-          return `${prerequisite} has not succeeded yet this conversation`;
+          return `${read} has not succeeded yet this conversation`;
         }
       });
     }
-  };
+  } as SeedGuard;
 }
 
 /** Consent, auto from the surface: a destructive call runs only on a consumed
@@ -725,56 +747,6 @@ export function argMatchesRecord(tool: string, arg: string, field: string,
         return held === undefined || held === null
           ? `'${arg}' arrived as '${value}', and the record carries no '${field}' to match it`
           : `'${arg}' arrived as '${value}', and the record carries '${String(held)}' under '${field}'`;
-      });
-    }
-  };
-}
-
-/** The order, demanded exactly where the record says so: ONE guard carrying both conditions.
- *  The prerequisite must have succeeded this conversation when the declared reading of the
- *  call's own row answers true, and where it answers false the act runs with no order to obey.
- *  A READ prerequisite raises the owe verdict on the same terms onlyAfter does — the engine
- *  pays the debt with one forced micro-step — so the condition decides whether a debt exists
- *  at all. A read already attempted this turn without success denies instead. */
-export function onlyAfterWhen(tool: string, prerequisite: string,
-  when: (ctx: { readonly record: Readonly<Record<string, Json>> | null;
-                readonly state: StateSnapshot | null }) => boolean,
-  reason: string): SeedGuard {
-  const satisfied = (ctx: CallCtx): boolean =>
-    [...ctx.pastActs, ...ctx.turnActs].some(a => a.call.tool === prerequisite && a.status === 'done');
-  const attemptedThisTurn = (ctx: CallCtx): boolean =>
-    ctx.turnActs.some(a => a.call.tool === prerequisite && a.status !== 'done');
-  return {
-    name: `onlyAfterWhen:${tool}`,
-    rule: reason,
-    tool,
-    on: 'preTool',
-    kind: 'onlyAfterWhen',
-    compile(home, facts) {
-      const prereqFact = facts.tools[prerequisite];
-      const isRead = prereqFact?.effect === 'read';
-      // The condition reads the records, so a surface with none is loud rather than a silent
-      // stand-aside: an order nobody demands is exactly what this guard exists to prevent.
-      const demanded = (ctx: CallCtx): boolean => {
-        if (ctx.state === null) {
-          throw new TurnFailure('construction',
-            `onlyAfterWhen on ${ctx.call.tool} needs a records snapshot, and this surface has none`);
-        }
-        return when({ record: recordOf(ctx, facts), state: ctx.state });
-      };
-      return installed(this, home, {
-        owe: ctx => {
-          if (!isRead || satisfied(ctx) || attemptedThisTurn(ctx) || !demanded(ctx)) return null;
-          return [{ alias: prerequisite, tool: prerequisite, args: {} }];
-        },
-        deny: ctx => {
-          if (satisfied(ctx) || !demanded(ctx)) return null;
-          if (isRead) {
-            return attemptedThisTurn(ctx)
-              ? `${prerequisite} did not succeed this conversation` : null;
-          }
-          return `${prerequisite} has not succeeded yet this conversation`;
-        }
       });
     }
   };

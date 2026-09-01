@@ -1,7 +1,7 @@
 import { test, expect } from 'vitest';
 import type { Act, CallCtx } from '../../src/contract/vocabulary.js';
 import { AgentFactory } from '../../src/cards/agent-factory.js';
-import { onlyAfter, precondition } from '../../src/cards/catalog.js';
+import { needs, precondition } from '../../src/cards/catalog.js';
 import { factsFromWorld } from '../../src/cards/facts.js';
 import { Rulebook } from '../../src/run/rulebook.js';
 import { HOSTILE } from '../fixtures/hostile-world.js';
@@ -53,7 +53,7 @@ test('a duplicate restates before anything else speaks', () => {
 test('an owed read still precedes the consent question', () => {
   const rulebook = new Rulebook(f.governed(
     { name: 'a', persona: 'p' },
-    { name: 'd', guards: [onlyAfter('cancelBooking', 'getBooking')] }, FACTS));
+    { name: 'd', guards: [needs('cancelBooking', { read: 'getBooking' })] }, FACTS));
   const verdict = rulebook.checkPreTool(call('cancelBooking', { id: 'bk_2' }, 'cancel:bk_2'));
   expect(verdict).toMatchObject({ kind: 'owe' });
 });

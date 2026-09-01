@@ -1,5 +1,5 @@
 import { test, expect } from 'vitest';
-import { maxCalls, onlyAfter } from '../../src/cards/catalog.js';
+import { maxCalls, needs } from '../../src/cards/catalog.js';
 import { ScriptedModel } from '../../src/run/scripted-model.js';
 import { BOOKING_SURFACE, install, testEngine } from '../fixtures/compiled-agents.js';
 
@@ -9,7 +9,7 @@ test('the census rows are the very objects the rulebook runs, in priority order'
   const inputGuard = install(
     { name: 'no-shouting', rule: 'Read the text calmly.', on: 'input', deny: () => null },
     'spec', 'custom');
-  const only = onlyAfter('cancelBooking', 'getBooking').compile('contract', BOOKING_SURFACE);
+  const only = needs('cancelBooking', { read: 'getBooking' }).compile('contract', BOOKING_SURFACE);
   const max = maxCalls('sendEmail', 1, { scope: 'conversation', reason: 'One email, ever.' })
     .compile('contract', BOOKING_SURFACE);
   const { engine } = testEngine({ model: new ScriptedModel([]), guards: [inputGuard, only, max] });
@@ -18,7 +18,7 @@ test('the census rows are the very objects the rulebook runs, in priority order'
   const second = engine.guards();
 
   expect(first.guards.slice(0, 3).map(g => g.name))
-    .toEqual(['no-shouting', 'onlyAfter:cancelBooking', 'maxCalls:sendEmail']);
+    .toEqual(['no-shouting', 'needs:cancelBooking', 'maxCalls:sendEmail']);
   expect(first.guards.slice(3).every(g => g.home === 'engine')).toBe(true);
   first.guards.forEach((g, i) => expect(second.guards[i]).toBe(g));
   expect(first.guards[1]).toBe(only);

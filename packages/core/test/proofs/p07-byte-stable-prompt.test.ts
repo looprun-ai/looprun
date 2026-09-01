@@ -1,5 +1,5 @@
 import { test, expect } from 'vitest';
-import { onlyAfter } from '../../src/cards/catalog.js';
+import { needs } from '../../src/cards/catalog.js';
 import { ScriptedModel } from '../../src/run/scripted-model.js';
 import { callStep, finishStep } from '../fixtures/scripted-model.js';
 import { BOOKING_SURFACE, install, testEngine } from '../fixtures/compiled-agents.js';
@@ -32,7 +32,7 @@ test('every step of every turn shares one byte-identical system prefix; only the
 });
 
 test('a contract tool guard rule rides the tool card; a spec rule rides the system prefix', async () => {
-  const contractGuard = onlyAfter('cancelBooking', 'getBooking').compile('contract', BOOKING_SURFACE);
+  const contractGuard = needs('cancelBooking', { read: 'getBooking' }).compile('contract', BOOKING_SURFACE);
   const specGuard = install(
     { name: 'no-prices', rule: 'The desk never discusses prices.', on: 'reply', deny: () => null },
     'spec', 'custom');
