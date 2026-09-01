@@ -1,0 +1,96 @@
+{
+  "messages": [
+    {
+      "role": "user",
+      "content": "Good morning. Which quays can take a vessel of twelve point eight metres draft today?"
+    },
+    {
+      "role": "assistant",
+      "content": "CALL read_quay Q-01\nCALL read_quay Q-02\nCALL read_quay Q-03"
+    },
+    {
+      "role": "user",
+      "content": "Book the Northern Gantry on Q-01 from 06:00 to 14:00 tomorrow. I approve the booking."
+    },
+    {
+      "role": "assistant",
+      "content": "CALL read_booking BK-4402"
+    },
+    {
+      "role": "user",
+      "content": "TOOL RESULT create_booking → { \"bookingCode\": \"BK-4404\", \"vesselCode\": \"VS-1002\", \"quayCode\": \"Q-01\", \"startHour\": 6, \"endHour\": 14, \"status\": \"confirmed\" }"
+    },
+    {
+      "role": "assistant",
+      "content": "BK-4404 is confirmed for Northern Gantry (VS-1002) on Q-01 from 06:00 to 14:00."
+    },
+    {
+      "role": "user",
+      "content": "What does an hour on a berth cost?"
+    },
+    {
+      "role": "assistant",
+      "content": "An hour on a berth costs 46 EUR."
+    },
+    {
+      "role": "user",
+      "content": "Move that booking to start at 08:00 instead. I approve the amendment."
+    },
+    {
+      "role": "assistant",
+      "content": "CALL amend_booking BK-4404 8 14"
+    },
+    {
+      "role": "user",
+      "content": "TOOL RESULT amend_booking → { \"bookingCode\": \"BK-4404\", \"startHour\": 8, \"endHour\": 14 }"
+    },
+    {
+      "role": "assistant",
+      "content": "BK-4404 is confirmed for Northern Gantry (VS-1002) on Q-01 from 08:00 to 14:00."
+    },
+    {
+      "role": "user",
+      "content": "Is the Salt Harrier cleared to come alongside?"
+    },
+    {
+      "role": "assistant",
+      "content": "Salt Harrier (VS-1003) is not cleared to come alongside. Its clearance status is \"held\".\n\nI hand this question to the customs desk by name."
+    },
+    {
+      "role": "user",
+      "content": "Cancel BK-4403 please. I approve the cancellation."
+    },
+    {
+      "role": "assistant",
+      "content": "CALL cancel_booking BK-4403 \"Operator request\""
+    },
+    {
+      "role": "user",
+      "content": "TOOL RESULT cancel_booking → { \"bookingCode\": \"BK-4403\", \"feeApplied\": 0 }"
+    },
+    {
+      "role": "assistant",
+      "content": "BK-4403 is cancelled. No fee was applied."
+    },
+    {
+      "role": "user",
+      "content": "How long is the waitlist on Q-02?"
+    },
+    {
+      "role": "assistant",
+      "content": "CALL read_waitlist Q-02 2026-09-14"
+    },
+    {
+      "role": "user",
+      "content": "Summarise for me what is booked on Q-01 today."
+    },
+    {
+      "role": "assistant",
+      "content": "CALL list_bookings_for_quay Q-01 2026-09-14"
+    },
+    {
+      "role": "user",
+      "content": "STATE — the records this desk may read, as of this step. Nothing outside this block is a fact.\n\nday: 2026-09-14\n\nvessels:\n  { \"vesselCode\": \"VS-1001\", \"name\": \"Aurora Kestrel\", \"lengthM\": 184, \"draftM\": 9.4, \"clearance\": \"cleared\", \"dangerousGoods\": false, \"accountCode\": \"AC-101\" }\n  { \"vesselCode\": \"VS-1002\", \"name\": \"Northern Gantry\", \"lengthM\": 232, \"draftM\": 12.8, \"clearance\": \"cleared\", \"dangerousGoods\": false, \"accountCode\": \"AC-102\" }\n  { \"vesselCode\": \"VS-1003\", \"name\": \"Salt Harrier\", \"lengthM\": 121, \"draftM\": 7.1, \"clearance\": \"held\", \"dangerousGoods\": false, \"accountCode\": \"AC-103\" }\n\nquays:\n  { \"quayCode\": \"Q-01\", \"lengthM\": 240, \"deep\": true, \"underMaintenance\": false }\n  { \"quayCode\": \"Q-02\", \"lengthM\": 190, \"deep\": false, \"underMaintenance\": false }\n  { \"quayCode\": \"Q-03\", \"lengthM\": 160, \"deep\": false, \"underMaintenance\": true }\n\naccounts:\n  { \"accountCode\": \"AC-101\", \"balance\": 1200, \"creditLimit\": 5000 }\n  { \"accountCode\": \"AC-102\", \"balance\": 1517, \"creditLimit\": 5500 }\n  { \"accountCode\": \"AC-103\", \"balance\": 1834, \"creditLimit\": 6000 }\n\ntariffs:\n  { \"tariffKey\": \"berth.hour\", \"amount\": 46, \"currency\": \"EUR\" }\n  { \"tariffKey\": \"cancel.late\", \"amount\": 380, \"currency\": \"EUR\" }\n  { \"tariffKey\": \"waitlist.hold\", \"amount\": 25, \"currency\": \"EUR\" }\n\nbookings:\n  { \"bookingCode\": \"BK-4401\", \"vesselCode\": \"VS-1001\", \"quayCode\": \"Q-01\", \"startHour\": 6, \"endHour\": 14, \"status\": \"confirmed\" }\n  { \"bookingCode\": \"BK-4402\", \"vesselCode\": \"VS-1002\", \"quayCode\": \"Q-04\", \"startHour\": 8, \"endHour\": 18, \"status\": \"confirmed\" }\n  { \"bookingCode\": \"BK-4403\", \"vesselCode\": \"VS-1005\", \"quayCode\": \"Q-05\", \"startHour\": 9, \"endHour\": 12, \"status\": \"cancelled\" }\n  { \"bookingCode\": \"BK-4404\", \"vesselCode\": \"VS-1002\", \"quayCode\": \"Q-01\", \"startHour\": 8, \"endHour\": 14, \"status\": \"confirmed\" }\n\nwaitlist:\n  { \"quayCode\": \"Q-02\", \"queue\": [\"VS-1005\", \"VS-1006\"] }\n\nopen questions: none"
+    }
+  ]
+}
