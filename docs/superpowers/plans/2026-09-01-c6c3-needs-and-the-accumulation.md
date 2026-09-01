@@ -250,7 +250,7 @@ capability. An author who runs the skill today receives both defects.
   values that carry the capability, and the roster read with the declared path to its list and the
   three fields a row is named by. Task 13 teaches exactly this shape; Task 14 re-emits against it.
 
-- [ ] **Step 1: Write the failing emit test**
+- [x] **Step 1: Write the failing emit test**
 
 ```typescript
 test('a role gate reads the acting record by its own call and names who can', () => {
@@ -266,12 +266,12 @@ test('a role gate reads the acting record by its own call and names who can', ()
 });
 ```
 
-- [ ] **Step 2: Run it and watch it fail**
+- [x] **Step 2: Run it and watch it fail**
 
 Run: `pnpm -C packages/emit test -- write-cards`
 Expected: FAIL — the emitted text carries `reads.latest('getMember')` and no roster read.
 
-- [ ] **Step 3: Teach `roleLines` the acting key and the roster**
+- [x] **Step 3: Teach `roleLines` the acting key and the roster**
 
 ```typescript
 function roleLines(guard: DeclaredGuard): readonly string[] {
@@ -311,7 +311,7 @@ const nameWhoCan = (rows: unknown, role: string, label: string, key: string,
 An empty answer, a missing list, a row without the declared fields: each ends on the empty
 string, and the guard's own rule speaks. Nothing here throws.
 
-- [ ] **Step 4: `LAWFUL_ARGS.role` learns `roster`; a `role` row without one is a construction error**
+- [x] **Step 4: `LAWFUL_ARGS.role` learns `roster`; a `role` row without one is a construction error**
 
 ```typescript
 role: ['read', 'at', 'in', 'roster'],
@@ -321,9 +321,9 @@ The throw names the repair: `contract.guards '<name>' declares factory 'role', w
 the members who hold the capability — declare args.roster with the read, the path to its list, and
 the role, label and key fields a row carries.`
 
-- [ ] **Step 5: Run the emit tests — green. Run `pnpm -r --if-present test` — green.**
+- [x] **Step 5: Run the emit tests — green. Run `pnpm -r --if-present test` — green.**
 
-- [ ] **Step 6: Commit** `feat(emit): a role refusal names who can, from a declared roster`
+- [x] **Step 6: Commit** `feat(emit): a role refusal names who can, from a declared roster`
 
 The subject declarations are NOT edited here. Stating the roster on a role row is authoring, and
 Task 14 is where an agent that learned it from the skill alone does it — a declaration this
@@ -343,7 +343,7 @@ author following them writes a guard that does not compile, or one that passes s
 - Modify: `agentspec/skill/references/author.md` — the `role` factory's argument table gains
   `roster` (the shape Task 12 fixes)
 
-- [ ] **Step 1: `guard-contexts.md` — the `state` row of both tables becomes `reads`**
+- [x] **Step 1: `guard-contexts.md` — the `state` row of both tables becomes `reads`**
 
 | field | type | what it carries |
 |---|---|---|
@@ -366,21 +366,21 @@ const closingIsTheLastStep: Guard = {
 };
 ```
 
-- [ ] **Step 2: `guard-catalog.md` — the `precondition` section states the real signature**
+- [x] **Step 2: `guard-catalog.md` — the `precondition` section states the real signature**
 
 `precondition` hands its predicate `{ args, reads }`: the acting call's own arguments, and what
 this conversation's reads answered. There is no record the engine resolves for the author — a
 condition reaches a row by reading the tool that returns it, and a row this conversation never
 read refuses in words.
 
-- [ ] **Step 3: `norms.md` — `CHECK_INERT` names the real silent pass**: a condition that walks a
+- [x] **Step 3: `norms.md` — `CHECK_INERT` names the real silent pass**: a condition that walks a
       path no answer carries ends on `undefined`, which equals no declared value, so it refuses on
       every call. The repair is the probe: write the condition against a real sample.
 
-- [ ] **Step 4: `author.md` — the `role` row's argument table gains `roster`, with atlas's own
+- [x] **Step 4: `author.md` — the `role` row's argument table gains `roster`, with atlas's own
       declaration as the worked example.**
 
-- [ ] **Step 5: `pnpm gate` in agentspec green; commit** `docs(skill): a guard reads what the tools answered`
+- [x] **Step 5: `pnpm gate` in agentspec green; commit** `docs(skill): a guard reads what the tools answered`
 
 ### Task 14: "Update the agent" — the blind re-emit
 
@@ -388,29 +388,29 @@ The subjects carry hand repairs the declaration does not state. Tasks 12 and 13 
 repairs into the emitter and the skill; this task proves it by having an agent that has seen none
 of this session run the skill's own update path.
 
-- [ ] **Step 1: Dispatch a blind agent with one instruction — "Update the agent"** — pointed at
+- [x] **Step 1: Dispatch a blind agent with one instruction — "Update the agent"** — pointed at
       `agentspec-bench/subjects/atlas-c20`, with the skill and nothing else. It runs the skill's
       resume path: the emit refuses the role rows until the declaration states the roster each
       refusal names people from, so the agent authors those rows from the skill's pages alone,
       re-emits `cards.ts`, re-stamps, and reports. What it gets wrong is a defect in the pages —
       fix the page, dispatch a fresh blind agent, repeat until the emitted cards are right.
-- [ ] **Step 1b: The same pass states the rename the owed read needs**, or the audit below
+- [x] **Step 1b: The same pass states the rename the owed read needs**, or the audit below
       records that the pages never taught it:
 
 ```yaml
       args: { read: getAsset, args: { assetId: assetId } }
 ```
-- [ ] **Step 2: Parity check, no model call:** `subjects/atlas-c20/micro-whocan.test.ts` green
+- [x] **Step 2: Parity check, no model call:** `subjects/atlas-c20/micro-whocan.test.ts` green
       against the re-emitted cards — the emitted gate answers what the hand gate answers, in all
       three states (nothing read · acting read only · acting and roster read).
-- [ ] **Step 3: The subject gate green; the hand-carried `roleGate` helper is gone from
+- [x] **Step 3: The subject gate green; the hand-carried `roleGate` helper is gone from
       `cards.ts`.**
-- [ ] **Step 4: Register what the `role` factory cannot express.** trialworks' gate reads the
+- [x] **Step 4: Register what the `role` factory cannot express.** trialworks' gate reads the
       acting id from one read and the role from another; harborpoint's reads both from one answer.
       Where a subject's gate does not fit the declared factory, the row goes on the BACKLOG with
       the shape it needs — a hand-carried gate no declaration states is the defect this task
       exists to end.
-- [ ] **Step 5: Re-run the directed 12 against the RE-EMITTED subject** (`<date>-c6c3-directed12-emitted`);
+- [x] **Step 5: Re-run the directed 12 against the RE-EMITTED subject** (`<date>-c6c3-directed12-emitted`);
       judge in session; SHOW the owner. The two who-can cases (48, 100) are the ones under test;
       the other ten are the regression bar. Nothing else in the exam reaches this gate: only the
       eleven cases whose preset moves the acting member away from the owner touch it
@@ -418,4 +418,4 @@ of this session run the skill's own update path.
 
 ### Task 15: The FULL RULER — the program's certification (only after the owner sees the 40)
 
-- [ ] **atlas-c20's 100 + harborpoint + trialworks, judged in session; the program closes with the number; then the merge question goes to the owner.**
+- [x] **atlas-c20's 100 + harborpoint + trialworks, judged in session; the program closes with the number; then the merge question goes to the owner.**
