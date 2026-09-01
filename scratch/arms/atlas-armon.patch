@@ -1,0 +1,64 @@
+diff --git a/subjects/atlas-c20/cards.ts b/subjects/atlas-c20/cards.ts
+index b328665..339c90b 100644
+--- a/subjects/atlas-c20/cards.ts
++++ b/subjects/atlas-c20/cards.ts
+@@ -40,6 +40,17 @@ const whoCan = (state: StateSnapshot, from: string, field: string,
+     : `${named.join(', ')} can.`;
+ };
+ 
++/** The acts a workspace-level standing refusal stops: every change to this workspace's
++ *  records. A hold at workspace scope, a suspension and an unfinished onboarding each
++ *  stop all of them, whoever asks. */
++const GATED_ACTS: readonly string[] = ['createBooking', 'rescheduleBooking', 'cancelBooking',
++  'checkOutAsset', 'checkInAsset', 'dispatchTechnician', 'cancelDispatch', 'chargeDeposit',
++  'releaseDeposit', 'payInvoice', 'issueRefund', 'voidInvoice', 'generateInvoice',
++  'closeBooking', 'resolveClaim', 'placeHold', 'releaseHold', 'registerAsset',
++  'updateAssetCondition', 'scheduleMaintenance', 'completeMaintenance', 'retireAsset',
++  'transferAsset', 'inviteMember', 'removeMember', 'updateMemberRole', 'changePlan',
++  'fileClaim', 'addClaimEvidence', 'generateQuote', 'createCustomer'];
++
+ /** Why each prose rule exists. Every name prose() mints appears here, claiming one of
+  *  noSuchAct, aboutARead, conduct, seam or measured:<case>. The set is closed. */
+ export const WHY = {
+@@ -104,6 +115,7 @@ export const WHY = {
+ /** Why a rule names more than one act: its sentence is stamped on the card of every act it
+  *  names, so naming several costs a licence — oneLawEveryAct, or sameRefusal. */
+ export const WIDE = {
++  'tool:theStandingFreezeSpeaksBeforeTheDesk': 'sameRefusal',
+   'tool:changeReadsTheFreezesStanding': 'oneLawEveryAct',
+   'tool:bookingChangeReadsTheRole': 'oneLawEveryAct',
+   'tool:fieldWorkReadsTheRole': 'oneLawEveryAct',
+@@ -180,6 +192,33 @@ export const CONTRACT: DomainContract = {
+           || whoCan(state, 'members', 'role', ['owner', 'admin', 'dispatcher', 'billing']),
+         'Filing a claim and attaching evidence to one both put a record on this workspace\'s file, and the acting member\'s recorded role is read-only. Read the member record, report the role it states, and name a member of this workspace whose role can file the claim.'),
+       name: 'tool:claimFilingReadsTheRole' },
++    { ...precondition(GATED_ACTS, ({ state }) => {
++        const workspace = Object.values(state['workspace'] ?? {})[0];
++        if (workspace?.['status'] === 'suspended') {
++          return 'This workspace is suspended, so nothing in it can be changed. Say that the '
++            + 'suspension stands, say the record keeps what it already carries, and offer no '
++            + 'route around it — the suspension is lifted before any of this work runs.';
++        }
++        if (workspace?.['onboarded'] === false) {
++          return 'This workspace has not finished onboarding, so there are no records here to '
++            + 'act on yet. Say so, and change nothing.';
++        }
++        const standing = Object.values(state['holds'] ?? {})
++          .find(hold => hold['active'] === true && hold['scope'] === 'workspace');
++        if (standing !== undefined) {
++          return `A ${String(standing['type'])} hold stands over the whole workspace: `
++            + `${String(standing['id'])} — "${String(standing['reason'])}". Name it, quote that `
++            + 'reason, and say the work runs once it is lifted. Offer no route around it.';
++        }
++        return true;
++      },
++      'A workspace-scope legal, compliance, safety or payment hold stops every gated operation, a suspended workspace stops them all, and an unfinished onboarding means there are no records to act on. Name the one that actually stands, quote its reason, and say it is lifted before the work runs.'),
++      name: 'tool:theStandingFreezeSpeaksBeforeTheDesk' },
++    { ...precondition('generateQuote', ({ state }) =>
++        ['owner', 'admin', 'dispatcher'].includes(actingField(state, 'workspace', 'actingMemberId', 'members', 'role'))
++          || whoCan(state, 'members', 'role', ['owner', 'admin', 'dispatcher']),
++        'Pricing a hire is rental-desk work, and the acting member\'s recorded role does not carry it. Read the member record, report the role it states, and name a member of this workspace whose role can price the hire — from a read — or say that an owner or an admin can change this member\'s role.'),
++      name: 'tool:pricingReadsTheRole' },
+     { ...onlyAfter('createBooking', 'checkAvailability'),
+       name: 'tool:availabilityBeforeBooking',
+       rule: 'Check the machine against the exact range before you open a booking on it. The status on the register is a point in time and is not an answer about a date range: only the availability read shows the bookings, workshop windows and freezes that fall inside it. An operator saying the machine is free is a claim, not that read.' },

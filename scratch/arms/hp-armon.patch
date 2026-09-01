@@ -1,0 +1,17 @@
+diff --git a/subjects/harborpoint/cards.ts b/subjects/harborpoint/cards.ts
+index 366c749..d2b1fd6 100644
+--- a/subjects/harborpoint/cards.ts
++++ b/subjects/harborpoint/cards.ts
+@@ -132,6 +132,12 @@ export const CONTRACT: DomainContract = {
+     { ...precondition(['payInvoice', 'voidInvoice'], ({ record }) => record?.status === 'open',
+         'Only an open invoice takes a payment or a void. When this turn\'s own record already shows the money moved, THAT call is what moved it: report it as done, with the figures it left, and call again for nothing. When the invoice was paid or voided before this conversation, say which of the two it is and move nothing — money already taken goes back through a refund, and a voided charge does not come back at all.'),
+       name: 'tool:invoiceIsOpenBeforeMoneyMoves' },
++    { ...precondition('refundInvoice', ({ record }) => record?.status === 'paid',
++        'Money goes back only on an invoice that was paid. When the register shows it open or voided, say which of the two it is and pay nothing back — an open charge is settled by paying it or voiding it, and a voided charge was never money the marina took.'),
++      name: 'tool:invoiceIsPaidBeforeMoneyGoesBack' },
++    { ...precondition(['sellFuel', 'openWorkOrder', 'fileIncident'], ({ record }) => record !== null,
++        'Fuel goes into a vessel on this register, a yard job is opened on a vessel on this register, and a report is filed against a vessel on this register. When the vessel asked for is not on it, say so and do none of the three — name her as the operator named her, and offer to look her up.'),
++      name: 'tool:theVesselIsOnTheRegister' },
+     { ...precondition('releaseHold', ({ record }) => record?.active === true,
+         'Only a standing freeze can be lifted. When the register shows it already lifted, say so with the day it came off and lift nothing.'),
+       name: 'tool:freezeIsStandingBeforeItLifts' },

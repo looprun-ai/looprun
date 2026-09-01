@@ -1,0 +1,51 @@
+diff --git a/subjects/harborpoint/cards.ts b/subjects/harborpoint/cards.ts
+index 366c749..ec9ab3e 100644
+--- a/subjects/harborpoint/cards.ts
++++ b/subjects/harborpoint/cards.ts
+@@ -40,6 +40,20 @@ const whoCan = (state: StateSnapshot, from: string, field: string,
+     : `${named.join(', ')} can.`;
+ };
+ 
++/** The vessel a call names is on the register and no freeze stands over her. A row reaches
++ *  a gate without its own key, so the key is the one this same snapshot files that row
++ *  under — the gate and the snapshot hold one object, and identity gives the key back. */
++const vesselIsFree = (record: Readonly<Record<string, unknown>> | null,
++  state: StateSnapshot): boolean => {
++  if (record === null) return false;
++  const standing = Object.values(state['holds'] ?? {}).filter(hold => hold?.['active'] === true);
++  if (standing.some(hold => hold['scope'] === 'harbor')) return false;
++  const key = Object.entries(state['vessels'] ?? {})
++    .find(([, row]) => row === record)?.[0];
++  return key === undefined
++    || !standing.some(hold => hold['scope'] === 'vessel' && hold['vesselId'] === key);
++};
++
+ /** Why each prose rule exists. Every name prose() mints appears here, claiming one of
+  *  noSuchAct, aboutARead, conduct, seam or measured:<case>. The set is closed. */
+ export const WHY = {
+@@ -69,6 +83,7 @@ export const WIDE = {
+   'tool:freezeChangeReadsTheRole': 'oneLawEveryAct',
+   'tool:yardJobIsOpenBeforeItCloses': 'sameRefusal',
+   'tool:invoiceIsOpenBeforeMoneyMoves': 'sameRefusal',
++  'tool:theVesselIsOnTheRegisterAndFree': 'sameRefusal',
+   'tool:dockRecordsOpenOnlyWhenAsked': 'oneLawEveryAct',
+   'tool:officeRecordsOpenOnlyWhenAsked': 'oneLawEveryAct'
+ } as const;
+@@ -132,6 +147,17 @@ export const CONTRACT: DomainContract = {
+     { ...precondition(['payInvoice', 'voidInvoice'], ({ record }) => record?.status === 'open',
+         'Only an open invoice takes a payment or a void. When this turn\'s own record already shows the money moved, THAT call is what moved it: report it as done, with the figures it left, and call again for nothing. When the invoice was paid or voided before this conversation, say which of the two it is and move nothing — money already taken goes back through a refund, and a voided charge does not come back at all.'),
+       name: 'tool:invoiceIsOpenBeforeMoneyMoves' },
++    { ...precondition('refundInvoice', ({ record }) => record !== null
++        && (Number(record['paid'] ?? 0) - Number(record['refunded'] ?? 0)) > 0,
++        'Money goes back only while something taken on the invoice is still standing. What was taken, less what has already gone back, is what can go back — an invoice part paid carries a refund for the part that was paid, whatever the rest of it still shows. When nothing on it is left to return, say what was taken and what has already gone back, and pay nothing: anything owed beyond that is settled with the owner outside this desk.'),
++      name: 'tool:somethingOnTheInvoiceIsStillRefundable' },
++    { ...precondition(['sellFuel', 'openWorkOrder'],
++        ({ record, state }) => vesselIsFree(record, state),
++        'Fuel goes into a vessel on this register, and a yard job is opened on a vessel on this register — and neither runs while a freeze stands over the harbour or over that vessel. When the vessel asked for is not on the register, say so and do neither: name her as the operator named her, and offer to look her up. When a freeze stands, name it, quote the reason it carries, and say the harbourmaster lifts it before the work runs.'),
++      name: 'tool:theVesselIsOnTheRegisterAndFree' },
++    { ...precondition('fileIncident', ({ record }) => record !== null,
++        'A report is filed against a vessel on this register. When the vessel asked for is not on it, say so and file nothing — name her as the operator named her, and offer to look her up.'),
++      name: 'tool:theVesselIsOnTheRegister' },
+     { ...precondition('releaseHold', ({ record }) => record?.active === true,
+         'Only a standing freeze can be lifted. When the register shows it already lifted, say so with the day it came off and lift nothing.'),
+       name: 'tool:freezeIsStandingBeforeItLifts' },
