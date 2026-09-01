@@ -53,10 +53,18 @@ export const hotelContract: DomainContract = {
     // The order above owes a read and is paid by running it; what REFUSES the cancellation is
     // this one. Every act carries a check that decides its call.
     precondition('cancelBooking',
-      ({ record }) => record !== null && record.status === 'CONFIRMED',
+      ({ reads }) => {
+        const row = reads.latest('getBooking')?.answer as { status?: string } | undefined;
+        if (row === undefined) return 'the booking was not read this conversation — read it first';
+        return row.status === 'CONFIRMED';
+      },
       'Cancel a booking only while it is still confirmed — a guest already checked in stays.'),
     precondition('moveBooking',
-      ({ record }) => record !== null && record.status === 'CONFIRMED',
+      ({ reads }) => {
+        const row = reads.latest('getBooking')?.answer as { status?: string } | undefined;
+        if (row === undefined) return 'the booking was not read this conversation — read it first';
+        return row.status === 'CONFIRMED';
+      },
       'Move a booking only while it is still confirmed.')
   ],
   disclosure: {

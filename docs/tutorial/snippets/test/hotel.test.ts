@@ -65,10 +65,12 @@ test('lesson 3 — the owed read is collected by the engine, in one forced micro
   const agent = new LoopRunAgent({
     spec: concierge, contract: hotelContract, world: hotel,
     model: { scripted: { steps: [
+      call('getBooking', { id: 'bk_1' }),
       // The model goes straight for the cancel. `needs` owes getInvoice, so the
       // engine stops and asks the model for THAT ONE call before anything else runs.
       call('cancelBooking', { id: 'bk_1' }),
       call('getInvoice', { id: 'bk_1' }),
+      { calls: [], text: '' },
       { calls: [], text: '' },
       { calls: [], text: '' },
       { calls: [], text: '' },
@@ -129,11 +131,14 @@ test('lesson 6 — a world gate refuses a checked-in booking, whatever the user 
 
 test("lesson 5 — the day the guest wrote passes the front desk's guard; an invented day is denied", async () => {
   const steps = (day: string): ModelStep[] => [
+    call('getBooking', { id: 'bk_1' }),
     call('moveBooking', { id: 'bk_1', set: { day } }),
-    finish(`Moved bk_1 to ${day}.`, [{ tool: 'moveBooking', target: 'bk_1', word: 'done' }]),
+    finish(`Moved bk_1 to ${day}.`, [{ tool: 'getBooking', target: 'bk_1', word: 'done' },
+      { tool: 'moveBooking', target: 'bk_1', word: 'done' }]),
     { calls: [], text: '' },
     { calls: [], text: '' },
-    finish('I could not move bk_1.', [{ tool: 'moveBooking', target: 'bk_1', word: 'refused' }]),
+    finish('I could not move bk_1.', [{ tool: 'getBooking', target: 'bk_1', word: 'done' },
+      { tool: 'moveBooking', target: 'bk_1', word: 'refused' }]),
     { calls: [], text: '' },
     { calls: [], text: '' }
   ];
