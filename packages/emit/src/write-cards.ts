@@ -86,7 +86,7 @@ const LAWFUL_ARGS: Readonly<Record<DeclaredGuard['factory'], readonly string[]>>
   valueFromUser: ['arg'],
   argMatchesFormat: ['arg', 'pattern'],
   argForbidden: ['arg'],
-  cap: ['calls', 'scope'],
+  maxCalls: ['calls', 'scope'],
   resultSatisfiesCondition: ['field', 'is', 'in'],
   mustAccountFor: ['records', 'status'],
   blockPattern: ['pattern', 'on'],
@@ -115,7 +115,7 @@ const ACT_SHAPE: Readonly<Record<DeclaredGuard['factory'], 'all' | 'first' | 'no
   valueFromUser: 'first',
   argMatchesFormat: 'first',
   argForbidden: 'first',
-  cap: 'first',
+  maxCalls: 'first',
   resultSatisfiesCondition: 'first',
   mustAccountFor: 'none',
   blockPattern: 'none',
@@ -129,13 +129,13 @@ const ACT_SHAPE: Readonly<Record<DeclaredGuard['factory'], 'all' | 'first' | 'no
 /** The factories whose law is the declaration's own sentence: the check refuses with it, or it
  *  states the correction the reply owes. A factory that mints its sentence from its own
  *  configuration is not here — a `rule` beside it overrides that sentence and is optional. */
-const OWES_RULE: ReadonlySet<DeclaredGuard['factory']> = new Set(['precondition', 'role', 'cap', 'resultSatisfiesCondition', 'blockPattern', 'prose',
+const OWES_RULE: ReadonlySet<DeclaredGuard['factory']> = new Set(['precondition', 'role', 'maxCalls', 'resultSatisfiesCondition', 'blockPattern', 'prose',
   'argSatisfiesCondition', 'valueFromUserOrRecord', 'argMatchesRecord']);
 
 /** The factories handed the declared sentence inside the call itself. Every other factory mints
  *  its own, and a `rule` declared beside one of those is emitted as a field of the literal. */
 const TAKES_RULE: ReadonlySet<DeclaredGuard['factory']> = new Set(['precondition', 'role',
-  'cap', 'blockPattern',
+  'maxCalls', 'blockPattern',
   'argSatisfiesCondition', 'valueFromUserOrRecord', 'argMatchesRecord']);
 
 function checkArgs(guard: DeclaredGuard): void {
@@ -416,16 +416,16 @@ function accountLines(guard: DeclaredGuard): readonly string[] {
 
 /** A ceiling on how many times one act runs. The count is that act's own completed calls, so a
  *  ceiling covers exactly one act. */
-function capLines(guard: DeclaredGuard, act: string): readonly string[] {
+function maxCallsLines(guard: DeclaredGuard, act: string): readonly string[] {
   if (guard.acts.length > 1) {
-    throw new Error(`contract.guards '${guard.name}' declares factory 'cap' over `
+    throw new Error(`contract.guards '${guard.name}' declares factory 'maxCalls' over `
       + `${String(guard.acts.length)} acts, and a ceiling counts one act's own calls — declare `
       + `one guard per act`);
   }
   const calls = guard.args?.calls;
   if (typeof calls !== 'number') {
-    throw new Error(`contract.guards '${guard.name}' declares factory 'cap', whose configuration `
-      + `is args.calls — a number this declaration does not carry`);
+    throw new Error(`contract.guards '${guard.name}' declares factory 'maxCalls', whose `
+      + `configuration is args.calls — a number this declaration does not carry`);
   }
   return [`maxCalls(${quote(act)}, ${String(calls)}, { scope: ${quote(stringArg(guard, 'scope'))},`,
     `reason: ${quote(ruleOf(guard))} })`];
@@ -525,8 +525,8 @@ function factoryCall(guard: DeclaredGuard): { readonly imported: string | null;
       return { imported: 'precondition', lines: preconditionLines(guard) };
     case 'role':
       return { imported: 'precondition', lines: roleLines(guard) };
-    case 'cap':
-      return { imported: 'maxCalls', lines: capLines(guard, act) };
+    case 'maxCalls':
+      return { imported: 'maxCalls', lines: maxCallsLines(guard, act) };
     case 'mustAccountFor':
       return { imported: 'mustAccountFor', lines: accountLines(guard) };
     case 'blockPattern':

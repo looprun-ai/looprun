@@ -615,7 +615,7 @@ describe('writeCards', () => {
             args: { arg: 'invoiceId', pattern: 'inv_[0-9]{4}' } },
           { name: 'noOverrideOnALookup', acts: ['getInvoice'], factory: 'argForbidden',
             args: { arg: 'invoiceId' } },
-          { name: 'oneRefundPerTurn', acts: ['issueRefund'], factory: 'cap',
+          { name: 'oneRefundPerTurn', acts: ['issueRefund'], factory: 'maxCalls',
             args: { calls: 1, scope: 'turn' },
             rule: 'One refund goes out per turn; a second is owed and takes another turn.' },
           { name: 'refundReallyLanded', acts: ['issueRefund'], factory: 'resultSatisfiesCondition',
