@@ -7,7 +7,7 @@ import { cases } from '../../../docs/tutorial/snippets/hotel/exam.js';
 
 describe('tutorial', () => {
   test('every hotel exam covers key resolves against the census', () => {
-    const census = new Set(['confirmFirst:cancelBooking', 'onlyAfter:cancelBooking',
+    const census = new Set(['confirmFirst:cancelBooking', 'needs:cancelBooking',
                             'precondition:moveBooking', 'valueFromUser:moveBooking']);
     expect(coversResolve(cases, census)).toEqual([]);
   });

@@ -80,7 +80,7 @@ function commaJoin(blocks: readonly (readonly string[])[]): readonly string[] {
 /** What each factory is configured from. A key outside this list configures nothing: the emitter
  *  would drop it, and the author would read a rule on the card that the engine never enforces. */
 const LAWFUL_ARGS: Readonly<Record<DeclaredGuard['factory'], readonly string[]>> = {
-  onlyAfter: ['after'],
+  needs: ['read', 'args', 'pick'],
   precondition: ['reads', 'field', 'is', 'in'],
   role: ['anchor', 'by', 'from', 'field', 'in'],
   valueFromUser: ['arg'],
@@ -93,7 +93,6 @@ const LAWFUL_ARGS: Readonly<Record<DeclaredGuard['factory'], readonly string[]>>
   argSatisfiesCondition: ['arg', 'is', 'in'],
   valueFromUserOrRecord: ['arg', 'from', 'field'],
   argMatchesRecord: ['arg', 'field'],
-  onlyAfterWhen: ['after', 'field', 'is', 'in'],
   prose: ['why'],
   deny: []
 };
@@ -110,7 +109,7 @@ const LAWFUL_REWRITE: Readonly<Record<DeclaredRewrite['kind'], readonly string[]
  *  `first` — the call takes the first, and the rest arrive as the guard's own `tool` scope;
  *  `none` — the call takes no act at all, so every act the guard names arrives as that scope. */
 const ACT_SHAPE: Readonly<Record<DeclaredGuard['factory'], 'all' | 'first' | 'none'>> = {
-  onlyAfter: 'first',
+  needs: 'first',
   precondition: 'all',
   role: 'all',
   valueFromUser: 'first',
@@ -123,7 +122,6 @@ const ACT_SHAPE: Readonly<Record<DeclaredGuard['factory'], 'all' | 'first' | 'no
   argSatisfiesCondition: 'all',
   valueFromUserOrRecord: 'first',
   argMatchesRecord: 'first',
-  onlyAfterWhen: 'first',
   prose: 'none',
   deny: 'none'
 };
@@ -132,13 +130,13 @@ const ACT_SHAPE: Readonly<Record<DeclaredGuard['factory'], 'all' | 'first' | 'no
  *  states the correction the reply owes. A factory that mints its sentence from its own
  *  configuration is not here — a `rule` beside it overrides that sentence and is optional. */
 const OWES_RULE: ReadonlySet<DeclaredGuard['factory']> = new Set(['precondition', 'role', 'cap', 'resultSatisfiesCondition', 'blockPattern', 'prose',
-  'argSatisfiesCondition', 'valueFromUserOrRecord', 'argMatchesRecord', 'onlyAfterWhen']);
+  'argSatisfiesCondition', 'valueFromUserOrRecord', 'argMatchesRecord']);
 
 /** The factories handed the declared sentence inside the call itself. Every other factory mints
  *  its own, and a `rule` declared beside one of those is emitted as a field of the literal. */
 const TAKES_RULE: ReadonlySet<DeclaredGuard['factory']> = new Set(['precondition', 'role',
   'cap', 'blockPattern',
-  'argSatisfiesCondition', 'valueFromUserOrRecord', 'argMatchesRecord', 'onlyAfterWhen']);
+  'argSatisfiesCondition', 'valueFromUserOrRecord', 'argMatchesRecord']);
 
 function checkArgs(guard: DeclaredGuard): void {
   const lawful = LAWFUL_ARGS[guard.factory];
@@ -420,18 +418,35 @@ function argMatchesRecordLines(guard: DeclaredGuard, act: string): readonly stri
     + `${quote(stringArg(guard, 'field'))},`, `${quote(ruleOf(guard))})`];
 }
 
-/** The order and the condition as one guard: the read the act waits for, and the reading of the
- *  call's own row that decides whether it waits at all. */
-function onlyAfterWhenLines(guard: DeclaredGuard, act: string): readonly string[] {
-  const field = testedField(guard);
-  if (field === null) {
-    throw new Error(`contract.guards '${guard.name}' declares factory 'onlyAfterWhen', which `
-      + `demands the read exactly where the record says so — declare args.field, and the value `
-      + `that field carries where the read is owed`);
+/** The one owed-read declaration: the read the act waits for, the read's args as declared
+ *  renames of the held call's own, and the pick that binds one row of a list answer. */
+function needsLines(guard: DeclaredGuard, act: string): readonly string[] {
+  const parts = [`read: ${quote(stringArg(guard, 'read'))}`];
+  const renames = guard.args?.['args'];
+  if (renames !== undefined) {
+    if (typeof renames !== 'object' || renames === null || Array.isArray(renames)) {
+      throw new Error(`contract.guards '${guard.name}' declares args.args, which maps each read `
+        + `argument to the name of one of the act's own — an object this declaration does not carry`);
+    }
+    const pairs = Object.entries(renames as Record<string, unknown>).map(([readArg, held]) => {
+      if (typeof held !== 'string') {
+        throw new Error(`contract.guards '${guard.name}' maps read argument '${readArg}' to a `
+          + `value that is not the name of one of the act's own arguments`);
+      }
+      return `${key(readArg)}: ${quote(held)}`;
+    });
+    parts.push(`args: { ${pairs.join(', ')} }`);
   }
-  return [`onlyAfterWhen(${quote(act)}, ${quote(stringArg(guard, 'after'))},`,
-    `({ record }) => ${fieldTest(guard, fieldAccess('record', field))},`,
-    `${quote(ruleOf(guard))})`];
+  const pick = guard.args?.['pick'] as { list?: unknown; by?: unknown; key?: unknown } | undefined;
+  if (pick !== undefined) {
+    if (typeof pick !== 'object' || pick === null || typeof pick.list !== 'string'
+      || typeof pick.by !== 'string' || typeof pick.key !== 'string') {
+      throw new Error(`contract.guards '${guard.name}' declares args.pick, which binds one row `
+        + `of a list answer — { list, by, key }, three strings this declaration does not carry`);
+    }
+    parts.push(`pick: { list: ${quote(pick.list)}, by: ${quote(pick.by)}, key: ${quote(pick.key)} }`);
+  }
+  return [`needs(${quote(act)}, { ${parts.join(', ')} })`];
 }
 
 /** The call one declared guard is emitted from: the factory it imports, and the lines of the
@@ -452,9 +467,8 @@ function factoryCall(guard: DeclaredGuard): { readonly imported: string | null;
   checkArgs(guard);
   if (OWES_RULE.has(guard.factory)) ruleOf(guard);
   switch (guard.factory) {
-    case 'onlyAfter':
-      return { imported: 'onlyAfter',
-        lines: [`onlyAfter(${quote(act)}, ${quote(stringArg(guard, 'after'))})`] };
+    case 'needs':
+      return { imported: 'needs', lines: needsLines(guard, act) };
     case 'valueFromUser':
       return { imported: 'valueFromUser',
         lines: [`valueFromUser(${quote(act)}, ${quote(stringArg(guard, 'arg'))})`] };
@@ -484,8 +498,6 @@ function factoryCall(guard: DeclaredGuard): { readonly imported: string | null;
         lines: valueFromUserOrRecordLines(guard, act) };
     case 'argMatchesRecord':
       return { imported: 'argMatchesRecord', lines: argMatchesRecordLines(guard, act) };
-    case 'onlyAfterWhen':
-      return { imported: 'onlyAfterWhen', lines: onlyAfterWhenLines(guard, act) };
     case 'prose':
       return { imported: null, lines: [`prose(${quote(guard.name)}, ${quote(ruleOf(guard))})`] };
   }

@@ -560,12 +560,12 @@ contract:
   guards:
     - name: refundReadsTheInvoice
       acts: [issueRefund]
-      factory: onlyAfter
-      args: { after: getInvoice }
+      factory: needs
+      args: { read: getInvoice }
     - name: refundReadsTheInvoice
       acts: [closeBooking]
-      factory: onlyAfter
-      args: { after: getInvoice }
+      factory: needs
+      args: { read: getInvoice }
   disclosure: {}
 desks:
   - name: front-desk
@@ -584,12 +584,12 @@ contract:
   guards:
     - name: refundReadsTheInvoice
       acts: [issueRefund]
-      factory: onlyAfter
-      args: { after: getInvoice }
+      factory: needs
+      args: { read: getInvoice }
     - name: closingNoteReadsTheInvoice
       acts: [closeBooking]
-      factory: onlyAfter
-      args: { after: getInvoice }
+      factory: needs
+      args: { read: getInvoice }
   disclosure: {}
 desks:
   - name: front-desk

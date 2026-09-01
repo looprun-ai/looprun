@@ -35,7 +35,7 @@ test('the seam table carries one row per world refusal, third column empty', () 
 
 test('the expected census names every guard the declaration mints', () => {
   const names = writeCensus(decl({ guards: [{ name: 'refundReadsTheInvoice', acts: ['issueRefund'],
-                                              factory: 'onlyAfter', args: { after: 'getInvoice' } }] }), FACTS);
+                                              factory: 'needs', args: { read: 'getInvoice' } }] }), FACTS);
   expect(names).toContain('refundReadsTheInvoice');
 });
 
@@ -117,7 +117,7 @@ test('a prerequisite the surface does not carry is refused beside the act that n
   try { emit(dir); } catch (error) { message = (error as Error).message; }
   const lines = message.split('\n');
   expect(lines).toHaveLength(2);
-  expect(lines).toContain('contract.guards[0].args.after names \'getInvioce\', '
+  expect(lines).toContain('contract.guards[0].args.read names \'getInvioce\', '
     + 'and the surface declares no such act — did you mean \'getInvoice\'?');
   expect(lines).toContain('contract.guards[1].acts[0] names \'getInvioce\', '
     + 'and the surface declares no such act — did you mean \'getInvoice\'?');
@@ -142,7 +142,7 @@ test('a refusal writes nothing at all, and states every refusal it can know', ()
 });
 
 /** One declaration with two faults of different kinds: an act the surface does not carry, which
- *  the surface check answers, and an argument `onlyAfter` does not read, which composing the card
+ *  the surface check answers, and an argument `needs` does not read, which composing the card
  *  raises. An author fixes both in one pass or reads only half of what is wrong. */
 const TWO_FAULTS = [
   'contract:',
@@ -152,8 +152,8 @@ const TWO_FAULTS = [
   '  guards:',
   '    - name: refundReadsTheInvoice',
   '      acts: [issueRefunds]',
-  '      factory: onlyAfter',
-  '      args: { after: getInvoice, pattern: inv }',
+  '      factory: needs',
+  '      args: { read: getInvoice, pattern: inv }',
   '  disclosure:',
   '    issueRefund:',
   '      needs: { invoice: getInvoice }',
@@ -175,7 +175,7 @@ test('the refusals of the surface and of the cards arrive as one list', () => {
   const lines = message.split('\n');
   expect(lines).toHaveLength(2);
   expect(lines[0]).toContain('names \'issueRefunds\', and the surface declares no such act');
-  expect(lines[1]).toContain('declares args.pattern, and factory \'onlyAfter\'');
+  expect(lines[1]).toContain('declares args.pattern, and factory \'needs\'');
   expect(existsSync(join(dir, 'cards.ts'))).toBe(false);
 });
 

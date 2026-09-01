@@ -62,8 +62,6 @@ test('a row-walking rung over an act with no target row is named back', () => {
     surface(guardDeclared).filter(refusal => refusal.includes('names no target')).join('\n');
   expect(names(guard('argMatchesRecord', { arg: 'ref', field: 'total' }, ['closeBooking'])))
     .toContain('closeBooking names no target');
-  expect(names(guard('onlyAfterWhen', { after: 'getInvoice', field: 'status', is: 'OPEN' },
-    ['closeBooking']))).toContain('closeBooking names no target');
 });
 
 /** The whole point of `in:`: the values the argument may carry, and no others. */
@@ -93,7 +91,6 @@ test('a row-walking rung over an act that names no entity is named back', () => 
 
   for (const [factory, args] of [
     ['argMatchesRecord', { arg: 'total', field: 'total' }],
-    ['onlyAfterWhen', { after: 'getInvoice', field: 'status', is: 'OPEN' }],
     ['precondition', { reads: 'record', field: 'status', is: 'OPEN' }]
   ] as const) {
     const refusal = over(factory, args);

@@ -104,8 +104,8 @@ describe('writeCards', () => {
         voice: 'Warm, brief, and exact about dates and money; never agreeable at the cost of being wrong.',
         facts: ['Check-in is from 15:00 and check-out is by 11:00 on the day the stay ends.'],
         guards: [
-          { name: 'refundReadsTheInvoice', acts: ['issueRefund'], factory: 'onlyAfter',
-            args: { after: 'getInvoice' },
+          { name: 'refundReadsTheInvoice', acts: ['issueRefund'], factory: 'needs',
+            args: { read: 'getInvoice' },
             rule: 'Read the invoice before a refund: what can still go back is what was paid minus what has already gone back.' },
           { name: 'moneyStandsOnARecord', acts: ['issueRefund', 'getInvoice'], factory: 'precondition',
             args: { reads: 'record' }, wide: 'sameRefusal',
@@ -171,14 +171,14 @@ describe('writeCards', () => {
   test('a contract prose rule is emitted as its sentence and the acts it is stamped on', () => {
     const rule = 'Name the role the member record states, then a member whose role can act.';
     const out = writeCards(decl({ guards: [
-      { name: 'confirmBeforeRefund', acts: ['issueRefund'], factory: 'onlyAfter',
-        args: { after: 'getInvoice' } },
+      { name: 'confirmBeforeRefund', acts: ['issueRefund'], factory: 'needs',
+        args: { read: 'getInvoice' } },
       { name: 'roleRefusalNamesWhoCan', acts: ['issueRefund', 'getInvoice'], factory: 'prose',
         wide: 'oneLawEveryAct', args: { why: 'conduct' }, rule }] }), FACTS);
     expect(out).toContain(`{ ...prose('roleRefusalNamesWhoCan', '${rule}'), `
       + "tool: ['issueRefund', 'getInvoice'] }");
     // `prose` is the card's own helper, so the engine import names the factories and not it.
-    expect(out).toContain("import { onlyAfter } from '@looprun-ai/core';");
+    expect(out).toContain("import { needs } from '@looprun-ai/core';");
     expect(out).toContain("roleRefusalNamesWhoCan: 'conduct'");
     expect(out).toContain("roleRefusalNamesWhoCan: 'oneLawEveryAct'");
 
@@ -412,7 +412,7 @@ describe('writeCards', () => {
     ] }), FACTS);
     expect(out).toContain("      prose('declareHonestly', 'Say what ran.'),");
     expect(out).toContain("      { ...injectionCheck(), tool: ['issueRefund', 'getInvoice'] }");
-    expect(out).toContain("import { injectionCheck, onlyAfter, precondition } from '@looprun-ai/core';");
+    expect(out).toContain("import { injectionCheck, needs, precondition } from '@looprun-ai/core';");
     // The desk that carries a judged check buys the pass that asks it.
     expect(out).toContain('    judgePass: true,');
   });
@@ -492,7 +492,7 @@ describe('writeCards', () => {
     expect(out).toContain("    maskPattern('taxNumber', new RegExp('[A-Z]{2}[0-9]{9}')),");
     expect(out).toContain("    purgePattern('internalNote', new RegExp('INTERNAL:[^\\\\n]*')),");
     expect(out).toContain("    swapTerms({ invoice: 'statement', refund: 'reimbursement' })");
-    expect(out).toContain("import { maskPattern, onlyAfter, precondition, purgePattern, swapTerms } from '@looprun-ai/core';");
+    expect(out).toContain("import { maskPattern, needs, precondition, purgePattern, swapTerms } from '@looprun-ai/core';");
   });
 
   test('a rewrite missing what its kind is configured from is refused by its index', () => {
@@ -575,8 +575,8 @@ describe('writeCards', () => {
         voice: 'Plain, brief, and exact about stock and money.',
         facts: ['An order is picked from one bay and never split across two.'],
         guards: [
-          { name: 'refundReadsTheInvoice', acts: ['issueRefund'], factory: 'onlyAfter',
-            args: { after: 'getInvoice' } },
+          { name: 'refundReadsTheInvoice', acts: ['issueRefund'], factory: 'needs',
+            args: { read: 'getInvoice' } },
           { name: 'refundWhileTheInvoiceStands', acts: ['issueRefund'], factory: 'precondition',
             args: { reads: 'record', field: 'settled', is: false },
             rule: 'A settled invoice takes no refund; read what it carries and say that instead.' },
@@ -643,7 +643,7 @@ describe('writeCards', () => {
     expect(typecheck(dir)).toEqual([]);
 
     // Every declared mechanism reaches the card under the name the engine imports it by.
-    for (const factory of ['onlyAfter', 'precondition', 'valueFromUser',
+    for (const factory of ['needs', 'precondition', 'valueFromUser',
       'argMatchesFormat', 'argForbidden', 'maxCalls', 'resultSatisfiesCondition', 'mustAccountFor', 'blockPattern',
       'maskPattern', 'purgePattern', 'swapTerms', 'injectionCheck']) {
       expect(out, `${factory} reaches no line of the card`).toContain(`${factory}(`);
@@ -655,9 +655,9 @@ describe('writeCards', () => {
 
   test('an argument no factory reads is refused, with the factory and the keys it does read', () => {
     const declaration = decl({ guards: [{ name: 'refundReadsTheInvoice', acts: ['issueRefund'],
-      factory: 'onlyAfter', args: { after: 'getInvoice', pattern: '^inv_' } }] });
+      factory: 'needs', args: { read: 'getInvoice', pattern: '^inv_' } }] });
     expect(() => writeCards(declaration, FACTS))
-      .toThrow("declares args.pattern, and factory 'onlyAfter' is configured from args.after");
+      .toThrow("declares args.pattern, and factory 'needs' is configured from args.read and args.args and args.pick");
   });
 });
 

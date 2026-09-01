@@ -78,7 +78,7 @@ export const billing = {
 };
 export const contract = {
   guards: [
-    onlyAfter('payInvoice', 'getInvoice'),
+    needs('payInvoice', 'getInvoice'),
     precondition('voidInvoice', ({ record }) => record !== null,
       'A void lands on the invoice the read returned, and on no other.'),
     prose('payFromTheRecord', 'A payment lands on the invoice the read returned.', ['payInvoice'])
@@ -91,7 +91,7 @@ export const contract = {
 
 test('pairing: a deterministic guard is not a prose rule, whatever shape it takes', () => {
   const dir = subjectDirWith(`${CARD}
-export const spread = { ...onlyAfter('payInvoice', 'getInvoice'), rule: 'Read it first.' };
+export const spread = { ...needs('payInvoice', 'getInvoice'), rule: 'Read it first.' };
 export const named = { ...precondition('payInvoice', c => true, 'Only while open.'), name: 'openOnly' };`);
   expect(pairing(dir)).toEqual([]);
 });
@@ -115,7 +115,7 @@ export const contract = { guards: [
 test('pairingTable: a row over an act names its mechanism, a row over none names its channel', () => {
   const table = pairingTable(subjectDirWith(CARD));
   expect(table).toContain('payFromTheRecord');
-  expect(table).toContain('onlyAfter');
+  expect(table).toContain('needs');
   expect(table).toContain('| noWriteOffs | — | the system prefix | on a spec, read every turn |');
 });
 
@@ -145,11 +145,11 @@ test('pairing: an order alone leaves an act unchecked — reading clears it', ()
 export const w = { records: {},
   reads: { listClaims: { form: 'list', entity: 'claims', label: 'List claims' } },
   writes: { addClaimEvidence: { form: 'set', entity: 'claims', label: 'Add evidence to a claim' } } };
-export const contract = { guards: [ onlyAfter('addClaimEvidence', 'listClaims') ] };`);
+export const contract = { guards: [ needs('addClaimEvidence', 'listClaims') ] };`);
   const found = pairing(dir);
   expect(found.map(f => f.code)).toEqual(['ACT_WITHOUT_CHECK']);
   expect(found[0].sentence).toContain("'addClaimEvidence' changes a record");
-  expect(found[0].sentence).toContain('only onlyAfter');
+  expect(found[0].sentence).toContain('only needs');
 });
 
 test('pairing: a rule about an act carrying only an order names what the order cannot do', () => {
@@ -160,14 +160,14 @@ export const w = { records: {},
 const prose = (name, rule, tool) =>
   tool === undefined ? { name, rule, on: 'reply' } : { name, rule, on: 'reply', tool };
 export const contract = { guards: [
-  onlyAfter('addClaimEvidence', 'listClaims'),
+  needs('addClaimEvidence', 'listClaims'),
   prose('evidenceLandsOnAnOpenClaim', 'Evidence lands on a claim the read returned as open.',
         ['addClaimEvidence'])
 ] };`);
   const found = pairing(dir);
   expect(found.map(f => f.code)).toEqual(['ACT_WITHOUT_CHECK']);
   expect(found[0].sentence).toContain('evidenceLandsOnAnOpenClaim');
-  expect(found[0].sentence).toContain('only onlyAfter');
+  expect(found[0].sentence).toContain('only needs');
 });
 
 test('pairing: a sharpened factory guard is a check, not a prose rule', () => {
@@ -177,7 +177,7 @@ export const w = { records: {},
   writes: { issueRefund: { form: 'set', entity: 'invoices', label: 'Refund an invoice' } } };
 export const contract = { guards: [
   precondition('issueRefund', ({ record }) => record !== null, 'Refund what the read returned.'),
-  { ...onlyAfter('issueRefund', 'getInvoice'),
+  { ...needs('issueRefund', 'getInvoice'),
     name: 'refundReadsTheInvoice',
     rule: 'Read the invoice before a refund: what can go back is paid minus refunded.' }
 ] };`);
@@ -193,7 +193,7 @@ export const w = { records: {},
 const prose = (name, rule, tool) =>
   tool === undefined ? { name, rule, on: 'reply' } : { name, rule, on: 'reply', tool };
 export const contract: DomainContract = { guards: [
-  onlyAfter('issueRefund', 'getInvoice'),
+  needs('issueRefund', 'getInvoice'),
   prose('refundCapFromTheRecord', 'A refund is capped by the record.', ['issueRefund'])
 ] };`;
   // membership is unknowable from the source, so a named act stands
@@ -230,7 +230,7 @@ export const billing: AgentSpec = { name: 'billing', persona: 'You are the billi
   guards: [ prose('declareHonestly', 'Say what ran, what did not, and why.') ] };
 export const contract: DomainContract = { name: 'atlas', guards: [
   precondition('issueRefund', ({ record }) => record !== null, 'Refund what the read returned.'),
-  { ...onlyAfter('issueRefund', 'getInvoice'),
+  { ...needs('issueRefund', 'getInvoice'),
     name: 'refundCapFromTheRecord',
     rule: 'A refund is capped by the statement: paid minus already refunded.' }
 ] };`;
@@ -240,7 +240,7 @@ test('pairing: a rule on a spec renders in the system prefix, so it needs no too
 });
 
 test('pairing: a contract rule naming no tool renders nowhere', () => {
-  const dir = subjectDirWith(CARDS.replace(/\{ \.\.\.onlyAfter[\s\S]*?refunded\.' \}/,
+  const dir = subjectDirWith(CARDS.replace(/\{ \.\.\.needs[\s\S]*?refunded\.' \}/,
     `prose('refundCapFromTheRecord', 'A refund is capped by the statement.')`));
   const found = pairing(dir);
   expect(found.map(f => f.code)).toContain('RULE_NEVER_RENDERED');
@@ -254,7 +254,7 @@ export const w = { records: {},
   writes: { issueRefund: { form: 'set', entity: 'invoices', label: 'Refund an invoice' } } };
 const prose = (name, rule) => ({ name, rule, on: 'reply' });
 export const contract = { guards: [
-  { ...onlyAfter('issueRefund', 'getInvoice'), name: 'refundReadsTheInvoice',
+  { ...needs('issueRefund', 'getInvoice'), name: 'refundReadsTheInvoice',
     rule: 'Read the invoice before a refund.' },
   { ...prose('roleRefusalNamesWhoCan', 'Name the role the member record states.'),
     tool: ['issueRefund'] }
@@ -263,7 +263,7 @@ export const contract = { guards: [
 });
 
 test('pairing: a contract rule naming a tool off the surface is a finding', () => {
-  const dir = subjectDirWith(CARDS.replace(/\{ \.\.\.onlyAfter[\s\S]*?refunded\.' \}/,
+  const dir = subjectDirWith(CARDS.replace(/\{ \.\.\.needs[\s\S]*?refunded\.' \}/,
     `prose('refundCapFromTheRecord', 'A refund is capped.', ['waiveFee'])`));
   expect(pairing(dir).map(f => f.code)).toContain('PROSE_TOOL_UNKNOWN');
 });
@@ -291,7 +291,7 @@ const prose = (name, rule, tool) =>
   tool === undefined ? { name, rule, on: 'reply' } : { name, rule, on: 'reply', tool };
 export const contract = { name: 'atlas', guards: [
   precondition('issueRefund', ({ record }) => record !== null, 'Refund what the read returned.'),
-  { ...onlyAfter('issueRefund', 'getStatement'),
+  { ...needs('issueRefund', 'getStatement'),
     name: 'refundCapFromTheRecord',
     rule: 'A refund is capped by the statement: paid minus already refunded.' }
 ] };
@@ -322,7 +322,7 @@ export const w = { records: {},
   destructive: { closeAccount: { form: 'remove', entity: 'accounts', label: 'Close an account' } } };
 export const contract = { name: 'atlas', guards: [
   precondition('issueRefund', ({ record }) => record !== null, 'Refund what the read returned.'),
-  { ...onlyAfter('issueRefund', 'getStatement'),
+  { ...needs('issueRefund', 'getStatement'),
     name: 'refundCapFromTheRecord',
     rule: 'A refund is capped by the statement: paid minus already refunded.' }
 ] };`);
@@ -366,7 +366,7 @@ export const w = { records: {},
   writes: { issueRefund: { form: 'set', entity: 'accounts', label: 'Refund an account' } } };
 export const contract = { name: 'atlas', guards: [
   precondition('issueRefund', ({ record }) => record !== null, 'Refund what the read returned.'),
-  { ...onlyAfter('issueRefund', 'getStatement'),
+  { ...needs('issueRefund', 'getStatement'),
     name: 'refundCapFromTheRecord',
     rule: 'A refund is capped by the statement: paid minus already refunded.' }
 ] };`);
@@ -379,7 +379,7 @@ export const w = { records: {},
   reads: { getStatement: { form: 'get', entity: 'accounts', label: 'Look up a statement' } },
   writes: { issueRefund: { form: 'set', entity: 'accounts', label: 'Refund an account' },
             voidStatement: { form: 'remove', entity: 'accounts', label: 'void a statement' } } };
-export const contract = { name: 'atlas', guards: [ onlyAfter('issueRefund', 'getStatement') ] };`);
+export const contract = { name: 'atlas', guards: [ needs('issueRefund', 'getStatement') ] };`);
   const p = profile(dir, ['issueRefund', 'voidStatement']);
   expect(p.acting).toBe(2);
   expect(p.actingChecked).toBe(1);
@@ -395,7 +395,7 @@ export const w = { records: {},
 const prose = (name, rule, tool) =>
   tool === undefined ? { name, rule, on: 'reply' } : { name, rule, on: 'reply', tool };
 export const contract = { name: 'atlas', guards: [
-  { ...onlyAfter('issueRefund', 'getStatement'), name: 'refundCap',
+  { ...needs('issueRefund', 'getStatement'), name: 'refundCap',
     rule: 'A refund is capped by the statement: paid minus already refunded.' },
   prose('refundCapFromTheRecord',
     'A refund is capped by the statement: paid minus already refunded.', ['issueRefund'])
@@ -412,7 +412,7 @@ export const w = { records: {},
 const prose = (name, rule, tool) =>
   tool === undefined ? { name, rule, on: 'reply' } : { name, rule, on: 'reply', tool };
 export const contract = { name: 'atlas', guards: [
-  { ...onlyAfter('issueRefund', 'getStatement'), name: 'refundCap',
+  { ...needs('issueRefund', 'getStatement'), name: 'refundCap',
     rule: 'A refund is capped by the statement: paid minus already refunded.' },
   prose('refundNamesTheAccount', 'State the account a refund lands on.', ['issueRefund'])
 ] };`);
@@ -425,7 +425,7 @@ export const w = { records: {},
   reads: { getStatement: { form: 'get', entity: 'accounts', label: 'Look up a statement' } },
   writes: { issueRefund: { form: 'set', entity: 'accounts', label: 'Refund an account' } } };
 export const contract = { name: 'atlas', guards: [
-  { ...onlyAfter('issueRefund', 'getStatement'), name: 'refundCap',
+  { ...needs('issueRefund', 'getStatement'), name: 'refundCap',
     rule: 'A refund is capped by the statement: paid minus already refunded.' }
 ] };`);
   expect(doubleStated(dir)).toEqual([]);
@@ -522,7 +522,7 @@ describe('overWide', () => {
   test('a rule over two acts with no licence is a finding', () => {
     const dir = write(`
       const CONTRACT = { guards: [
-        { ...onlyAfter(['payInvoice', 'issueRefund'], 'getInvoice'), name: 'moneyReadsTheInvoice' }
+        { ...needs(['payInvoice', 'issueRefund'], 'getInvoice'), name: 'moneyReadsTheInvoice' }
       ] };
     `);
     const found = overWide(dir);
@@ -535,7 +535,7 @@ describe('overWide', () => {
     const dir = write(`
       export const WIDE = { moneyReadsTheInvoice: 'sameRefusal' } as const;
       const CONTRACT = { guards: [
-        { ...onlyAfter(['payInvoice', 'issueRefund'], 'getInvoice'), name: 'moneyReadsTheInvoice' }
+        { ...needs(['payInvoice', 'issueRefund'], 'getInvoice'), name: 'moneyReadsTheInvoice' }
       ] };
     `);
     expect(overWide(dir)).toEqual([]);
@@ -571,7 +571,7 @@ describe('overWide', () => {
     const dir = write(`
       export const WIDE = { moneyReadsTheInvoice: 'itIsFine' } as const;
       const CONTRACT = { guards: [
-        { ...onlyAfter(['payInvoice', 'issueRefund'], 'getInvoice'), name: 'moneyReadsTheInvoice' }
+        { ...needs(['payInvoice', 'issueRefund'], 'getInvoice'), name: 'moneyReadsTheInvoice' }
       ] };
     `);
     expect(overWide(dir).map(f => f.code)).toEqual(['RULE_WIDE_LICENCE_UNKNOWN']);
@@ -579,7 +579,7 @@ describe('overWide', () => {
 
   test('a rule over one act asks nothing', () => {
     const dir = write(`
-      const CONTRACT = { guards: [{ ...onlyAfter('issueRefund', 'getInvoice'), name: 'refundReads' }] };
+      const CONTRACT = { guards: [{ ...needs('issueRefund', 'getInvoice'), name: 'refundReads' }] };
     `);
     expect(overWide(dir)).toEqual([]);
   });
@@ -836,16 +836,16 @@ import { approvable, coversResolve } from '../src/lints.js';
 describe('coversResolve', () => {
   test('a key naming nothing the census carries is a finding', () => {
     const found = coversResolve(
-      [{ id: 'cancel-asks-first', covers: ['consent:cancelBooking', 'onlyAfter:cancelBooking'] } as never],
-      new Set(['confirmFirst:cancelBooking', 'onlyAfter:cancelBooking']));
+      [{ id: 'cancel-asks-first', covers: ['consent:cancelBooking', 'needs:cancelBooking'] } as never],
+      new Set(['confirmFirst:cancelBooking', 'needs:cancelBooking']));
     expect(found.map(f => f.code)).toEqual(['COVERS_UNRESOLVED']);
     expect(found[0].sentence).toContain('consent:cancelBooking');
     expect(found[0].sentence).toContain('confirmFirst:cancelBooking');
   });
 
   test('every key resolving asks nothing', () => {
-    expect(coversResolve([{ id: 'x', covers: ['onlyAfter:cancelBooking'] } as never],
-                         new Set(['onlyAfter:cancelBooking']))).toEqual([]);
+    expect(coversResolve([{ id: 'x', covers: ['needs:cancelBooking'] } as never],
+                         new Set(['needs:cancelBooking']))).toEqual([]);
   });
 });
 
@@ -992,7 +992,7 @@ describe('unspokenChecks', () => {
 
   test('a factory whose minted sentence states the whole law is never charged', () => {
     const dir = write(`const CONTRACT = { guards: [
-      { ...onlyAfter('issueRefund', 'getInvoice'), name: 'refundReadsTheInvoice' },
+      { ...needs('issueRefund', 'getInvoice'), name: 'refundReadsTheInvoice' },
       { ...valueFromUser('fileClaim', 'description'), name: 'theOperatorsWord' } ] };`);
     expect(unspokenChecks(dir)).toEqual([]);
   });
@@ -1087,11 +1087,11 @@ describe('noEffectDenied', () => {
     expect(found[0].sentence).toContain('no check at all');
   });
 
-  test('an onlyAfter alone is cleared by reading, so it is still a finding', () => {
-    const dir = write(`const CONTRACT = { guards: [ onlyAfter('issueRefund', 'getInvoice') ] };`);
+  test('an needs alone is cleared by reading, so it is still a finding', () => {
+    const dir = write(`const CONTRACT = { guards: [ needs('issueRefund', 'getInvoice') ] };`);
     const found = noEffectDenied(dir, REFUSED);
     expect(found.map(f => f.code)).toEqual(['ACT_UNDENIABLE']);
-    expect(found[0].sentence).toContain('only onlyAfter');
+    expect(found[0].sentence).toContain('only needs');
     expect(found[0].sentence).toContain('an order is cleared by reading it');
   });
 

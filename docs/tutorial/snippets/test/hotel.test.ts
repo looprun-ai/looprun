@@ -65,7 +65,7 @@ test('lesson 3 — the owed read is collected by the engine, in one forced micro
   const agent = new LoopRunAgent({
     spec: concierge, contract: hotelContract, world: hotel,
     model: { scripted: { steps: [
-      // The model goes straight for the cancel. `onlyAfter` owes getInvoice, so the
+      // The model goes straight for the cancel. `needs` owes getInvoice, so the
       // engine stops and asks the model for THAT ONE call before anything else runs.
       call('cancelBooking', { id: 'bk_1' }),
       call('getInvoice', { id: 'bk_1' }),

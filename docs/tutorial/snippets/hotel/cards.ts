@@ -1,7 +1,7 @@
 /** The two cards of the hotel. The spec says how ONE desk behaves; the contract says
  *  what the BUSINESS is, and every desk in the domain answers to it. */
 import type { AgentSpec, DomainContract, Guard } from 'looprun';
-import { onlyAfter, precondition, valueFromUser, maskPattern, swapTerms } from 'looprun';
+import { needs, precondition, valueFromUser, maskPattern, swapTerms } from 'looprun';
 
 /** A prose-only guard: no check can decide it, so it rides the prompt as the sentence it is
  *  and `agent.guards()` prints it beside every other guard. It names no tool, so it belongs on
@@ -48,7 +48,7 @@ export const hotelContract: DomainContract = {
     'A cancellation inside 24 hours of arrival keeps the first night.'
   ],
   guards: [
-    { ...onlyAfter('cancelBooking', 'getInvoice'),
+    { ...needs('cancelBooking', { read: 'getInvoice' }),
       rule: 'Read the booking\'s invoice before cancelling, so the guest hears what stays owed.' },
     // The order above owes a read and is paid by running it; what REFUSES the cancellation is
     // this one. Every act carries a check that decides its call.

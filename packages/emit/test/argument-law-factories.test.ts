@@ -35,12 +35,13 @@ test('argMatchesRecord is emitted with the field the target row fixes', () => {
   expect(text).toContain('argMatchesRecord(\'issueRefund\', \'currency\', \'currency\',');
 });
 
-test('onlyAfterWhen is emitted as the order and the condition together', () => {
-  const text = cards({ name: 'disputedRefundReadsTheInvoice', acts: ['issueRefund'],
-    factory: 'onlyAfterWhen', args: { after: 'getInvoice', field: 'status', is: 'disputed' },
-    rule: 'Read a disputed invoice before you refund it.' });
-  expect(text).toContain('onlyAfterWhen(\'issueRefund\', \'getInvoice\',');
-  expect(text).toContain('({ record }) => record?.status === \'disputed\'');
+test('needs is emitted with its declared renames and pick', () => {
+  const text = cards({ name: 'refundReadsTheInvoice', acts: ['issueRefund'],
+    factory: 'needs', args: { read: 'getInvoice', args: { invoiceId: 'invoiceId' },
+      pick: { list: 'invoices', by: 'id', key: 'invoiceId' } } });
+  expect(text).toContain('needs(\'issueRefund\', { read: \'getInvoice\', '
+    + 'args: { invoiceId: \'invoiceId\' }, '
+    + 'pick: { list: \'invoices\', by: \'id\', key: \'invoiceId\' } })');
 });
 
 test('argSatisfiesCondition declared with neither is nor in is refused by the keys it is missing', () => {
@@ -55,10 +56,10 @@ test('valueFromUserOrRecord declared without its entity is refused by that key',
     .toThrow(/args.from/);
 });
 
-test('onlyAfterWhen declared without the field its condition reads is refused', () => {
-  expect(() => cards({ name: 'disputedRefundReadsTheInvoice', acts: ['issueRefund'],
-    factory: 'onlyAfterWhen', args: { after: 'getInvoice' }, rule: 'r' }))
-    .toThrow(/args.field/);
+test('needs declared without its read is refused', () => {
+  expect(() => cards({ name: 'refundReadsTheInvoice', acts: ['issueRefund'],
+    factory: 'needs', args: {}, rule: 'r' }))
+    .toThrow(/args.read/);
 });
 
 test('a key no argument-shaped factory reads is refused by name', () => {
@@ -76,10 +77,7 @@ test('a prerequisite the surface does not declare is named back, with the act it
       acts: ['issueRefund'], factory, args, rule: 'Read the invoice before you refund it.' }] }),
       FACTS, SEAM)];
 
-  expect(near('onlyAfter', { after: 'getInvoces' })).toEqual([
-    'contract.guards[0].args.after names \'getInvoces\', and the surface declares no such act '
-    + '— did you mean \'getInvoice\'?']);
-  expect(near('onlyAfterWhen', { after: 'getInvoces', field: 'status', is: 'disputed' })).toEqual([
-    'contract.guards[0].args.after names \'getInvoces\', and the surface declares no such act '
+  expect(near('needs', { read: 'getInvoces' })).toEqual([
+    'contract.guards[0].args.read names \'getInvoces\', and the surface declares no such act '
     + '— did you mean \'getInvoice\'?']);
 });

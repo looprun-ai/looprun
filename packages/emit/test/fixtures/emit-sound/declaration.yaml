@@ -6,8 +6,8 @@ contract:
   guards:
     - name: refundReadsTheInvoice
       acts: [issueRefund]
-      factory: onlyAfter
-      args: { after: getInvoice }
+      factory: needs
+      args: { read: getInvoice }
     - name: refundOnlyWhatIsOpen
       acts: [issueRefund]
       factory: precondition
@@ -15,8 +15,8 @@ contract:
       rule: Refund an invoice while it is still open, and never one already settled.
     - name: closingNoteReadsTheInvoice
       acts: [closeBooking]
-      factory: onlyAfter
-      args: { after: getInvoice }
+      factory: needs
+      args: { read: getInvoice }
       rule: Write the closing note from the invoice you read this conversation, never from memory.
     - name: theClosingNoteIsTheAuditDesksOwn
       acts: [closeBooking]

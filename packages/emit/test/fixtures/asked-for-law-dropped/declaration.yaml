@@ -194,8 +194,8 @@ contract:
     # ── the reads owed before an act ──────────────────────────────────────────
     - name: 'tool:availabilityBeforeBooking'
       acts: [createBooking]
-      factory: onlyAfter
-      args: { after: checkAvailability }
+      factory: needs
+      args: { read: checkAvailability }
       rule: >-
         Run checkAvailability for that exact machine and that exact date range before opening a
         booking, whatever the operator says they already know: the calendar, the workshop windows
@@ -204,8 +204,8 @@ contract:
 
     - name: 'tool:availabilityBeforeReschedule'
       acts: [rescheduleBooking]
-      factory: onlyAfter
-      args: { after: checkAvailability }
+      factory: needs
+      args: { read: checkAvailability }
       rule: >-
         Run checkAvailability for the new range before moving a booking into it: the new dates
         carry their own clashes, workshop windows and freezes, and the old range says nothing
@@ -213,8 +213,8 @@ contract:
 
     - name: 'tool:chargeReadsTheDepositBalance'
       acts: [chargeDeposit]
-      factory: onlyAfter
-      args: { after: getDepositBalance }
+      factory: needs
+      args: { read: getDepositBalance }
       rule: >-
         Read the deposit balance before holding anything: what is already held, what the machine
         requires and what is still short are read there, and the workspace deposit float is what a
@@ -223,8 +223,8 @@ contract:
 
     - name: 'tool:refundReadsTheInvoice'
       acts: [issueRefund]
-      factory: onlyAfter
-      args: { after: getInvoice }
+      factory: needs
+      args: { read: getInvoice }
       rule: >-
         Read the invoice before a refund: what can still go back is what was PAID minus what has
         already been refunded, never the total and never the balance due. Work that subtraction
@@ -233,8 +233,8 @@ contract:
 
     - name: 'tool:resolutionReadsTheClaim'
       acts: [resolveClaim]
-      factory: onlyAfter
-      args: { after: getClaim }
+      factory: needs
+      args: { read: getClaim }
       rule: >-
         Read the claim before resolving it: its status, the booking and machine it stands against,
         and any settlement figure already recorded on it are read there. A resolution is final —
@@ -242,8 +242,8 @@ contract:
 
     - name: 'tool:holdReleaseReadsThePolicy'
       acts: [releaseHold]
-      factory: onlyAfter
-      args: { after: lookupPolicy }
+      factory: needs
+      args: { read: lookupPolicy }
       rule: >-
         Read the published hold_release policy before lifting any freeze, and state what it
         requires in its own words rather than from general knowledge: a hold is lifted only once
@@ -252,9 +252,9 @@ contract:
 
     - name: 'tool:terminalExitReadsTheAsset'
       acts: [retireAsset, transferAsset]
-      factory: onlyAfter
+      factory: needs
       wide: oneLawEveryAct
-      args: { after: getAsset }
+      args: { read: getAsset }
       rule: >-
         Read the machine before it leaves this fleet: one out on rental, one a booking still holds,
         and one under a freeze do not leave, and the booking or the hold that stands is what the
@@ -263,8 +263,8 @@ contract:
 
     - name: 'tool:scheduleReadBeforeDispatch'
       acts: [dispatchTechnician]
-      factory: onlyAfter
-      args: { after: getTechnicianSchedule }
+      factory: needs
+      args: { read: getTechnicianSchedule }
       rule: >-
         Read the technician's schedule for that date before putting them on a job: somebody
         already booked that day cannot take a second, and the job standing on that date is what
@@ -272,9 +272,9 @@ contract:
 
     - name: 'tool:memberChangeReadsTheRoster'
       acts: [removeMember, updateMemberRole]
-      factory: onlyAfter
+      factory: needs
       wide: oneLawEveryAct
-      args: { after: listMembers }
+      args: { read: listMembers }
       rule: >-
         Read the roster before changing anybody on it: the last active owner can neither be
         removed nor moved off owner, and the roster is where that is visible. When the change
@@ -283,8 +283,8 @@ contract:
 
     - name: 'tool:inviteReadsTheSeatCount'
       acts: [inviteMember]
-      factory: onlyAfter
-      args: { after: getPlanUsage }
+      factory: needs
+      args: { read: getPlanUsage }
       rule: >-
         Read the plan usage before inviting anybody: an invitation takes a seat, and the seat cap
         the plan sets is read there. Quote the seats used and the cap from that read, and where
@@ -293,8 +293,8 @@ contract:
 
     - name: 'tool:planMoveReadsUsageFirst'
       acts: [changePlan]
-      factory: onlyAfter
-      args: { after: getPlanUsage }
+      factory: needs
+      args: { read: getPlanUsage }
       rule: >-
         Read the plan usage before moving the tier: the seats taken, the active bookings and the
         deposit float held are what decide whether a tier can be moved to at all. State the

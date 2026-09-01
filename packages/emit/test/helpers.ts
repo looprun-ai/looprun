@@ -33,7 +33,7 @@ export const SIX_VOICES: Readonly<Record<string, string>> = {
  *  and carries what its factory is configured from, a `precondition` reading a record sits over an
  *  act that has a target, and both desks teach all six voices. */
 export const SOUND_GUARDS: readonly DeclaredGuard[] = [
-  { name: 'confirmBeforeRefund', acts: ['issueRefund'], factory: 'onlyAfter', args: { after: 'getInvoice' } },
+  { name: 'confirmBeforeRefund', acts: ['issueRefund'], factory: 'needs', args: { read: 'getInvoice' } },
   { name: 'confirmInvoiceKnown', acts: ['getInvoice'], factory: 'precondition', args: { reads: 'record' },
     rule: 'Read the invoice this desk was asked about before you speak for it.' }
 ];

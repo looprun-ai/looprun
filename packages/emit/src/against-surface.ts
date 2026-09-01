@@ -116,9 +116,9 @@ function checkJudgedActs(declaration: Declaration, facts: SurfaceFacts): readonl
 
 /** The arguments that name an ACT rather than configure one. A factory is pointed at the act it
  *  covers through `acts`, and some are pointed at a second act through their configuration — the
- *  prerequisite `onlyAfter` waits for. Both name the same namespace, `facts.tools`. */
+ *  read `needs` waits for. Both name the same namespace, `facts.tools`. */
 const ACT_ARGS: Readonly<Record<string, readonly string[]>> = {
-  onlyAfter: ['after'], onlyAfterWhen: ['after'] };
+  needs: ['read'] };
 
 /** Every act a guard's CONFIGURATION names exists on the surface. A prerequisite spelled one
  *  letter off is never a call anyone can make, so the guard it configures denies the act it
@@ -306,17 +306,15 @@ function checkMutatingAfter(declaration: Declaration, facts: SurfaceFacts): read
  *  and an act that names no target hands the walk nothing to find. */
 function walksTheCallsRow(guard: DeclaredGuard): boolean {
   if (guard.factory === 'precondition') return guard.args?.reads === 'record';
-  if (guard.factory === 'argMatchesRecord') return true;
-  return guard.factory === 'onlyAfterWhen' && guard.args?.field !== undefined;
+  return guard.factory === 'argMatchesRecord';
 }
 
 /** A guard whose law reads the call's own row names an act that can HAND IT ONE. The walk takes
  *  two facts of the act and needs both: the target names the row, and the entity names the family
  *  the row is filed in — a target with no entity points at a row in no family at all. Either one
- *  missing and the law reads `null` on every call: `precondition` decides against nothing,
- *  `argMatchesRecord` refuses every call by an id the records DO carry, and `onlyAfterWhen` stops
- *  demanding its read. Nothing downstream sees it — the act carries a check, and the check simply
- *  never reaches a record. */
+ *  missing and the law reads `null` on every call: `precondition` decides against nothing and
+ *  `argMatchesRecord` refuses every call by an id the records DO carry. Nothing downstream sees
+ *  it — the act carries a check, and the check simply never reaches a record. */
 function checkPreconditionTarget(declaration: Declaration, facts: SurfaceFacts): readonly string[] {
   const refusals: string[] = [];
   declaration.contract.guards.forEach((guard, guardIndex) => {

@@ -28,8 +28,8 @@ const precondition = (tool: string, holds: (held: Held) => boolean): Check => ({
 
 /** The gated act runs only after the prerequisite succeeded — the shape the engine's own factory
  *  mints, so the order a case requires is one the cards declare. */
-const onlyAfter = (tool: string, prerequisite: string): Check => ({
-  name: `onlyAfter:${tool}`, tool: [tool], on: 'preTool',
+const needs = (tool: string, prerequisite: string): Check => ({
+  name: `needs:${tool}`, tool: [tool], on: 'preTool',
   rule: `A close runs once ${prerequisite} has returned the order it names.`,
   deny: () => `${prerequisite} has not succeeded yet this conversation`
 });
@@ -84,7 +84,7 @@ export const ordersContract = {
   guards: [
     prose('closeOnlyWhatYouRead', 'A close lands on the order the read returned.', ['closeOrder']),
     precondition('closeOrder', ({ record }) => record?.status === 'OPEN'),
-    onlyAfter('closeOrder', 'getOrder'),
+    needs('closeOrder', 'getOrder'),
     // The ceiling the cap refuses at, said in the words the desk reads before it proposes the
     // call: a check that decides carries its own law, so nothing here is a prose rule.
     { name: 'deleteWhatTheReadReturned', on: 'preTool', tool: ['deleteOrder'],

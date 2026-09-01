@@ -6,8 +6,8 @@ contract:
   guards:
     - name: refundReadsTheInvoice
       acts: [issueRefund]
-      factory: onlyAfter
-      args: { after: getInvioce }
+      factory: needs
+      args: { read: getInvioce }
     - name: refundFollowsTheRead
       acts: [getInvioce]
       factory: precondition

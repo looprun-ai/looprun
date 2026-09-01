@@ -5,7 +5,7 @@ import { AFTERS, decl, FACTS, SEAM, SIX_VOICES, soundDeclaration } from './helpe
 
 describe('checkAgainstSurface', () => {
   test('an act the surface does not declare', () => {
-    expect(checkAgainstSurface(decl({ guards: [{ name: 'g', acts: ['getInvioce'], factory: 'onlyAfter' }] }), FACTS, SEAM))
+    expect(checkAgainstSurface(decl({ guards: [{ name: 'g', acts: ['getInvioce'], factory: 'needs' }] }), FACTS, SEAM))
       .toEqual([expect.stringContaining("the surface declares no such act")]);
   });
 

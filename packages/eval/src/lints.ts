@@ -153,7 +153,7 @@ const SENTENCE_KEYS = new Set(['rule', 'voice', 'persona', 'description', 'summa
 /** Where each factory takes the sentence its law is stated in. */
 const SENTENCE_ARG: ReadonlyMap<string, number> = new Map([
   ['prose', 1], ['precondition', 2], ['maxCalls', 2], ['blockPattern', 2],
-  ['argSatisfiesCondition', 3], ['valueFromUserOrRecord', 4], ['argMatchesRecord', 3], ['onlyAfterWhen', 3]
+  ['argSatisfiesCondition', 3], ['valueFromUserOrRecord', 4], ['argMatchesRecord', 3]
 ]);
 
 /** Every sentence a card states, with the node it is written at. */
@@ -278,10 +278,9 @@ function surfaceKeys(sources: readonly Source[], blocks: ReadonlySet<string>): R
   return tools;
 }
 
-const DETERMINISTIC_FACTORIES = ['onlyAfter', 'precondition', 'valueFromUser',
+const DETERMINISTIC_FACTORIES = ['needs', 'precondition', 'valueFromUser',
   'argMatchesFormat', 'argForbidden', 'resultSatisfiesCondition', 'mustAccountFor', 'maxCalls',
-  'blockPattern', 'argSatisfiesCondition', 'valueFromUserOrRecord', 'argMatchesRecord',
-  'onlyAfterWhen'];
+  'blockPattern', 'argSatisfiesCondition', 'valueFromUserOrRecord', 'argMatchesRecord'];
 
 function callsAny(node: ts.Node, names: ReadonlySet<string>): boolean {
   let found = false;
@@ -613,7 +612,7 @@ function homeOf(node: ts.Node): 'spec' | 'contract' {
  *  destructive effect — that nothing refuses is worse: no rule even claims it, so a reader of the
  *  card sees nothing missing while the engine has nothing to stop the call with.
  *
- *  An ACT owes a mechanism that DECIDES its call. An order is not one: `onlyAfter` is paid by
+ *  An ACT owes a mechanism that DECIDES its call. An order is not one: `needs` is paid by
  *  running the read, and the act then proceeds. A tool that changes no record owes a mechanism of
  *  any shape — a check over its result or its reply is the only kind there is for a read.
  *
@@ -858,14 +857,14 @@ export function doubleStated(subjectDir: string): readonly string[] {
 
 /** The factories whose MINTED sentence already states the whole law, so a card that adds nothing
  *  has still said it:
- *    onlyAfter       'Run <prerequisite> before <tool>.'      — the order, both names in it
+ *    needs           'Run <read> before <tool>.'              — the order, both names in it
  *    valueFromUser   "Send <tool>'s '<arg>' only as the user wrote it."
  *    argForbidden       "Never send '<arg>' on <tool>."
  *    argMatchesFormat       "Send '<arg>' on <tool> in its declared format." — the format is the schema's
  *                    own declared pattern, and the schema rides the same card the sentence does
  *    mustAccountFor  'The report must account for <records> as <status>.' — the records and the
  *                    status word are both in it; it names no tool and reaches no act at all */
-const SELF_STATING_FACTORIES = new Set(['onlyAfter', 'valueFromUser', 'argForbidden', 'argMatchesFormat',
+const SELF_STATING_FACTORIES = new Set(['needs', 'valueFromUser', 'argForbidden', 'argMatchesFormat',
   'mustAccountFor']);
 
 /** The factories that take the law as an ARGUMENT — `precondition`'s reason, `maxCalls`'s
@@ -874,8 +873,7 @@ const SELF_STATING_FACTORIES = new Set(['onlyAfter', 'valueFromUser', 'argForbid
  *  written a sentence about. */
 const AUTHORED_RULE_ARG: ReadonlyMap<string, number> = new Map([
   ['precondition', 2], ['maxCalls', 2], ['blockPattern', 2],
-  ['argSatisfiesCondition', 3], ['valueFromUserOrRecord', 4], ['argMatchesRecord', 3],
-  ['onlyAfterWhen', 3]]);
+  ['argSatisfiesCondition', 3], ['valueFromUserOrRecord', 4], ['argMatchesRecord', 3]]);
 
 /** What is left of the deterministic catalog once the self-stating factories and the ones handed
  *  their law are taken out: a factory that refuses on an act and mints a sentence naming no law. */
@@ -1887,8 +1885,8 @@ export function seamUnreached(subjectDir: string, cases: readonly ExamCase[],
 /** The mechanisms that can refuse the CALL: each one judges the arriving call, and a call it
  *  refuses never reaches the world. Three shapes that look like protection are not here.
  *
- *  An `onlyAfter` owes a read rather than deciding a call: a desk that runs the prerequisite walks
- *  straight through it, and `onlyAfterWhen` owes the same read wherever its condition holds. A
+ *  A `needs` owes a read rather than deciding a call: a desk that runs the read walks
+ *  straight through it. A
  *  `resultSatisfiesCondition` runs after the call returned — the record has already
  *  moved, and the finding it raises is a correction on the reply. A reply-bound check —
  *  `mustAccountFor`, a judged query, a `blockPattern` on the reply — reads words the desk wrote
@@ -1937,7 +1935,7 @@ function denyingNames(sources: readonly Source[]): ReadonlySet<string> {
  *  therefore carries a mechanism that can deny the call itself — a role or state precondition, a
  *  choice or value the operator has to have given, a format or ceiling the arriving call fails.
  *
- *  What the act carries is read for its SHAPE, never counted. An `onlyAfter` is satisfied by
+ *  What the act carries is read for its SHAPE, never counted. A `needs` is satisfied by
  *  running the read, and a desk that reads first then acts has cleared it. A `resultSatisfiesCondition` or a
  *  reply-bound check answers once the call has returned, and by then the record has moved. Either
  *  way the invariant fails on a call the engine allowed. */
