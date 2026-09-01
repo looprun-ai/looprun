@@ -10,7 +10,7 @@ export type ReportWord = 'done' | 'held' | 'refused' | 'unknown'
   | 'no_tool_called';                         // the model's closing vocabulary: refused = turned down
                                               //   (by the system or a rule); no_tool_called = a
                                               //   decision to act in words only
-export type Evidence = 'executor' | 'diff' | 'engine';       // who grounded the status
+export type Evidence = 'executor' | 'engine';                // who grounded the status
 export type QuestionClose = 'declined' | 'superseded' | 'expired' | 'vetoed';
 export type QuestionState = 'open' | 'consumed' | { readonly closed: QuestionClose };
 export interface ChatMsg { readonly role: 'user' | 'assistant'; readonly text: string }
@@ -51,7 +51,6 @@ export type Correction =
   | { readonly kind: 'redrive'; readonly guardName: string; readonly detail: string }
   | { readonly kind: 'postToolFinding'; readonly guardName: string; readonly detail: string }
   | { readonly kind: 'earlyFinish' } | { readonly kind: 'staleFinish' } | { readonly kind: 'forcedFinish' }
-  | { readonly kind: 'recordCorrected'; readonly actId: string; readonly said: Done }   // snapshot diff overruled the executor
   | { readonly kind: 'judgeUnreadable'; readonly guardName: string }
   | { readonly kind: 'proseReader';                                // the delivered words failed the
       readonly check: 'wallEcho' | 'language';                     // reader at the seal

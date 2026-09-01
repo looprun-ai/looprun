@@ -79,7 +79,7 @@ export class CallRunner {
 
   private async runChecked(raw: RawCall, origin: Act['origin'], draft: TurnDraft,
                            oweRounds: number): Promise<Act> {
-    const { rulebook, clerk, history, recordsPort, compiled } = this.deps;
+    const { rulebook, clerk, history, compiled } = this.deps;
     const fact = compiled.facts.tools[raw.tool];
     if (!fact) {
       return this.record(draft, {
@@ -99,16 +99,15 @@ export class CallRunner {
       });
     }
     const call = coerced;
-    const state = recordsPort?.snapshot() ?? null;
     const ctx = this.callCtx(call, fact, origin, draft);
     const verdict = origin === 'licence' ? { kind: 'allow' as const } : rulebook.checkPreTool(ctx);
 
     switch (verdict.kind) {
       case 'allow':
-        return this.execute(call, fact, origin, state, draft);
+        return this.execute(call, fact, origin, draft);
       case 'refuse': {
         const rule = rulebook.guards().guards.find(g => g.name === verdict.guardName)?.rule ?? '';
-        const grade = clerk.grade({ verdict, actId: '' }, fact.effect, state, state, draft);
+        const grade = clerk.grade({ verdict, actId: '' }, fact.effect, draft);
         return this.record(draft, {
           origin, call: call.data(v => this.deps.masker.maskData(v)), effect: fact.effect, said: grade.said,
           status: grade.status, reason: grade.reason, evidence: grade.evidence,
@@ -187,7 +186,7 @@ export class CallRunner {
         const sentence = tenses.before ?? verdict.sentence;
         const question = this.deps.consent.hold(call, targetValue, sentence, draft,
           { after: tenses.after, later: tenses.later });
-        const grade = clerk.grade({ verdict, actId: '' }, fact.effect, state, state, draft);
+        const grade = clerk.grade({ verdict, actId: '' }, fact.effect, draft);
         return this.record(draft, {
           origin, call: call.data(v => this.deps.masker.maskData(v)), effect: fact.effect, said: grade.said,
           status: grade.status, reason: grade.reason, evidence: grade.evidence,
@@ -197,7 +196,7 @@ export class CallRunner {
       }
       case 'owe': {
         if (oweRounds <= 0) {
-          return this.refuseUnpaidDebt(call, fact, origin, state, draft, verdict);
+          return this.refuseUnpaidDebt(call, fact, origin, draft, verdict);
         }
         let paid = false;
         for (const read of verdict.reads) {
@@ -221,15 +220,15 @@ export class CallRunner {
         }
         // A round that paid nothing can never pay anything: refuse now, in the
         // words of the guard whose debt stands.
-        if (!paid) return this.refuseUnpaidDebt(call, fact, origin, state, draft, verdict);
+        if (!paid) return this.refuseUnpaidDebt(call, fact, origin, draft, verdict);
         return this.runChecked(raw, origin, draft, oweRounds - 1);
       }
     }
   }
 
   private async execute(call: CanonicalCall, fact: ToolFact, origin: Act['origin'],
-                        before: StateSnapshot | null, draft: TurnDraft): Promise<Act> {
-    const { clerk, recordsPort, toolPort, rulebook } = this.deps;
+                        draft: TurnDraft): Promise<Act> {
+    const { clerk, toolPort, rulebook } = this.deps;
     const id = this.deps.history.mint();
     let input: GradeInput;
     let result: Json = null;
@@ -240,8 +239,7 @@ export class CallRunner {
     } catch (e) {
       input = { threw: e instanceof Error ? e.message : String(e), actId: id };
     }
-    const after = recordsPort?.snapshot() ?? null;
-    const grade = clerk.grade(input, fact.effect, before, after, draft);
+    const grade = clerk.grade(input, fact.effect, draft);
     draft.corrections.push(...grade.corrections);
     // The after-tense is offered on EVERY done call, reads included: the licence
     // path replays the consumed question's rendered text; an ordinary call
@@ -287,11 +285,11 @@ export class CallRunner {
    *  guard that raised it — the turn goes on and the delivery carries the sentence;
    *  never a dead turn. */
   private refuseUnpaidDebt(call: CanonicalCall, fact: ToolFact, origin: Act['origin'],
-                           state: StateSnapshot | null, draft: TurnDraft,
+                           draft: TurnDraft,
                            debt: { readonly guardName: string; readonly rule: string }): Act {
     const grade = this.deps.clerk.grade(
       { verdict: { kind: 'refuse', guardName: debt.guardName, detail: '' }, actId: '' },
-      fact.effect, state, state, draft);
+      fact.effect, draft);
     return this.record(draft, {
       origin, call: call.data(v => this.deps.masker.maskData(v)), effect: fact.effect, said: grade.said,
       status: grade.status, reason: grade.reason, evidence: grade.evidence,

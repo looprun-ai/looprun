@@ -1,8 +1,8 @@
-/** Derives the user-facing word from the executor's one-word answer plus control
- *  flow, and never guesses. Stateless. */
-import type { Correction, Done, Effect, Evidence, Reason, StateSnapshot, Status, ToolAnswer, Verdict } from '../contract/vocabulary.js';
+/** Derives the user-facing word from the tool's OWN answer plus control flow, and
+ *  never guesses: yes is done, no is refused, anything else is unknown — exactly
+ *  what an MCP surface gives. Stateless. */
+import type { Correction, Done, Effect, Evidence, Reason, Status, ToolAnswer, Verdict } from '../contract/vocabulary.js';
 import { TurnFailure } from '../contract/vocabulary.js';
-import { canonicalJson } from '../contract/canonical-call.js';
 import type { TurnDraft } from './session.js';
 
 export type GradeInput =
@@ -19,18 +19,12 @@ export interface Grade {
 }
 
 export class StatusClerk {
-  grade(input: GradeInput, effect: Effect, before: StateSnapshot | null,
-        after: StateSnapshot | null, draft: TurnDraft): Grade {
+  grade(input: GradeInput, effect: Effect, draft: TurnDraft): Grade {
     void draft;
     if ('answer' in input) {
       const said = input.answer.done;
       if (said === 'yes') return { said, status: 'done', reason: null, evidence: 'executor', corrections: [] };
       if (said === 'no') {
-        if (effect !== 'read' && before !== null && after !== null
-          && canonicalJson(before) !== canonicalJson(after)) {
-          return { said, status: 'done', reason: null, evidence: 'diff',
-                   corrections: [{ kind: 'recordCorrected', actId: input.actId, said }] };
-        }
         return { said, status: 'not-done', reason: 'refused', evidence: 'executor', corrections: [] };
       }
       return { said, status: 'unknown', reason: null, evidence: 'executor', corrections: [] };
