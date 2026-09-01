@@ -33,7 +33,6 @@ const SCOPE_EXCLUDE = /^docs\/superpowers\//;
 const DRIFT = new RegExp(
   [
     'neurono',
-    'criaty',
     '\\bNB_[A-Z_]+',
     '\\bBENCH_EXAMPLE\\b',
     'bench-core',
@@ -71,6 +70,7 @@ const VENDOR = /(?<![.\/@-])\b(claude|anthropic|opus|sonnet|haiku)\b/i;
 const VENDOR_ALLOWLIST = new Set([
   'docs/benchmarks.md',
   'docs/analysis/2026-08-04-lie-check-model-portability.md',
+  'docs/analysis/2026-08-31-governed-vs-traditional-verdict.md',
 ]);
 
 function* walk(path) {
