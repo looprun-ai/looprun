@@ -9,7 +9,7 @@ read by a person, not by a framework.
 {
   id: 'cancel-asks-first',
   split: 'fix',
-  covers: ['consent:cancelBooking', 'onlyAfter:cancelBooking'],
+  covers: ['consent:cancelBooking', 'needs:cancelBooking'],
   turns: ['Please cancel booking bk_1.'],
   invariants: {
     requiredToolCalls: [{ name: 'getInvoice' }],

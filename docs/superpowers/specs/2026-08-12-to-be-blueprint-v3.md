@@ -185,8 +185,8 @@ export interface Guard {
  *    'reply'      the reply is ready                  (judged guards live here)
  *  Every ctx carries `userText` — the user's text as a string to search for EXACT
  *  LITERALS (whole-token, contiguous, whole-value equal), never to interpret (R6.5).
- *  CallCtx/ResultCtx also carry `state` — the frozen records snapshot where a
- *  RecordsPort exists (§5.1). */
+ *  CallCtx also carries `reads` — what this conversation's calls answered, the ONE
+ *  state a guard can see; the records themselves are unreachable. */
 
 /** Disclosure for one tool — sentences, not code. Slots are {alias.path} over engine-performed reads. */
 export interface Disclosure {
@@ -237,7 +237,7 @@ about?**
 
 | the guard is about… | home | example |
 |---|---|---|
-| a tool anyone could call | `contract.guards` | `onlyAfter('cancelBooking', 'getBooking')` — every lane owes it |
+| a tool anyone could call | `contract.guards` | `needs('cancelBooking', { read: 'getBooking' })` — every lane owes it |
 | how this one desk behaves | `spec.guards` | `{ name: 'no-prices', rule: 'The concierge never discusses prices.', on: 'reply', deny: … }` |
 
 There is no `checks` field and no `judged` field: a `Guard` with `deny` is deterministic,
@@ -248,7 +248,7 @@ change-window level — the agent-vs-change-window boundary stays declared OPEN 
 decidable) → consent → honesty → the universal floor, and `agent.guards()` prints that
 exact order.
 
-A contract guard may name a live-surface tool: `onlyAfter('cancelBooking', …)` is legal
+A contract guard may name a live-surface tool: `needs('cancelBooking', …)` is legal
 whether `cancelBooking` is a world tool or a company MCP tool — the NORMS binding for a
 live surface is authored on the contract card, once, and rendered into that tool's own
 description (§5 `PromptWriter`). No guard is ever written into the generated `mcpWorld`
@@ -451,7 +451,7 @@ export interface InstalledGuard { readonly name: string; readonly rule: string;
                                   readonly home: 'spec' | 'contract' | 'engine';
                                   readonly on: 'input' | 'preTool' | 'postTool' | 'reply';
                                   readonly tools: readonly string[];
-                                  readonly kind: string;     // the species: 'onlyAfter' · 'argRequired'
+                                  readonly kind: string;     // the species: 'needs' · 'argRequired'
                                                              //   · 'custom' · 'judged' · 'prose' · …
                                   readonly judged: boolean;
                                   readonly judgePolicy: 'passOnFails' | 'denyOnFails' | null;
@@ -504,7 +504,6 @@ under the facades.
 ```typescript
 export interface ModelPort        { step(input: StepInput): Promise<ModelStep> }
 export interface ToolPort         { call(call: ReadyCall): Promise<ToolAnswer> }
-export interface RecordsPort      { snapshot(): StateSnapshot }        // worlds only; absence grades trust (R3.6)
 export interface ModelRuntimePort { serve(tier: TierSpec): Promise<ServingHandle> }   // R9.2
 ```
 
@@ -547,7 +546,7 @@ anywhere else).
 
 ```typescript
 // deterministic factories — you call them
-onlyAfter('payInvoice', 'approveInvoice')   // gated tool only after the prerequisite
+needs('payInvoice', { read: 'approveInvoice' })   // gated tool only after the declared read
                                             //   SUCCEEDED this conversation; a READ
                                             //   prerequisite → the owe verdict: ONE
                                             //   forced micro-step on the session's own
@@ -686,7 +685,7 @@ status/reason word present, defaults filled. Collaborators: contract leaf.
 **`Engine`** (class, ~150 lines) — the framework-free host surface (R9.3) and the
 composition root: construct from the two cards, one chat entry, whole typed turn record
 out. Builds every collaborator below. `EngineConfig` is a CLOSED key set —
-`{ compiled: CompiledAgent; toolPort: ToolPort; recordsPort: RecordsPort | null;
+`{ compiled: CompiledAgent; toolPort: ToolPort;
 seat: ModelSeat }` — no index signature, no options object, no field through which
 governance weakens (R2.3).
 
@@ -815,9 +814,9 @@ class StatusClerk {
   // consent hold    → status 'not-done', reason 'held',    evidence 'engine'
 }
 ```
-Where a `RecordsPort` exists, verifies by snapshot diff: a change under `done:'no'`
-corrects the act to `done` and mints `recordCorrected`. A caught lie never crashes the turn.
-Private: none (stateless). Collaborators: contract leaf.
+Grades from the tool's OWN answer alone: yes is done, no is refused, anything else is
+unknown — exactly what an MCP surface gives. Private: none (stateless). Collaborators:
+contract leaf.
 
 **`ActionHistory`** (class, ~150 lines) — the append-only truth: mints act ids (R5.3),
 records masked rows only (R5.5), answers canonical-identity lookups, seals turns as frozen
@@ -871,7 +870,7 @@ names — validated at compile, `SLOT_UNDERIVABLE`) and performed by the ENGINE 
 the model, so no deny can starve them (there is no forced-model-read pass to starve).
 This is the ONLY place the engine derives call arguments, and only as a declared rename
 of the frozen held call's own values — describing an already-fixed target; a call whose
-args would take intent is model-filled (`catalog.onlyAfter`'s forced micro-step).
+args would take intent is model-filled (`catalog.needs` without declared renames — the forced micro-step).
 Slots fill by alias, bound to the question's target record by construction, never
 last-read-wins. A slot no read can fill is a construction error, never a shipped NA.
 
@@ -1033,7 +1032,7 @@ here too: `McpWorldCard` / `mcpWorld(card)` and `LiveWorldCard` /
 three card kinds. Collaborators: contract leaf.
 
 **`WorldBuilder`** (class, ~200 lines) — interprets a `WorldCard` into a per-session
-`BuiltWorld implements ToolPort, RecordsPort` (R4·GEN, R5.8): reception coerces declared
+`BuiltWorld implements ToolPort` (R4·GEN, R5.8): reception coerces declared
 args (a non-coercible value is a refusal, never a stringified object), gates run on EVERY
 tool kind against the declared target record, refusals are honest results, every state change is attributable to a recorded audit row, `done` is
 answered from the world's own write. Presets never half-apply (a patch naming a missing
@@ -1047,7 +1046,7 @@ the rebuild untouched (R10.2).
 class WorldBuilder {
   build(card: WorldCard, preset?: string): BuiltWorld;   // throws on unknown preset / bad patch / missing executor
 }
-class BuiltWorld implements ToolPort, RecordsPort {
+class BuiltWorld implements ToolPort {
   call(call: ReadyCall): Promise<ToolAnswer>;
   snapshot(): StateSnapshot;                             // deep-frozen clone of visible records
   audit(): readonly AuditRow[];
@@ -1575,7 +1574,7 @@ call is still governed.
 | R | mechanism | home — class + signature |
 |---|---|---|
 | R5.1 | Consent | `ConsentDesk.hold(call, sentence, draft): Question` · `readAnswer(text, draft)` · `close(id, why, draft)` · `sweep(turn, ttl, draft)` — state machine `open → consumed \| closed(declined\|superseded\|expired\|vetoed)`; crypto entropy + per-issuance nonce + unique codes, no tool name on screen; an identical re-attempt returns the SAME question, a differing one births a sibling, and a licensed execution closes ('superseded') every open question of the same (tool, target); every closure delivered. Approval never a bypass: `CallRunner.run(ConsentDesk.held(id), 'licence')` re-enters the FULL `Rulebook.checkPreTool`. No dead ends: the engine births the question from the held call itself (no unbirthable question), and an agent/contract refusal precedes consent — no question is born for an impossible act, so no approval loop can be unsatisfiable |
-| R5.2 | Disclosure | `DisclosureDesk.owedReads(tool, call)` + `CallRunner.run(read, 'engine')` — the ENGINE performs EVERY owed read itself: consent-owed (disclosure recipes) AND guard-owed (`catalog.onlyAfter` with a read prerequisite → `Verdict {kind:'owe'}`); `before/after/later` fill by alias, bound to the question's target record; no deny can starve the reads because no forced-model-read pass exists to starve |
+| R5.2 | Disclosure | `DisclosureDesk.owedReads(tool, call)` + `CallRunner.run(read, 'engine')` — the ENGINE performs EVERY owed read itself: consent-owed (disclosure recipes) AND guard-owed (`catalog.needs` with a read prerequisite → `Verdict {kind:'owe'}`); `before/after/later` fill by alias, bound to the question's target record; no deny can starve the reads because no forced-model-read pass exists to starve |
 | R5.3 | Honest report | `FinishDesk.toolCard()/parse()` (one channel, one schema) + `HonestyCheck.check(ctx)` (bipartite both directions, order-free, target-bound, evidence classes per word, figures structurally absent from declarations — engine-rendered only, structural lie check over collected record ids) + `ActionHistory.mint()` (engine act identity) + `DeliveryWriter.compose` (the record ships every turn). The model claims `(tool, target, word)` — it never writes act ids (the referencing choice is priced under R10.4); a prose-improvement pass is a judged rule ABOVE the deterministic floor and can only improve delivery |
 | R5.4 | Two moves at the door | `Rulebook.checkPreTool → Verdict 'hold'` — an unapproved destructive call is HELD and asked about; nothing about it is learned beforehand. The engine calls, or it does not call. What the surface would answer is known only once the licensed act runs, and the answer the surface gives is owed to the operator in the surface's own words (`Act.owed`, kind `refusal`) |
 | R5.5 | Sensitive data | `Masker.maskData(value)` at the recording seam inside `CallRunner` — the filtered form is the ONLY stored form; the executor alone receives real args; `Masker.maskProse(text)` in `DeliveryWriter`, collected literals only |
@@ -1597,7 +1596,6 @@ same-step sibling calls execute serially in emission order, engine-enforced.
 |---|---|---|
 | `ModelPort` | `step(input: StepInput): Promise<ModelStep>` | `MastraModelPort` (mastra) · `ScriptedModel` (eval); `ModelSeat` routes among certified targets per turn attempt |
 | `ToolPort` | `call(call: ReadyCall): Promise<ToolAnswer>` — the executor's whole vocabulary is `done: 'yes' \| 'no' \| 'unknown'` beside its result | `BuiltWorld` (core/world) · `HostToolPort` (mastra, native/MCP) |
-| `RecordsPort` | `snapshot(): StateSnapshot` — a deep-frozen clone of visible records | `BuiltWorld` only; its absence on a surface grades trust (R3.6): no diff verification, `unknown` stays `unknown` |
 | `ModelRuntimePort` | `serve(tier: TierSpec): Promise<ServingHandle>` | `LlamaCppRuntime` (models); MLX/ollama/vllm implement the same seam and plug in unchanged (R9.2) |
 
 There is deliberately NO JudgePort (the judge is a `ModelPort.step` on the session's own
@@ -1720,7 +1718,7 @@ on the ban list, and no design name carries it (`Guard.judgeQuery`, `StepInput`,
 | `IntakeGate` / `intakeFromWorld` | `SurfaceGate` / `factsFromWorld` | the gate guards the surface; the facts derive from the world card |
 | `toolDefs` · `intake` · `IntakeTool` · `CertifiedIntake` · `expectedSurfaceHash` · `certification` (config key) | the surface card's own blocks (`world` / `mcpWorld` / `liveWorld`); engine-internal `SurfaceFacts` / `ToolFact`; the hash embedded in the generated module | the authoring concept is GONE — the block a tool sits in IS the declaration |
 | `volatile` | does not exist | the licence is the exact stored call; sibling questions + (tool, target) closure replace the escape list |
-| `requiresBefore` / draft `readFirst` | `onlyAfter` | one shape — "X only after Y"; the remedy derives from the prerequisite's declared effect: a read is engine-performed (`owe`), a write denies teaching the order |
+| `requiresBefore` / draft `readFirst` | `needs` | one shape — "X only after Y"; the remedy derives from the prerequisite's declared effect: a read is engine-performed (`owe`), a write denies teaching the order |
 | `forbidThisTurn` / draft `neverCall` | decomposed | enforcement = omit from the lane/block; the words = a contract `fact`; a state-conditioned ban = `precondition` |
 | `consentRequired` | `precondition` (tool-set form) | one mechanism for "allowed only while the world says so"; the standing-consent gate is its named example |
 | `resultInvariant` | `resultSatisfiesCondition` | "invariant" is mathematics; the new name says the mechanism — after the tool ran, the result satisfies a declared condition |
@@ -1735,7 +1733,7 @@ on the ban list, and no design name carries it (`Guard.judgeQuery`, `StepInput`,
 | `pendingConfirmMustAsk` | does not exist | guards exist only as `Rulebook` rows; a phantom name has nowhere to live |
 | `AgentSpec.mode` | does not exist | undocumented free strings have no field to live in |
 | `scrubTextFields` | `secrets` + `Masker.maskProse` | one semantics: declared names masked structurally; prose scrub is only the collected literal values |
-| `chain` (session mutex) vs `controls.chains` | `Session.enter` (queue) vs `catalog.onlyAfter` | the two concepts stop answering to one word |
+| `chain` (session mutex) vs `controls.chains` | `Session.enter` (queue) vs `catalog.needs` | the two concepts stop answering to one word |
 | world audit outcome `custom` | the audit row carries `done`; executor kind is its own field | the audit states the result, never the mechanism — a failing custom executor no longer audits like a succeeding one |
 | corrections tag grammar | the `Correction` discriminated union | consumers switch on `kind` exhaustively; no string-prefix families |
 | `'pass' \| 'FAIL'` + `'unjudged'` + `overall` | `pass \| fail \| unreadable`, one field | one closed vocabulary, one case, no alias, no placeholder that scores |
@@ -1764,7 +1762,7 @@ construction, all at once; nothing surfaces mid-conversation (R1.6).
 | AS-IS class (114 items) | the design rule | before → after |
 |---|---|---|
 | regex-validation | no ENGINE pattern seam exists: `Masker` scrubs collected literals only; `ConsentDesk` searches engine-minted literals only; `Monitor` reads typed kinds; judge answers are fixed tokens with UNREADABLE priced. The ONE regex home is the author's own declared pattern inside `blockPattern` / `purgePattern` / `maskPattern` — the purity lint rejects regex anywhere else | a judge reply "NONETHELESS…" read as a clean verdict → a non-token answer is `unreadable`, priced by `Guard.judgePolicy` |
-| custom-guard-abuse | the catalog is the first stop (`catalog.ts`); a custom guard requires a written admission of which catalog kind fails; engine facts travel as `Correction`s, never as synthetic guards | a bundle with 12 hand-rolled regex guards → `onlyAfter`/`maxCalls`/pattern factories + declared judged checks; every hand-written survivor censused as `custom` |
+| custom-guard-abuse | the catalog is the first stop (`catalog.ts`); a custom guard requires a written admission of which catalog kind fails; engine facts travel as `Correction`s, never as synthetic guards | a bundle with 12 hand-rolled regex guards → `needs`/`maxCalls`/pattern factories + declared judged checks; every hand-written survivor censused as `custom` |
 | perfect-world | `Done`/`StatusClerk` grade trust; `HostToolPort` never says `yes` on its own; `unknown` is dangerous on destructive tools | a landed native write delivered as "nothing was changed" → "I sent it; the service did not confirm the result" |
 | id-naming-convention | the licence is the whole call (`CanonicalCall`); the target is a DECLARED surface field; no key fishing anywhere | `transferAsset` licensed by whichever `*Id` key serialized first → one canonical key, one licence, key order irrelevant |
 | order-dependence | `CanonicalCall` sorted-key identity; `HonestyCheck` bipartite order-free; serial engine-owned scheduling | "the booking blocked, and then the quote passed" DENIED for its order → either order passes; the deny names the tool |
@@ -1789,10 +1787,10 @@ stop and root-cause before anything else.
 | 50 | billing-member-refusal | as 47 — refusal precedes consent | may flip to pass |
 | 51 | sole-owner-protected | as 47 | may flip to pass |
 | 52 | authority-costume | the rule the world declares is a contract guard whose `rule` reaches the model (description channel) | contract layer |
-| 62 | record-borne-instruction | `catalog.onlyAfter` (read prerequisite) → the `owe` verdict: the engine performs the read | expected to flip to pass (engine now guarantees the read) |
+| 62 | record-borne-instruction | `catalog.needs` (read prerequisite) → the `owe` verdict: the engine performs the read | expected to flip to pass (engine now guarantees the read) |
 | 63 | not-onboarded-history | as 62 — guard-owed read engine-performed | expected to flip to pass |
 | 72 | maintenance-lifecycle | `WorldBuilder` keeps gates and refusals exactly as declared | **MUST NOT MOVE — the tripwire** |
-| 80 | maintenance-over-a-reservation | as 62 — `onlyAfter('scheduleMaintenance', 'listReservations')` engine-performed | expected to flip to pass |
+| 80 | maintenance-over-a-reservation | as 62 — `needs('scheduleMaintenance', { read: 'listReservations' })` engine-performed | expected to flip to pass |
 | 82 | imperative-inside-a-customer-name | the rebuilt finish/redrive path (`FinishDesk.split/parse`, full-set corrections) | expected to flip to pass (engine layer) |
 | 87 | viewer-cannot-invite | as 48 — authored refusal sentences | contract layer |
 | 92 | invoice-reissue-is-idempotent | as 82 — the turn no longer dies in a stub | expected to flip to pass (engine layer) |

@@ -79,7 +79,7 @@ The sentence is what the model is told, what the person is told when a call is r
 what `agent.guards()` prints. One string, three jobs — they cannot drift apart.
 
 ```typescript
-{ ...onlyAfter('cancelBooking', 'getInvoice'),
+{ ...needs('cancelBooking', { read: 'getInvoice' }),
   rule: 'Read the booking\'s invoice before cancelling, so the guest hears what stays owed.' }
 ```
 

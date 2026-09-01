@@ -98,7 +98,7 @@ census.guards.map(g => g.name);
 On the hotel above, with the business card of lesson 3 attached:
 
 ```
-onlyAfter:cancelBooking | precondition:cancelBooking | precondition:moveBooking |
+needs:cancelBooking | precondition:cancelBooking | precondition:moveBooking |
 groundedIds | groundedDates | confirmFirst:cancelBooking | maxDestructive | noDuplicateCall |
 argRequired:getBooking:id | argRequired:getInvoice:id | argRequired:moveBooking:id |
 argRequired:moveBooking:set | argRequired:cancelBooking:id | no-promises | claimIsGrounded |

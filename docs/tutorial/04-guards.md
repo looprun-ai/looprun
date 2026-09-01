@@ -104,13 +104,12 @@ the rest.
 | the rule does this to a call | mechanism | worked example |
 |---|---|---|
 | blocks it while the record stands a certain way | `precondition` | a freight desk: `releaseContainer(cnt_88)` while customs hold `chd_12` stands — the refusal states the hold, the 6 days accrued and the 240/day demurrage behind them |
-| requires a read to have happened first | `onlyAfter` | a school registrar: `issueTranscript` only after `getFeeBalance`, and the rule carries the subtraction — 1,250 charged, 900 paid, 350 standing |
+| requires a read to have happened first | `needs` | a school registrar: `issueTranscript` only after `getFeeBalance`, the read's args declared as renames of the act's own so the engine fills and runs it itself |
 | holds a number under a figure a read returned | `cap` (disclosure) | a pharmacy counter: `dispense(rx_4471, quantity)` capped at `getPrescription.rx.remaining` — 30 authorised, 20 collected, a request for 30 refused at 10 |
 | requires an argument to be the user's own words | `valueFromUser` | a printworks counter: the customer asked for *"the matt stock"* and the model sent `finish: gloss` — the value is refused, the desk asks which finish, and the customer's own word licenses it |
 | holds the CALL's own argument to a law | `argSatisfiesCondition` | a returns counter: `refund(reason)` where the reasons this shop refunds under are `damaged` and `wrong-item`, and nothing else |
 | takes the operator's word OR the records' | `valueFromUserOrRecord` | a lettings desk: the rent on a renewal is the figure the tenant quoted or the figure the tenancy already carries — never one the desk worked out |
 | holds an argument to the row on file | `argMatchesRecord` | a garage: `collectVehicle(reg)` where the plate typed must be the plate the job card carries, so a neighbouring job is never released |
-| requires a read only WHERE the record says so | `onlyAfterWhen` | a bank: `closeAccount` reads the balance first only when the account is overdrawn; a clear account closes with no order to obey |
 | requires an argument to match a declared shape | `argMatchesFormat` | an insurer: `policyId` is `POL-` and eight digits, so `POL-2291` is a well-formed guess, not an identifier |
 | forbids an argument from arriving at all | `argForbidden` | a clinic: `bookAppointment` declares `overrideCapacity`, and no desk may send it |
 | checks the RESULT after the call ran | `resultSatisfiesCondition` | a statements desk: `sendStatement` returns `delivered: false, bounce: 'mailbox_full'`, and the reply corrects itself instead of reporting success |
@@ -137,12 +136,11 @@ machine can never disagree. Use one instead of hand-writing a `deny` wherever it
 
 | factory | configuration | it refuses | the mistake it prevents |
 |---|---|---|---|
-| `onlyAfter(tool, prerequisite)` | two tool names | the act until the prerequisite SUCCEEDED this conversation | acting on a figure nobody read |
+| `needs(tool, { read, args?, pick?, when? })` | the read and its declared renames | the act until the read SUCCEEDED this conversation — the engine fills and runs a declared read itself | acting on a figure nobody read |
 | `precondition(tool, check, rule)` | `({ record, state }) => boolean` | while the records fail the check | asking about an act the records already rule out |
 | `argSatisfiesCondition(tool, arg, check, rule)` | `({ value, record, state }) => boolean` over the call's OWN argument | the value the call arrived with; an argument that never arrived is left alone | a law about an argument written as a law about a record |
 | `valueFromUserOrRecord(tool, arg, from, field, rule)` | the entity and the field that may also carry it | a value neither the operator wrote nor any row of that entity holds | the desk's own arithmetic passing as a figure somebody gave it |
 | `argMatchesRecord(tool, arg, field, rule)` | the field of the call's own target row | an argument that differs from the one on file, naming both figures | acting on a value the record already contradicts |
-| `onlyAfterWhen(tool, prerequisite, when, rule)` | the read, and a reading of the call's own row | the act until the read succeeded — but only where the condition holds | demanding a read on every call to catch the few that need it |
 | `valueFromUser(tool, arg)` | tool + arg name | a value the user never wrote, matched as whole tokens | the model inventing an amount, an address, a date |
 | `argMatchesFormat(tool, arg, pattern)` | a pattern string | a value the declared shape rejects | a well-formed guess passing as an identifier |
 | `argForbidden(tool, arg)` | tool + arg name | the call when the forbidden argument arrives | a banned field being used anyway |
@@ -207,13 +205,13 @@ the ask.
 Straight, when the default sentence is right:
 
 ```typescript
-onlyAfter('payInvoice', 'listHolds')
+needs('payInvoice', { read: 'listHolds' })
 ```
 
 Spread and override, when the desk needs to say more:
 
 ```typescript
-{ ...onlyAfter('cancelBooking', 'getInvoice'),
+{ ...needs('cancelBooking', { read: 'getInvoice' }),
   rule: 'Read the booking\'s invoice before cancelling, so the guest hears what stays owed.' }
 ```
 
@@ -221,12 +219,12 @@ Override `name` too when the same factory is installed twice on one tool, so bot
 the census:
 
 ```typescript
-{ ...onlyAfter('issueRefund', 'listHolds'), name: 'onlyAfter:issueRefund:holds' }
+{ ...needs('issueRefund', { read: 'listHolds' }), name: 'needs:issueRefund:holds' }
 ```
 
 ## What a refusal reads like
 
-`onlyAfter` does not merely refuse. It **owes**: the engine stops, collects the missing read
+`needs` does not merely refuse. It **owes**: the engine stops, collects the missing read
 itself in one forced micro-step, and only then lets the original call continue. The rule is
 kept without the model having to remember it.
 
@@ -344,7 +342,7 @@ A rule stated only as a sentence is a wish.
 An ORDER is a third thing, and it is not the check:
 
 ```typescript
-onlyAfter('cancelBooking', 'getInvoice')
+needs('cancelBooking', { read: 'getInvoice' })
 ```
 
 It owes a read and is paid by running it — the engine collects `getInvoice`, and the
