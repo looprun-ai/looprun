@@ -1,5 +1,8 @@
 # minimal-core — the run ledger
 
+> **CLOSED — 2026-09-01.** The program's record. The four parked rulings are retired: the
+> shipped answers are the running law.
+
 Run: the minimal-core program, branch `minimal-core` off main @ 7079285, unattended.
 Dispatch: `docs/superpowers/plans/2026-08-30-minimal-core-execution-goal.md`
 Spec of record: `docs/superpowers/specs/2026-08-30-minimal-core-free-author-proposal.md`

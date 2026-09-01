@@ -1,5 +1,8 @@
 # minimal-core — parked decisions
 
+> **CLOSED — 2026-09-01.** All four retired: the shipped answers are the running law, and the
+> C2 choice-gate removal deleted the licence D-4 questioned.
+
 Questions only the owner can answer, parked by the unattended run. Each entry names
 what blocked, what was tried, and the exact question. An empty file means nothing
 needed the owner.

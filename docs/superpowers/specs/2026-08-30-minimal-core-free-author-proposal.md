@@ -1,5 +1,9 @@
 # The minimal core under a freed author — technical proposal
 
+> **CLOSED — 2026-09-01.** Steps 2–6 live in `packages/*`, step 1 is superseded by the C2
+> choice-gate removal, and the two live remainders are BACKLOG rows 1 (step 4b) and 8 (the
+> local measurement).
+
 > **Status: PROPOSED — awaiting the owner's ruling. Nothing in this document is
 > implemented.** The measurement behind it lives in
 > `docs/analysis/2026-08-30-governed-vs-traditional-deep-analysis.md`.

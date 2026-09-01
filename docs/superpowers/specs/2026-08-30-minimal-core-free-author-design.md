@@ -1,5 +1,8 @@
 # The minimal core under a freed author — the design map
 
+> **CLOSED — 2026-09-01.** Shipped through the proposal beside this file; the engine content
+> lives in `packages/*` and the remainders are BACKLOG rows 1 and 8.
+
 > **Status: DESIGN — companion to `2026-08-30-minimal-core-free-author-proposal.md`
 > (Status PROPOSED). Nothing here is implemented.** Every AS-IS figure below was read
 > off the sources in session; file and line anchors name where.

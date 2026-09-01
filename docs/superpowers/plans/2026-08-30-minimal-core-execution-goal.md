@@ -1,5 +1,8 @@
 # The minimal-core program — the execution dispatch
 
+> **CLOSED — 2026-09-01.** Executed to step 8; the record is `minimal-core-LEDGER.md` beside
+> this file.
+
 > The goal prompt for the session that BUILDS the program. Everything here is settled by
 > measurement or ruling; the spec is the plan of record. Paste the dispatch below into a
 > fresh session, whole.
