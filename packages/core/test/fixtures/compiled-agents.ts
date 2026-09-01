@@ -1,7 +1,7 @@
 import type { Json, ModelTarget, SurfaceFacts } from '../../src/contract/vocabulary.js';
 import { deepFreeze } from '../../src/contract/freeze.js';
 import type { ToolFact } from '../../src/contract/vocabulary.js';
-import type { ModelPort, RecordsPort } from '../../src/contract/ports.js';
+import type { ModelPort, } from '../../src/contract/ports.js';
 import type { CompiledAgent, CompiledGuard, Guard } from '../../src/cards/cards.js';
 import type { Limits } from '../../src/cards/cards.js';
 import { AgentFactory } from '../../src/cards/agent-factory.js';
@@ -78,7 +78,6 @@ export function testEngine(opts: {
   limits?: Partial<Limits>;
   facts?: SurfaceFacts;
   behaviors?: Readonly<Record<string, ToolBehavior>>;
-  records?: RecordsPort | null;
   targets?: readonly ModelTarget[];
   choice?: string | { targets: readonly string[]; strategy: 'sequential' };
 }): TestRig {
@@ -88,7 +87,6 @@ export function testEngine(opts: {
   const engine = Engine.create({
     compiled: bookingAgent(opts.guards ?? [], opts.limits ?? {}, opts.facts ?? BOOKING_SURFACE),
     toolPort: port,
-    recordsPort: opts.records ?? null,
     seat
   });
   return { engine, port };

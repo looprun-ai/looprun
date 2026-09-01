@@ -6,7 +6,7 @@ import type { ChatOpts, GuardCensus, Question, TurnRecord,
               TurnReturned } from '../contract/vocabulary.js';
 import { TurnFailure } from '../contract/vocabulary.js';
 import { deepFreeze } from '../contract/freeze.js';
-import type { ToolPort, RecordsPort } from '../contract/ports.js';
+import type { ToolPort } from '../contract/ports.js';
 import type { CompiledAgent } from '../cards/cards.js';
 import { ActionHistory } from './action-history.js';
 import { DeliveryWriter } from './delivery-writer.js';
@@ -22,7 +22,6 @@ import { Turn, type TurnDeps } from './turn.js';
 export interface EngineConfig {
   readonly compiled: CompiledAgent;
   readonly toolPort: ToolPort;
-  readonly recordsPort: RecordsPort | null;
   readonly seat: ModelSeat;
   /** The consent clock; injectable so a test can age a code. */
   readonly now?: () => number;
@@ -47,7 +46,6 @@ export class Engine {
       compiled,
       seat: cfg.seat,
       toolPort: cfg.toolPort,
-      recordsPort: cfg.recordsPort,
       rulebook,
       clerk: new StatusClerk(),
       masker: new Masker(compiled.maskKeys),

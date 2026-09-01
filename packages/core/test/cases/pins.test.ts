@@ -72,8 +72,7 @@ async function twoEntityChat(compiled: ReturnType<AgentFactory['governed']>,
                              text: string): ReturnType<Engine['chat']> {
   const targets = scriptedTargets(1);
   const built = new WorldBuilder().build(TWO);
-  const engine = Engine.create({ compiled, toolPort: built, recordsPort: built,
-    seat: ModelSeat.create(targets, targets[0].id, () => model) });
+  const engine = Engine.create({ compiled, toolPort: built,     seat: ModelSeat.create(targets, targets[0].id, () => model) });
   return engine.chat('s1', text);
 }
 

@@ -2,7 +2,6 @@ import { test, expect } from 'vitest';
 import { TurnFailure } from '../../src/contract/vocabulary.js';
 import { StatusClerk } from '../../src/run/status-clerk.js';
 import type { TurnDraft } from '../../src/run/session.js';
-import { RecordsPortStub } from '../fixtures/records-port-stub.js';
 import { callStep, finishStep, payingDesk } from '../fixtures/scripted-model.js';
 import { testEngine } from '../fixtures/compiled-agents.js';
 
@@ -58,8 +57,6 @@ test("done:'no' on a destructive act grades not-done/refused — the answer alon
 });
 
 test('a surface that answers no is taken at its word, whatever its records did', async () => {
-  const records = new RecordsPortStub();
-  records.set('bookings', 'bk_1', { status: 'CONFIRMED' });
   const model = payingDesk([
     callStep('cancelBooking', { id: 'bk_1' }),
     finishStep('The surface refused the cancellation.',
@@ -68,12 +65,9 @@ test('a surface that answers no is taken at its word, whatever its records did',
     { calls: [], text: '' },
     { calls: [], text: '' }]);
   const { engine } = testEngine({
-    model, records,
+    model,
     behaviors: {
-      cancelBooking: () => {
-        records.set('bookings', 'bk_1', { status: 'CANCELLED' });
-        return { result: { refused: 'policy' }, done: 'no' };
-      }
+      cancelBooking: () => ({ result: { refused: 'policy' }, done: 'no' })
     }
   });
 

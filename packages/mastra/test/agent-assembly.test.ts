@@ -37,7 +37,6 @@ test('the options a local tier declares reach every request the seated port make
 test('a world card assembles the author door: built world seated, consent armed', async () => {
   const { config, surface } = await assemble({ spec: SPEC, model: SCRIPTED, world: BOOKING });
   expect(config.toolPort).toBeInstanceOf(BuiltWorld);
-  expect(config.recordsPort).toBe(config.toolPort);
   expect(config.compiled.guards.some(g => typeof g.hold === 'function')).toBe(true);
   expect(surface).toBeNull();
 });

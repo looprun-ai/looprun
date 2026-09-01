@@ -16,7 +16,7 @@
 import type { Act, ChatOpts, Correction, FinishPayload, Msg, Question, RawCall, ReportLine,
               StepInput, ToolCard, TurnRecord, TurnReturned } from '../contract/vocabulary.js';
 import { deepFreeze } from '../contract/freeze.js';
-import type { ModelPort, ToolPort, RecordsPort } from '../contract/ports.js';
+import type { ModelPort, ToolPort } from '../contract/ports.js';
 import type { CompiledAgent } from '../cards/cards.js';
 import { CallRunner } from './call-runner.js';
 import { canonicalAmount, carriedIds, figureRuns } from '../cards/catalog.js';
@@ -149,7 +149,6 @@ export interface TurnDeps {
   readonly compiled: CompiledAgent;
   readonly seat: ModelSeat;
   readonly toolPort: ToolPort;
-  readonly recordsPort: RecordsPort | null;
   readonly rulebook: Rulebook;
   readonly clerk: StatusClerk;
   readonly masker: Masker;
@@ -275,7 +274,7 @@ export class Turn {
       return step.calls.find(c => c.tool === read.tool) ?? null;
     };
     const runner = new CallRunner({ compiled, rulebook, clerk: this.deps.clerk, history,
-      toolPort: this.deps.toolPort, recordsPort: this.deps.recordsPort,
+      toolPort: this.deps.toolPort,
       reads: session.reads, consent: desk, masker,
       disclosure: new DisclosureDesk(compiled.disclosureBindings),
       microStep });

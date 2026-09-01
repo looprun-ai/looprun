@@ -33,7 +33,6 @@ test('emission order rules: the slow first call fully exits before the second en
   const engine = Engine.create({
     compiled: bookingAgent(),
     toolPort: port,
-    recordsPort: null,
     seat: ModelSeat.create(targets, targets[0].id, () => model)
   });
 

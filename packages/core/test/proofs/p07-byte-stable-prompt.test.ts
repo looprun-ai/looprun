@@ -3,24 +3,20 @@ import { needs } from '../../src/cards/catalog.js';
 import { ScriptedModel } from '../../src/run/scripted-model.js';
 import { callStep, finishStep } from '../fixtures/scripted-model.js';
 import { BOOKING_SURFACE, install, testEngine } from '../fixtures/compiled-agents.js';
-import { RecordsPortStub } from '../fixtures/records-port-stub.js';
 
 // P7 · R7.3 — system() is byte-identical across turns; only the tail varies. The
 // channel law: a CONTRACT tool guard's rule rides its tool's own card; a SPEC
 // guard's rule rides the per-agent block of the shared prefix.
 test('every step of every turn shares one byte-identical system prefix; only the tail varies', async () => {
-  const records = new RecordsPortStub();
-  records.set('bookings', 'bk_1', { status: 'CONFIRMED' });
   const model = new ScriptedModel([
     callStep('getBooking', { id: 'bk_1' }),
     finishStep('Found bk_1.'),
     finishStep('Nothing more.'),
     finishStep('Still nothing.')
   ]);
-  const { engine } = testEngine({ model, records });
+  const { engine } = testEngine({ model });
 
   await engine.chat('s1', 'check bk_1');
-  records.set('bookings', 'bk_1', { status: 'CANCELLED' });
   await engine.chat('s1', 'thanks');
   await engine.chat('s1', 'bye');
 

@@ -3,7 +3,6 @@ import { needs } from '../../src/cards/catalog.js';
 import { fact } from '../fixtures/compiled-agents.js';
 import { callStep, finishStep, payingDesk } from '../fixtures/scripted-model.js';
 import { BOOKING_SURFACE, testEngine } from '../fixtures/compiled-agents.js';
-import { RecordsPortStub } from '../fixtures/records-port-stub.js';
 
 // P4 · R5.2 — owe: the engine pays the owed read with ONE forced micro-step where
 // the session's own model fills the args over a single-tool surface; the read runs
@@ -32,8 +31,6 @@ const MISMATCHED_BEHAVIORS = {
 
 test('the micro-step pays the debt: single-tool surface, model-filled args, engine origin, order kept', async () => {
   const guard = needs('cancelBooking', { read: 'getBooking' }).compile('contract', MISMATCHED);
-  const records = new RecordsPortStub();
-  records.set('bookings', 'bk_9', { status: 'CONFIRMED', customer: 'c_42' });
   const model = payingDesk([
     callStep('cancelBooking', { id: 'bk_9' }),
     callStep('getBooking', { bookingRef: 'bk_9' }),
@@ -42,7 +39,7 @@ test('the micro-step pays the debt: single-tool surface, model-filled args, engi
     { calls: [], text: '' },
     { calls: [], text: '' }]);
   const { engine, port } = testEngine({
-    model, guards: [guard], facts: MISMATCHED, behaviors: MISMATCHED_BEHAVIORS, records
+    model, guards: [guard], facts: MISMATCHED, behaviors: MISMATCHED_BEHAVIORS
   });
 
   const r = await engine.chat('s1', 'cancel booking bk_9');

@@ -29,7 +29,7 @@ function rig(steps: ReturnType<typeof callStep>[]) {
     factsFromWorld(LOCKS));
   const targets = scriptedTargets(1);
   const seat = ModelSeat.create(targets, targets[0].id, () => payingDesk(steps));
-  return Engine.create({ compiled, toolPort: built, recordsPort: built, seat });
+  return Engine.create({ compiled, toolPort: built, seat });
 }
 
 test('a non-matching call runs unheld — the branch is a write', async () => {

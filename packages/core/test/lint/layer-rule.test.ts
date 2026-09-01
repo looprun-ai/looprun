@@ -4,7 +4,7 @@ import { srcFiles, type SourceFile } from './walk.js';
 /** The §6 layer law, downward-only: contract (L0) imports NOTHING outside itself,
  *  cards (L1–L2) import contract only, world imports contract only, run (L3) imports
  *  contract + cards — never world: the machine reaches a BuiltWorld through the
- *  ToolPort/RecordsPort seams it implements. No src file imports test/. Only
+ *  ToolPort seam it implements. No src file imports test/. Only
  *  engine.ts imports turn; nothing in src imports engine except the export barrel
  *  (src/index.ts), which re-exports the public surface for the facade packages and
  *  composes nothing. The one bare specifier the package allows itself is zod. */

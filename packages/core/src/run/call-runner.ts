@@ -6,7 +6,7 @@ import type { Act, CallCtx, CanonicalCallData, Json, OwedRead, RawCall,
               StateSnapshot } from '../contract/vocabulary.js';
 import { TurnFailure } from '../contract/vocabulary.js';
 import type { ToolFact } from '../contract/vocabulary.js';
-import type { ToolPort, RecordsPort } from '../contract/ports.js';
+import type { ToolPort } from '../contract/ports.js';
 import { CanonicalCall, isJson } from '../contract/canonical-call.js';
 import { deepFreeze } from '../contract/freeze.js';
 import type { CompiledAgent } from '../cards/cards.js';
@@ -44,7 +44,6 @@ export interface CallRunnerDeps {
   readonly clerk: StatusClerk;
   readonly history: ActionHistory;
   readonly toolPort: ToolPort;
-  readonly recordsPort: RecordsPort | null;
   /** The session's reads log: every done answer lands here, masked, on the clock. */
   readonly reads: ReadsLog;
   /** The per-session question desk; the hold route issues through it. */

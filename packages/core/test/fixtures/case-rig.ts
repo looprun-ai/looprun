@@ -25,7 +25,7 @@ export function caseRig(opts: {
     facts);
   const targets = scriptedTargets(1);
   const seat = ModelSeat.create(targets, targets[0].id, () => opts.model);
-  const engine = Engine.create({ compiled, toolPort: world, recordsPort: world, seat,
+  const engine = Engine.create({ compiled, toolPort: world, seat,
     ...(opts.now === undefined ? {} : { now: opts.now }) });
   return { engine, world };
 }

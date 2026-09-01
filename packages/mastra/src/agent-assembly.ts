@@ -83,7 +83,6 @@ function adoptLiveSchemas(facts: SurfaceFacts, card: McpWorldCard,
 async function resolveSurface(cfg: LoopRunConfig): Promise<{
   facts: SurfaceFacts;
   toolPort: EngineConfig['toolPort'];
-  recordsPort: EngineConfig['recordsPort'];
   surface: SurfaceReport | null;
 }> {
   const w = cfg.world;
@@ -94,14 +93,14 @@ async function resolveSurface(cfg: LoopRunConfig): Promise<{
         + `— build the shared instance with '${cfg.preset}' and drop the key here`);
     }
     const built = cfg.built ?? new WorldBuilder().build(w, cfg.preset);
-    return { facts: factsFromWorld(w), toolPort: built, recordsPort: built, surface: null };
+    return { facts: factsFromWorld(w), toolPort: built, surface: null };
   }
   const live = 'host' in w
     ? cfg.live ?? missing('a liveWorld card needs the host tools on the live key')
     : await connect(cfg.mcp ?? missing('an mcpWorld card needs the mcp door { url, headers }'));
   const facts = adoptLiveSchemas(factsFromWorld(w), w, live);
   const surface = new SurfaceGate().check(facts, Object.values(live), cfg.seal ?? null);
-  return { facts, toolPort: new HostToolPort(w, live), recordsPort: null, surface };
+  return { facts, toolPort: new HostToolPort(w, live), surface };
 }
 
 function missing(sentence: string): never {
@@ -109,12 +108,12 @@ function missing(sentence: string): never {
 }
 
 async function build(cfg: LoopRunConfig, armed: boolean): Promise<Assembled> {
-  const { facts, toolPort, recordsPort, surface } = await resolveSurface(cfg);
+  const { facts, toolPort, surface } = await resolveSurface(cfg);
   const factory = new AgentFactory();
   const compiled = armed
     ? factory.governed(cfg.spec, cfg.contract, facts)
     : factory.ungoverned(cfg.spec, cfg.contract, facts);
-  return { config: { compiled, toolPort, recordsPort,
+  return { config: { compiled, toolPort,
     seat: seatFor(cfg.model, cfg.spec, cfg.providerOptions ?? {}) }, surface };
 }
 

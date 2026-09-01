@@ -5,5 +5,4 @@ import type { ModelStep, ReadyCall, StateSnapshot, StepInput, TierSpec, ToolAnsw
 
 export interface ModelPort        { step(input: StepInput): Promise<ModelStep> }
 export interface ToolPort         { call(call: ReadyCall): Promise<ToolAnswer> }
-export interface RecordsPort      { snapshot(): StateSnapshot }        // worlds only; absence grades trust
 export interface ModelRuntimePort { serve(tier: TierSpec): Promise<ServingHandle> }

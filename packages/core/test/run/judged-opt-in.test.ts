@@ -21,7 +21,6 @@ function engineOf(spec: AgentSpec, model: ModelPort): Engine {
   return Engine.create({
     compiled: new AgentFactory().governed(spec, undefined, BOOKING_SURFACE),
     toolPort: new HostileToolPort(OK_BEHAVIORS),
-    recordsPort: null,
     seat: ModelSeat.create(scriptedTargets(1), 'scripted-1', () => model)
   });
 }

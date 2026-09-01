@@ -210,7 +210,7 @@ function censusFromEngine(door: Door): ReadonlySet<string> {
   const names = new Set<string>();
   for (const desk of Object.values(door.specs)) {
     const engine = Engine.create({ compiled: factory.governed(desk, door.contract, facts),
-      seat: {} as never, toolPort: {} as never, recordsPort: null });
+      seat: {} as never, toolPort: {} as never });
     for (const guard of engine.guards().guards) names.add(guard.name);
   }
   return names;
