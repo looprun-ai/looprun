@@ -103,14 +103,4 @@ export class FinishDesk {
     return `Call ${FINISH_TOOL} now with your closing message and the report of what happened. No other call remains available.`;
   }
 
-  /** Pure over the acts: done names it · unknown → could not confirm · neither → nothing changed. */
-  closure(acts: readonly Act[]): string {
-    const done = acts.filter(a => a.status === 'done').map(a => a.call.tool);
-    const unknown = acts.filter(a => a.status === 'unknown').map(a => a.call.tool);
-    const parts: string[] = [];
-    if (done.length > 0) parts.push(`Completed: ${[...new Set(done)].join(', ')}.`);
-    if (unknown.length > 0) parts.push(`Could not confirm: ${[...new Set(unknown)].join(', ')}.`);
-    if (parts.length === 0) parts.push('Nothing changed.');
-    return parts.join(' ');
-  }
 }

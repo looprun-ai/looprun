@@ -34,10 +34,36 @@ export function factId(index: number): string {
   return `F${String(index + 1)}`;
 }
 
+/** An act sentence spoken: the human content without the log prefix. The record line
+ *  is `head(args) — status` followed by a tail (`. TAIL`) or a detail (`(DETAIL)`);
+ *  what a delivery may carry is the tail or the detail, never the line. A sentence
+ *  with no log prefix is already speech and stays itself. */
+export function spokenActSentence(sentence: string): string {
+  const dash = sentence.indexOf(' — ');
+  if (dash === -1 || !sentence.slice(0, dash).includes('(')) return sentence;
+  const tool = sentence.slice(0, sentence.indexOf('('));
+  const rest = sentence.slice(dash + 3);
+  const status = rest.startsWith('not-done') ? 'not-done'
+    : rest.startsWith('done') ? 'done'
+    : rest.startsWith('unknown') ? 'unknown' : null;
+  if (status === null) return sentence;
+  let tail = rest.slice(status.length).trim();
+  // The restatement note is bookkeeping, not content.
+  tail = tail.replace('(already ran; first result restated)', '').trim();
+  if (tail.startsWith('(') && tail.endsWith(')')) tail = tail.slice(1, -1).trim();
+  if (tail.startsWith('.') || tail.startsWith(',')) tail = tail.slice(1).trim();
+  if (tail === 'awaiting approval') return 'This stands held, awaiting the operator\'s code.';
+  if (tail !== '') return tail.endsWith('.') || tail.endsWith('!') || tail.endsWith('?')
+    ? tail : `${tail}.`;
+  if (status === 'done') return `The ${tool} call ran and took effect.`;
+  if (status === 'unknown') return `The ${tool} call could not be confirmed.`;
+  return `The ${tool} call did not run.`;
+}
+
 /** The owed facts as the desk reads them — one numbered line each. */
 export function numberedFactLines(facts: readonly DeliveryFact[]): string {
   return facts.map((f, i) => f.kind === 'code'
-    ? `[${factId(i)}] The approval code for the ask above is: ${f.text} — the operator must send it alone.`
+    ? `[${factId(i)}] To proceed, the operator replies with just this code: ${f.text}.`
     : `[${factId(i)}] ${f.state === null ? '' : `[${STATE_TAG[f.state]}] `}${f.text}`).join('\n');
 }
 
@@ -162,15 +188,20 @@ export function assembleFacts(acts: readonly Act[], open: readonly Question[],
     // becomes a fact — a placeholder never reaches the operator.
     if (a.owed !== null && a.owed.text.includes('{')) continue;
     if (a.owed !== null) {
-      facts.push({ kind: a.owed.kind, text: a.owed.text,
+      // A bare world code where an authored sentence should stand is spoken inside a
+      // human sentence — the code verbatim, never alone.
+      const text = isCodeShaped(a.owed.text)
+        ? `That cannot be done — the records refuse it: ${a.owed.text.trim()}.`
+        : a.owed.text;
+      facts.push({ kind: a.owed.kind, text,
         state: a.owed.kind === 'receipt' ? 'ran' : 'refused' });
       continue;
     }
     // A done act that changed the world is never silent: with no authored after,
-    // the act's own record line is the receipt — the reply may say less than the
+    // the act's spoken sentence is the receipt — the reply may say less than the
     // record, never the opposite of it.
     if (a.status === 'done' && a.effect !== 'read') {
-      facts.push({ kind: 'receipt', text: a.sentence, state: 'ran' });
+      facts.push({ kind: 'receipt', text: spokenActSentence(a.sentence), state: 'ran' });
     }
   }
   for (const q of open) {

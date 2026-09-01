@@ -23,9 +23,9 @@ describe('assembleFacts', () => {
     expect(assembleFacts([act({ owed: null, effect: 'read' })], [], [], [])).toEqual([]);
   });
 
-  it('a done write with owed null still owes its record line — the world changed', () => {
+  it('a done write with owed null still owes its record, spoken — the world changed', () => {
     expect(assembleFacts([act({ owed: null })], [], [], [])).toEqual([
-      { kind: 'receipt', text: 't() — done. x', state: 'ran' }
+      { kind: 'receipt', text: 'x.', state: 'ran' }
     ]);
   });
 

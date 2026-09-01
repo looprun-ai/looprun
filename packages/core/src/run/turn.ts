@@ -2,8 +2,8 @@
  *  guards over the arrived text (a deny answers the turn with the guard's own
  *  sentence — no model call) → model loop (serial per-call execution in emission
  *  order, engine-enforced) → finish checks and bounded redrives → the figure walk and
- *  the prose reader over the DELIVERED words (both close paths; the floor is literal
- *  and exempt) → seal. All mutation goes to the TurnDraft; Session.seal commits
+ *  the prose reader over the DELIVERED words (both close paths; the floor is spoken
+ *  from the facts and exempt) → seal. All mutation goes to the TurnDraft; Session.seal commits
  *  atomically; a TurnFailure discards the draft so a retry starts clean.
  *
  *  ONE writer answers the operator: the desk, in the conversation it has been reading.
@@ -593,7 +593,7 @@ export class Turn {
   private async engineClose(session: Session, draft: TurnDraft,
                             operatorTexts: readonly string[], messages: Msg[],
                             drive: StepInput, closeSystem: string): Promise<TurnRecord> {
-    const { finishDesk: fd, deliveryWriter: dw } = this.deps;
+    const { deliveryWriter: dw } = this.deps;
     draft.corrections.push({ kind: 'forcedFinish' });
     draft.closedBy = 'engine';
     draft.finish = null;
@@ -602,8 +602,10 @@ export class Turn {
       ...session.consent.laterTexts(draft.turn),
       ...session.consent.codeNotices(draft.userText)];
     const facts = assembleFacts(draft.acts, open, draft.closed, notes);
-    const floor = (): string => this.rewrite(dw.compose(fd.closure(draft.acts), draft.acts,
-      open, draft.closed, notes));
+    const floor = (): string => {
+      const spoken = this.rewrite(dw.compose('', draft.acts, open, draft.closed, notes));
+      return spoken === '' ? 'Nothing changed.' : spoken;
+    };
     const records = groundedRecords(operatorTexts,
       [...draft.acts, ...session.history.pastActs()], facts);
     const delivered = await this.closeStep(draft, messages, drive, closeSystem, facts,
@@ -625,11 +627,10 @@ export class Turn {
                           records: GroundedRecords, pastActs: readonly Act[],
                           operatorTexts: readonly string[]):
     Promise<{ readonly text: string; readonly retried: boolean } | null> {
-    // A turn owing nothing has no reply for the desk to write, and a bare world code
-    // standing where an authored sentence should carries no sentence to render:
-    // the floor delivers, literal, and no call is spent.
+    // A turn owing nothing has no reply for the desk to write: the floor delivers
+    // and no call is spent. Every owed fact is a sentence — a world code arrives
+    // already spoken inside one.
     if (facts.length === 0) return null;
-    if (facts.some(f => f.kind !== 'code' && isCodeShaped(f.text))) return null;
 
     const fd = this.deps.finishDesk;
     // The loop may already have ordered the finish on its way out. The closing order

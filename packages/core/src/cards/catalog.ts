@@ -317,17 +317,61 @@ export function questionAnswered(): SeedGuard {
 /** The always-on floor: structural reply damage — byte-identical line repetition,
  *  engine-taught literals leaking as prose, tool markup, foreign chat-template
  *  tokens. Structural, never linguistic. */
+/** The act-log line a text carries, or null: a call with its dash-status
+ *  (`name(args) — done` / `— not-done`), or the completed prefix (`Completed: name.`).
+ *  The shape is markup, never vocabulary — naming a tool inside a sentence is speech
+ *  and carries neither the dash-status nor the log prefix. */
+export function actLogLine(text: string): string | null {
+  const isWordy = (ch: string): boolean => (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z')
+    || (ch >= '0' && ch <= '9') || ch === '_';
+  const skipSpaces = (at: number): number => {
+    while (at < text.length && (text[at] === ' ' || text[at] === '\t')) at += 1;
+    return at;
+  };
+  for (let i = 0; i < text.length; i += 1) {
+    if (text[i] !== '(') continue;
+    let start = i;
+    while (start > 0 && isWordy(text[start - 1])) start -= 1;
+    if (start === i) continue;
+    let close = i + 1;
+    while (close < text.length && text[close] !== ')' && text[close] !== '(' && text[close] !== '\n') close += 1;
+    if (close >= text.length || text[close] !== ')') continue;
+    let at = skipSpaces(close + 1);
+    if (text[at] !== '—') continue;
+    at = skipSpaces(at + 1);
+    const rest = text.slice(at);
+    if (rest.startsWith('not-done') || (rest.startsWith('done') && !isWordy(rest[4] ?? ''))) {
+      return text.slice(start, at + (rest.startsWith('not-done') ? 8 : 4));
+    }
+  }
+  const MARK = 'Completed:';
+  for (let i = text.indexOf(MARK); i !== -1; i = text.indexOf(MARK, i + 1)) {
+    if (i > 0 && isWordy(text[i - 1])) continue;
+    let at = skipSpaces(i + MARK.length);
+    const start = at;
+    while (at < text.length && isWordy(text[at])) at += 1;
+    if (at > start && (text[at] === '.' || text[at] === ',')) return text.slice(i, at + 1);
+  }
+  return null;
+}
+
 export function brokenReply(): SeedGuard {
   const LEAKS = ['<tool_call>', '</tool_call>', '<|', '{result.', '{args.'];
   return {
     name: 'brokenReply',
-    rule: 'The reply is plain prose — no tool markup, no repeated lines, no engine literals.',
+    rule: 'The reply is plain prose — no tool markup, no act-log lines, no repeated lines, '
+      + 'no engine literals.',
     on: 'reply',
     kind: 'brokenReply',
     compile(home) {
       return installedAt<ReplyCtx>(this, home, ctx => {
         for (const leak of LEAKS) {
           if (ctx.message.includes(leak)) return `the reply carries the literal '${leak}'`;
+        }
+        const log = actLogLine(ctx.message);
+        if (log !== null) {
+          return `the reply carries the act log line '${log}' — the record is spoken in `
+            + 'sentences, never pasted';
         }
         const counts = new Map<string, number>();
         for (const line of ctx.message.split('\n')) {
