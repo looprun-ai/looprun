@@ -1,4 +1,0 @@
-cancel-a-booked-visit-asks-first	hold:cancelVisit
-cancel-a-queued-shipment-asks-first	hold:cancelShipment
-charge-within-the-budget-asks-first	hold:postSiteCharge
-withdrawal-asks-first	choose:withdrawParticipant
