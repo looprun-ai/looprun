@@ -1543,7 +1543,9 @@ call is still governed.
    │        ModelSeat.port().step(input) ──► ModelStep { calls, text }
    │        FinishDesk.split(calls) → domain calls (SERIAL, emission order) + finish?
    │        each call → CallRunner.run(call, 'model'):
-   │           Rulebook verdict routes —
+   │           checkPreTool walks its covering rows twice — restate · owe · deny across
+   │           ALL rows, then hold — so a refusal precedes any question, and an approval
+   │           can never buy a refusal; the verdict routes —
    │             allow    → execute → grade → record
    │             owe      → the owed reads run engine-side (origin 'engine'), then re-check
    │             hold     → DisclosureDesk.owedReads →

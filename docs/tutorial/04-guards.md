@@ -72,6 +72,22 @@ all: a guard the census prints and no model ever reads.
 A rule about a *tool* belongs on the contract, because every desk that can reach that tool
 owes it. A rule about *this desk* belongs on the spec.
 
+## A refusal walks before a question
+
+At the call door the engine walks every rule that names the tool twice: first everything the
+records settle — a duplicate to restate, a read owed, a refusal — then any question. A rule
+that refuses late in the array still speaks before a rule that asks early in it.
+
+```
+the destructive budget is spent, and the model proposes a second cancellation
+
+question first:  "approve with code 419203?" → approved → REFUSED on the budget
+refusal first:   the budget's refusal, immediately — no code, no dead approval
+```
+
+An approval never buys a refusal: what the operator licenses is an act every rule already
+lets through.
+
 ## Which guard — ask what the rule does to a call
 
 One question routes every rule, and it is not about functions:
