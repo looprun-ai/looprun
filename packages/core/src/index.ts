@@ -20,6 +20,7 @@ export { needs, precondition, valueFromUser, resultSatisfiesCondition,
   from './cards/catalog.js';
 export { label } from './run/label.js';
 export { Engine } from './run/engine.js';
+export { ReadsLog, DEFAULT_READ_VALID_FOR_MS } from './run/reads-log.js';
 export type { EngineConfig } from './run/engine.js';
 export { Rulebook } from './run/rulebook.js';
 export { ModelSeat } from './run/model-seat.js';

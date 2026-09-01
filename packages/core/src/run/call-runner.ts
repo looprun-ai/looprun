@@ -7,7 +7,7 @@ import type { Act, CallCtx, CanonicalCallData, Json, OwedRead, RawCall,
 import { TurnFailure } from '../contract/vocabulary.js';
 import type { ToolFact } from '../contract/vocabulary.js';
 import type { ToolPort } from '../contract/ports.js';
-import { CanonicalCall, isJson } from '../contract/canonical-call.js';
+import { CanonicalCall, canonicalJson, isJson } from '../contract/canonical-call.js';
 import { deepFreeze } from '../contract/freeze.js';
 import type { CompiledAgent } from '../cards/cards.js';
 import type { Rulebook } from './rulebook.js';
@@ -267,8 +267,14 @@ export class CallRunner {
       result: this.deps.masker.maskData(result)
     }, id);
     if ('answer' in input && grade.status === 'done') {
+      // The row's key: the declared target's value where the fact names one — the
+      // name an author queries by — else the canonical args, so two different
+      // calls of one read never overwrite each other; no args keys the empty string.
       const target = fact.target !== null ? call.args[fact.target] : undefined;
-      this.deps.reads.record(call.tool, typeof target === 'string' ? target : '', act.result);
+      const argsKey = typeof target === 'string' ? target
+        : Object.keys(call.args).length === 0 ? ''
+        : canonicalJson(call.args);
+      this.deps.reads.record(call.tool, argsKey, act.result);
       const resultCtx = deepFreeze({
         call: act.call, result: act.result,
         userText: draft.userText, turnActs: [...draft.acts], pastActs: this.deps.history.pastActs()
