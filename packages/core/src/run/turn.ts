@@ -276,7 +276,7 @@ export class Turn {
     };
     const runner = new CallRunner({ compiled, rulebook, clerk: this.deps.clerk, history,
       toolPort: this.deps.toolPort, recordsPort: this.deps.recordsPort,
-      consent: desk, masker,
+      reads: session.reads, consent: desk, masker,
       disclosure: new DisclosureDesk(compiled.disclosureBindings),
       microStep });
 

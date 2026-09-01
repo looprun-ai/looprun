@@ -8,6 +8,7 @@ import type { CanonicalCallData } from '../contract/vocabulary.js';
 import { isJson, type CanonicalCall } from '../contract/canonical-call.js';
 import type { ActionHistory } from './action-history.js';
 import { ConsentDesk } from './consent-desk.js';
+import { ReadsLog } from './reads-log.js';
 
 /** The one mutable work area of a turn, private to it and folded by seal. */
 export interface TurnDraft {
@@ -43,6 +44,8 @@ export class Session {
   readonly history: ActionHistory;
   /** The question lifecycle; the delivered display form is masked at the desk door. */
   readonly consent: ConsentDesk;
+  /** What this conversation's calls answered — the one state a guard can see. */
+  readonly reads: ReadsLog;
   private turnIndex = 1;
   private tail: Promise<unknown> = Promise.resolve();
 
@@ -53,6 +56,7 @@ export class Session {
     this.id = id;
     this.history = history;
     this.consent = new ConsentDesk(maskCall, now);
+    this.reads = new ReadsLog(now);
   }
 
   /** The serializing queue: a failed job never poisons the next entry. */

@@ -1,19 +1,26 @@
 import { test, expect } from 'vitest';
-import type { CallCtx, InputCtx, Json, ReplyCtx, ResultCtx, StateSnapshot } from '../../src/contract/vocabulary.js';
-import { TurnFailure } from '../../src/contract/vocabulary.js';
+import type { CallCtx, InputCtx, Json, ReplyCtx, ResultCtx } from '../../src/contract/vocabulary.js';
+import { NO_READS } from '../../src/contract/vocabulary.js';
+import { ReadsLog } from '../../src/run/reads-log.js';
 import { argForbidden, blockPattern, brokenReply, resultSatisfiesCondition,
          mustAccountFor, precondition, questionAnswered, valueFromUser } from '../../src/cards/catalog.js';
 import { factsFromWorld } from '../../src/cards/facts.js';
 import { HOSTILE } from '../fixtures/hostile-world.js';
 
 const FACTS = factsFromWorld(HOSTILE);
-const STATE: StateSnapshot = HOSTILE.card.records;
+
+/** What this conversation read: bk_9's own row, under getBooking. */
+function readLog(): ReadsLog {
+  const log = new ReadsLog(() => 1_000);
+  log.record('getBooking', 'bk_9', { room: '12', day: 'Tuesday', paid: true });
+  return log;
+}
 
 function callCtx(tool: string, args: Record<string, Json>,
-                 state: StateSnapshot | null = STATE, userText = '',
+                 reads: CallCtx['reads'] = readLog(), userText = '',
                  userTexts: readonly string[] = [userText]): CallCtx {
   return { call: { tool, args, key: JSON.stringify({ args, tool }) }, effect: 'destructive',
-           consented: false, state, userText, userTexts, turnActs: [], pastActs: [] };
+           consented: false, reads, userText, userTexts, turnActs: [], pastActs: [] };
 }
 
 function replyCtx(message: string, report: ReplyCtx['report'] = []): ReplyCtx {
@@ -26,28 +33,28 @@ test('argForbidden denies when the forbidden declared arg arrives', () => {
   expect(g.deny(callCtx('sendEmail', { to: 'a@b.c', bcc: 'x@y.z' }))).toContain('bcc');
 });
 
-test('precondition resolves the record from the tool OWN entity — two entities, one id', () => {
-  const twoEntities: StateSnapshot = {
-    bookings: { x_1: { paid: true, marker: 'booking-row' } },
-    invoices: { x_1: { paid: false, marker: 'invoice-row' } }
-  };
-  const g = precondition('cancelBooking', ({ record }) => record?.paid === true,
-                         'Only paid bookings cancel.').compile('contract', FACTS);
-  expect(g.deny(callCtx('cancelBooking', { id: 'x_1' }, twoEntities))).toBeNull();
+test('precondition reads the returned answer with the author\'s own knowledge of the shape', () => {
+  const g = precondition('cancelBooking', ({ reads }) =>
+    (reads.latest('getBooking')?.answer as { paid?: boolean } | undefined)?.paid === true,
+    'Only paid bookings cancel.').compile('contract', FACTS);
+  expect(g.deny(callCtx('cancelBooking', { id: 'bk_9' }))).toBeNull();
 });
 
-test('precondition denies while the record fails the check — the rule alone is the denial', () => {
+test('precondition denies while the answers fail the check — the rule alone is the denial', () => {
   const g = precondition('cancelBooking',
-    ({ state }) => state.invoices?.inv_1?.paid === true,
+    ({ reads }) => (reads.latest('getInvoice')?.answer as { paid?: boolean } | undefined)?.paid === true,
     'The invoice must be paid first.').compile('contract', FACTS);
   const verdict = g.deny(callCtx('cancelBooking', { id: 'bk_9' }));
   expect(verdict).toBe('');
   expect(g.rule).toBe('The invoice must be paid first.');
 });
 
-test('precondition on a stateless surface is loud, never a silent pass', () => {
-  const g = precondition('cancelBooking', ({ record }) => record !== null, 'r').compile('contract', FACTS);
-  expect(() => g.deny(callCtx('cancelBooking', { id: 'bk_9' }, null))).toThrow(TurnFailure);
+test('precondition over an unread conversation refuses in the condition\'s own words', () => {
+  const g = precondition('cancelBooking', ({ reads }) =>
+    reads.latest('getBooking') !== null || 'the booking was not read this conversation — read it first',
+    'r').compile('contract', FACTS);
+  expect(g.deny(callCtx('cancelBooking', { id: 'bk_9' }, NO_READS)))
+    .toBe('the booking was not read this conversation — read it first');
 });
 
 test('resultSatisfiesCondition wraps the author check over the result ctx', () => {
@@ -55,7 +62,7 @@ test('resultSatisfiesCondition wraps the author check over the result ctx', () =
     (ctx.result as { comped?: boolean }).comped === true ? null : 'the room was not comped')
     .compile('contract', FACTS);
   const ok: ResultCtx = { call: { tool: 'compRoom', args: {}, key: 'k' }, result: { comped: true },
-                          state: STATE, userText: '', turnActs: [], pastActs: [] };
+                          userText: '', turnActs: [], pastActs: [] };
   expect(g.deny(ok)).toBeNull();
   expect(g.deny({ ...ok, result: { comped: false } })).toContain('not comped');
 });
@@ -70,11 +77,11 @@ test('mustAccountFor demands the record at the declared status — whole-value e
 
 test('valueFromUser passes only a value the user wrote as contiguous whole tokens', () => {
   const g = valueFromUser('sendEmail', 'to').compile('contract', FACTS);
-  expect(g.deny(callCtx('sendEmail', { to: 'ana@example.com' }, STATE,
+  expect(g.deny(callCtx('sendEmail', { to: 'ana@example.com' }, readLog(),
     'send it to ana@example.com please'))).toBeNull();
-  expect(g.deny(callCtx('sendEmail', { to: 'eve@example.com' }, STATE,
+  expect(g.deny(callCtx('sendEmail', { to: 'eve@example.com' }, readLog(),
     'send it to ana@example.com please'))).toContain('to');
-  expect(g.deny(callCtx('sendEmail', { to: 'ana' }, STATE,
+  expect(g.deny(callCtx('sendEmail', { to: 'ana' }, readLog(),
     'reach ana@example.com'))).toContain('to');
 });
 
@@ -86,11 +93,11 @@ test('brokenReply denies an unrendered result slot — a template never reaches 
 
 test('valueFromUser reads the whole conversation — a value stated on an earlier turn counts', () => {
   const g = valueFromUser('sendEmail', 'to').compile('contract', FACTS);
-  expect(g.deny(callCtx('sendEmail', { to: 'ana@example.com' }, STATE,
+  expect(g.deny(callCtx('sendEmail', { to: 'ana@example.com' }, readLog(),
     'go ahead and send it', ['send it to ana@example.com please', 'go ahead and send it'])))
     .toBeNull();
   const gf = valueFromUser('issueRefund', 'amount').compile('contract', FACTS);
-  expect(gf.deny({ ...callCtx('issueRefund', {}, STATE,
+  expect(gf.deny({ ...callCtx('issueRefund', {}, readLog(),
     'yes, do it', ['Refund R$ 2.000,00 on inv_7001', 'yes, do it']),
     call: { tool: 'issueRefund', args: { amount: 2000 }, key: 'k' } })).toBeNull();
 });
@@ -98,7 +105,7 @@ test('valueFromUser reads the whole conversation — a value stated on an earlie
 test("valueFromUser reads a dotted path — a set-form write's field is still the user's word", () => {
   const g = valueFromUser('moveBooking', 'set.day').compile('contract', FACTS);
   const call = (day: string, userText: string): CallCtx =>
-    ({ ...callCtx('moveBooking', {}, STATE, userText),
+    ({ ...callCtx('moveBooking', {}, readLog(), userText),
        call: { tool: 'moveBooking', args: { id: 'bk_1', set: { day } }, key: 'k' } });
   expect(g.deny(call('Saturday', 'move bk_1 to Saturday please'))).toBeNull();
   expect(g.deny(call('Sunday', 'move bk_1 to Saturday please'))).toContain('set.day');
@@ -107,7 +114,7 @@ test("valueFromUser reads a dotted path — a set-form write's field is still th
 test('valueFromUser reads a figure written in any format, currency mark or slip of it', () => {
   const g = valueFromUser('issueRefund', 'amount').compile('contract', FACTS);
   const call = (amount: number, userText: string): CallCtx =>
-    ({ ...callCtx('issueRefund', {}, STATE, userText),
+    ({ ...callCtx('issueRefund', {}, readLog(), userText),
        call: { tool: 'issueRefund', args: { amount }, key: 'k' } });
   expect(g.deny(call(2000, 'Refund R$ 2.000,00 on inv_7001'))).toBeNull();
   expect(g.deny(call(2000, 'Refund R4 2000.00 on inv_7001'))).toBeNull();
@@ -124,7 +131,7 @@ test('valueFromUser reads a figure written in any format, currency mark or slip 
 test('valueFromUser reads a number arg by its digits — the user must have written them', () => {
   const g = valueFromUser('registerAsset', 'requiredDeposit').compile('contract', FACTS);
   const call = (deposit: number, userText: string): CallCtx =>
-    ({ ...callCtx('registerAsset', {}, STATE, userText),
+    ({ ...callCtx('registerAsset', {}, readLog(), userText),
        call: { tool: 'registerAsset', args: { requiredDeposit: deposit }, key: 'k' } });
   expect(g.deny(call(3000, 'Deposit is 3000, condition good.'))).toBeNull();
   expect(g.deny(call(0, 'Add a new machine: Genie S-65, 780 a day.')))

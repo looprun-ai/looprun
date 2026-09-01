@@ -32,7 +32,7 @@ test('two concurrent turns on ONE session serialize; the records number 1 and 2'
 
 test('guards() lists the installed census; excluded() is empty on a world card', async () => {
   const agent = readAgent();
-  await agent.generate('hi', { session: 's1' });
+  await agent.generate('is bk_9 confirmed?', { session: 's1' });
   const census = agent.guards();
   expect(JSON.stringify(census).length).toBeGreaterThan(2);
   expect(agent.excluded()).toEqual([]);
@@ -48,7 +48,7 @@ test('endSession drops the state — the next turn is turn 1 again', async () =>
   await agent.generate('hi', { session: 's1' });
   await agent.generate('hi', { session: 's1' });
   agent.endSession('s1');
-  const fresh = await agent.generate('hi', { session: 's1' });
+  const fresh = await agent.generate('is bk_9 confirmed?', { session: 's1' });
   expect(fresh.loopRun.turn).toBe(1);
 });
 
@@ -96,6 +96,6 @@ test('the ungoverned twin executes the destructive call with no question — by 
   expect(out.loopRun.questions.issued).toHaveLength(0);
   expect(out.loopRun.acts[0]).toMatchObject({ call: { tool: 'cancelBooking' }, status: 'done' });
   const governed = readAgent();
-  await governed.generate('hi', { session: 'g1' });
+  await governed.generate('is bk_9 confirmed?', { session: 'g1' });
   expect(JSON.stringify(twin.guards())).toBe(JSON.stringify(governed.guards()));
 });

@@ -16,8 +16,7 @@ test('M7 — a contract precondition vetoes before consent even asks', async () 
     { calls: [], text: '' }
   ]);
   const { engine } = caseRig({ model, contract: { guards: [
-    precondition('cancelBooking',
-      ({ state }) => state.invoices?.inv_1?.paid === true,
+    precondition('cancelBooking', () => false,
       'The invoice must be paid before cancelling.')
   ] } });
 

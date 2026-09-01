@@ -57,7 +57,7 @@ test('M1 — an identical re-proposal returns the SAME question; a sibling call 
   expect(r2.questions.issued).toHaveLength(0);          // same question, no second live code
   expect(r2.text).toContain(first.code);                // every delivery reprints the open code
 
-  const r3 = await engine.chat('s1', 'and the Friday one too');
+  const r3 = await engine.chat('s1', 'and cancel bk_7 too');
   expect(r3.questions.issued).toHaveLength(1);          // a sibling question, its own code
   const sibling = r3.questions.issued[0];
   expect(sibling.code).not.toBe(first.code);

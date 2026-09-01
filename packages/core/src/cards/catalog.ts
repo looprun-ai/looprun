@@ -5,7 +5,7 @@
  *  ONLY inside blockPattern, purgePattern and maskPattern; argMatchesFormat evaluates the
  *  schema's own declared pattern. */
 import type { Act, CallCtx, ConsentWhen, InputCtx, Json, OwedRead, ReadsView, ReplyCtx, ReportWord,
-              ResultCtx, Rewrite, StateSnapshot, SurfaceFacts } from '../contract/vocabulary.js';
+              ResultCtx, Rewrite, SurfaceFacts } from '../contract/vocabulary.js';
 import { TurnFailure } from '../contract/vocabulary.js';
 import type { CompiledGuard, Guard, GuardCtx } from './cards.js';
 
@@ -75,8 +75,8 @@ export function needs(tool: string, spec: NeedsSpec): SeedGuard {
     [...ctx.pastActs, ...ctx.turnActs].some(a => a.call.tool === read && a.status === 'done');
   const attemptedThisTurn = (ctx: CallCtx): boolean =>
     ctx.turnActs.some(a => a.call.tool === read && a.status !== 'done');
-  const emptyView: ReadsView = { latest: () => null };
-  const standsDown = (): boolean => spec.when !== undefined && spec.when(emptyView) === false;
+  const standsDown = (ctx: CallCtx): boolean =>
+    spec.when !== undefined && spec.when(ctx.reads) === false;
   return {
     name: `needs:${tool}`,
     rule: spec.rule ?? `Run ${read} before ${tool}.`,
@@ -94,11 +94,11 @@ export function needs(tool: string, spec: NeedsSpec): SeedGuard {
           .map(([readArg, heldArg]) => [readArg, ctx.call.args[heldArg] ?? null]));
       return installed(this, home, {
         owe: ctx => {
-          if (!isRead || standsDown() || satisfied(ctx) || attemptedThisTurn(ctx)) return null;
+          if (!isRead || standsDown(ctx) || satisfied(ctx) || attemptedThisTurn(ctx)) return null;
           return [{ alias: read, tool: read, args: armed(ctx) }];
         },
         deny: ctx => {
-          if (standsDown() || satisfied(ctx)) return null;
+          if (standsDown(ctx) || satisfied(ctx)) return null;
           if (isRead) {
             return attemptedThisTurn(ctx)
               ? `${read} did not succeed this conversation` : null;
@@ -234,34 +234,24 @@ export function carriedIds(text: string): readonly string[] {
 
 /** The always-on floor: an id-shaped argument value the conversation never produced is
  *  a GUESS — a well-formed guess is still a fabrication. Grounded = the operator typed
- *  it (any turn), a recorded act carried it (result or args), the state the model was
- *  shown carries it, or the conversation's own acts returned it at another desk (the
- *  engine-minted provenance the routed door carries — never scraped from text). Enum
- *  words like a policy topic carry no digit and stay untouched. */
+ *  it (any turn), a recorded act carried it (result or args), or the conversation's own
+ *  acts returned it at another desk (the engine-minted provenance the routed door
+ *  carries — never scraped from text). Enum words like a policy topic carry no digit
+ *  and stay untouched. */
 export function groundedIds(): SeedGuard {
   return {
     name: 'groundedIds',
     rule: 'An identifier you did not read and were not given is a guess — look it up or ask for it.',
     on: 'preTool',
     kind: 'groundedIds',
-    compile(home, facts) {
-      // Grounding sources are what the model actually SAW: the operator's
-      // messages, the recorded acts, and the state tail's visible entities.
-      const visibleState = (state: StateSnapshot): string => {
-        const tail = facts.tail ?? null;
-        return JSON.stringify(tail === null ? state
-          : Object.fromEntries(Object.entries(state).filter(([entity]) => tail.includes(entity))));
-      };
+    compile(home) {
       return installedAt<CallCtx>(this, home, ctx => {
         for (const [arg, v] of Object.entries(ctx.call.args)) {
           if (typeof v !== 'string' || !isIdShaped(v)) continue;
-          const note = facts.note != null && ctx.state !== null ? facts.note(ctx.state) : '';
           const grounded = ctx.userTexts.some(t => t.includes(v))
             || [...ctx.pastActs, ...ctx.turnActs].some(a =>
               JSON.stringify(a.result).includes(v) || JSON.stringify(a.call.args).includes(v))
-            || (ctx.grounded ?? []).includes(v)
-            || (ctx.state !== null && visibleState(ctx.state).includes(v))
-            || note.includes(v);
+            || (ctx.grounded ?? []).includes(v);
           if (!grounded) return `'${v}' in '${arg}' appears in no result and no message`;
         }
         return null;
@@ -271,8 +261,8 @@ export function groundedIds(): SeedGuard {
 }
 
 /** A date on a WRITE must be one somebody gave the model: the operator's
- *  messages, the recorded acts, or the state note. A read may compute a range
- *  freely; a write stamps only a date that exists somewhere. */
+ *  messages or the recorded acts. A read may compute a range freely; a write
+ *  stamps only a date that exists somewhere. */
 export function groundedDates(): SeedGuard {
   const isDateShaped = (v: string): boolean => {
     if (v.length !== 10 || v[4] !== '-' || v[7] !== '-') return false;
@@ -280,7 +270,7 @@ export function groundedDates(): SeedGuard {
   };
   return {
     name: 'groundedDates',
-    rule: 'A date you were not given and did not read is a guess — a write carries only a date from the operator, the records, or the state note.',
+    rule: 'A date you were not given and did not read is a guess — a write carries only a date from the operator or the records.',
     on: 'preTool',
     kind: 'groundedDates',
     compile(home, facts) {
@@ -289,12 +279,10 @@ export function groundedDates(): SeedGuard {
         if (fact === undefined || fact.effect === 'read') return null;
         for (const [arg, v] of Object.entries(ctx.call.args)) {
           if (typeof v !== 'string' || !isDateShaped(v)) continue;
-          const note = facts.note != null && ctx.state !== null ? facts.note(ctx.state) : '';
           const grounded = ctx.userTexts.some(t => t.includes(v))
             || [...ctx.pastActs, ...ctx.turnActs].some(a =>
-              JSON.stringify(a.result).includes(v) || JSON.stringify(a.call.args).includes(v))
-            || note.includes(v);
-          if (!grounded) return `'${v}' in '${arg}' is a date nobody gave you — the operator's words, the records and the state note hold the only dates there are`;
+              JSON.stringify(a.result).includes(v) || JSON.stringify(a.call.args).includes(v));
+          if (!grounded) return `'${v}' in '${arg}' is a date nobody gave you — the operator's words and the records hold the only dates there are`;
         }
         return null;
       }, 'the always-on floor');
@@ -415,29 +403,31 @@ export function argForbidden(tool: string, arg: string): SeedGuard {
   };
 }
 
-/** The row a call is about: the value of the tool's declared target argument, read out of
- *  the tool's OWN entity — so a same-valued id living in another entity is never picked up
- *  by mistake. A tool that names no target, or records that hold no such row, answer null. */
-function recordOf(ctx: CallCtx, facts: SurfaceFacts):
-  Readonly<Record<string, Json>> | null {
-  const state = ctx.state;
-  if (state === null) return null;
-  const fact = facts.tools[ctx.call.tool];
-  const idValue = fact?.target != null ? ctx.call.args[fact.target] : undefined;
-  return fact?.entity != null && typeof idValue === 'string'
-    ? state[fact.entity]?.[idValue] ?? null : null;
+/** A declared path into an answer this conversation holds: the ONE way the engine walks
+ *  a payload. Each step is a field name; a digits step reaches into a list. */
+function walkPath(answer: Json, path: string): Json | undefined {
+  let current: Json | undefined = answer;
+  for (const step of path.split('.')) {
+    if (typeof current !== 'object' || current === null) return undefined;
+    if (Array.isArray(current)) {
+      if (step.length === 0 || [...step].some(c => c < '0' || c > '9')) return undefined;
+      current = current[Number(step)];
+      continue;
+    }
+    current = (current as { readonly [k: string]: Json })[step];
+  }
+  return current;
 }
 
-/** The declared predicate over { record, state } must hold before the call runs.
- *  The record is the call's target row in the tool's OWN entity — the effect-block
- *  declaration names the entity, so a same-valued id in another entity can never be
- *  read by mistake. A predicate that answers with WORDS instead of false refuses in
- *  those words: the gate already holds the records, so what it found there reaches
- *  the operator beside the rule. A state predicate on a stateless surface is loud,
- *  never a silent pass. */
+/** The declared predicate over { args, reads } must hold before the call runs. The
+ *  condition is the AUTHOR's reading of their own surface's answers: it walks the
+ *  reads log with declared knowledge of the shapes that surface returns, and an
+ *  answer the conversation does not hold refuses in words — the row was not read
+ *  this conversation, so nothing here can decide on it. A predicate that answers
+ *  with WORDS instead of false refuses in those words. */
 export function precondition(tool: string | readonly string[],
-  check: (ctx: { readonly record: Readonly<Record<string, Json>> | null;
-                 readonly state: StateSnapshot }) => boolean | string,
+  check: (ctx: { readonly args: Readonly<Record<string, Json>>;
+                 readonly reads: ReadsView }) => boolean | string,
   reason: string): SeedGuard {
   const tools = typeof tool === 'string' ? [tool] : [...tool];
   return {
@@ -446,16 +436,9 @@ export function precondition(tool: string | readonly string[],
     tool: tools,
     on: 'preTool',
     kind: 'precondition',
-    compile(home, facts) {
+    compile(home) {
       return installedAt<CallCtx>(this, home, ctx => {
-        const state = ctx.state;
-        if (state === null) {
-          throw new TurnFailure('construction',
-            `precondition on ${ctx.call.tool} needs a records snapshot, and this surface has none`);
-        }
-        // A check that answers with words refuses in them: the gate reads the records
-        // and the refusal carries what it found there, beside the rule.
-        const verdict = check({ record: recordOf(ctx, facts), state });
+        const verdict = check({ args: ctx.call.args, reads: ctx.reads });
         return verdict === true ? null : typeof verdict === 'string' ? verdict : '';
       });
     }
@@ -660,14 +643,14 @@ function argText(ctx: CallCtx, arg: string): string | null {
 }
 
 /** A law over ONE argument the CALL itself carries: the value arriving under that name must
- *  satisfy the declared check. The call's own record and the state ride along, so a law may
- *  read the argument against the row the call is about — but the argument is what it decides
- *  on, and an argument that never arrived is a law with nothing to decide, so the guard
- *  stands aside. A check that answers with WORDS refuses in those words. */
+ *  satisfy the declared check. The call's own args and the reads log ride along, so a law
+ *  may read the argument against the answers this conversation holds — but the argument is
+ *  what it decides on, and an argument that never arrived is a law with nothing to decide,
+ *  so the guard stands aside. A check that answers with WORDS refuses in those words. */
 export function argSatisfiesCondition(tool: string | readonly string[], arg: string,
   check: (ctx: { readonly value: Json;
-                 readonly record: Readonly<Record<string, Json>> | null;
-                 readonly state: StateSnapshot | null }) => boolean | string,
+                 readonly args: Readonly<Record<string, Json>>;
+                 readonly reads: ReadsView }) => boolean | string,
   reason: string): SeedGuard {
   const tools = typeof tool === 'string' ? [tool] : [...tool];
   return {
@@ -676,11 +659,11 @@ export function argSatisfiesCondition(tool: string | readonly string[], arg: str
     tool: tools,
     on: 'preTool',
     kind: 'argSatisfiesCondition',
-    compile(home, facts) {
+    compile(home) {
       return installedAt<CallCtx>(this, home, ctx => {
         const value = ctx.call.args[arg];
         if (value === undefined) return null;
-        const verdict = check({ value, record: recordOf(ctx, facts), state: ctx.state });
+        const verdict = check({ value, args: ctx.call.args, reads: ctx.reads });
         return verdict === true ? null : typeof verdict === 'string' ? verdict : '';
       });
     }
@@ -688,11 +671,12 @@ export function argSatisfiesCondition(tool: string | readonly string[], arg: str
 }
 
 /** Two grounds, one law: the argument is licensed when the OPERATOR wrote it verbatim on any
- *  turn, or when a row of the named entity carries it in the named field. A figure the
- *  operator typed and a figure already on file are both somebody's; a figure that is neither
- *  is the desk's own arithmetic, and the refusal names the value it could not place. */
-export function valueFromUserOrRecord(tool: string, arg: string, from: string, field: string,
-  reason: string): SeedGuard {
+ *  turn, or when a RETURNED answer carries it at the declared path. A figure the operator
+ *  typed and a figure a read answered are both somebody's; a figure that is neither is the
+ *  desk's own arithmetic, and the refusal names the value it could not place. The declared
+ *  path may land on one value or on a list of them. */
+export function valueFromUserOrRecord(tool: string, arg: string,
+  source: { readonly read: string; readonly at: string }, reason: string): SeedGuard {
   return {
     name: `valueFromUserOrRecord:${tool}:${arg}`,
     rule: reason,
@@ -703,50 +687,48 @@ export function valueFromUserOrRecord(tool: string, arg: string, from: string, f
       return installedAt<CallCtx>(this, home, ctx => {
         const value = argText(ctx, arg);
         if (value === null || value === '') {
-          return `'${arg}' must be a value the operator wrote or the records carry`;
+          return `'${arg}' must be a value the operator wrote or a read answered`;
         }
         if (writtenByUser(value, ctx.userTexts)) return null;
-        const rows = ctx.state?.[from] ?? {};
-        for (const row of Object.values(rows)) {
-          const held = row?.[field];
-          if (held !== undefined && held !== null && String(held) === value) return null;
-        }
-        return `'${arg}' arrived as '${value}', which the operator never wrote and no `
-          + `${from} row carries under '${field}'`;
+        const answer = ctx.reads.latest(source.read)?.answer;
+        const held = answer === undefined ? undefined : walkPath(answer, source.at);
+        const carries = Array.isArray(held)
+          ? held.some(v => v !== null && String(v) === value)
+          : held !== undefined && held !== null && String(held) === value;
+        if (carries) return null;
+        return `'${arg}' arrived as '${value}', which the operator never wrote and the `
+          + `${source.read} answer does not carry at '${source.at}'`;
       });
     }
   };
 }
 
-/** The argument must be what the record already says: the value arriving under that name is
- *  compared, whole-value, with the field the call's OWN target row carries. A row the records
- *  do not hold fixes nothing, so the call is refused by the id it named; a value that differs
- *  from the one on file is refused with both figures in the sentence. */
-export function argMatchesRecord(tool: string, arg: string, field: string,
-  reason: string): SeedGuard {
+/** The argument must be what a returned answer already says: the value arriving under that
+ *  name is compared, whole-value, with the declared path over the read's last valid answer.
+ *  An answer this conversation does not hold fixes nothing, so the call is refused — read it
+ *  first; a value that differs from the one on file is refused with both figures in the
+ *  sentence. */
+export function argMatchesRecord(tool: string, arg: string,
+  source: { readonly read: string; readonly at: string }, reason: string): SeedGuard {
   return {
     name: `argMatchesRecord:${tool}:${arg}`,
     rule: reason,
     tool,
     on: 'preTool',
     kind: 'argMatchesRecord',
-    compile(home, facts) {
-      const target = facts.tools[tool]?.target ?? null;
+    compile(home) {
       return installedAt<CallCtx>(this, home, ctx => {
         const value = argText(ctx, arg);
         if (value === null) return `'${arg}' must be one value the record can be read against`;
-        const record = recordOf(ctx, facts);
-        if (record === null) {
-          const named = target === null ? undefined : ctx.call.args[target];
-          return typeof named === 'string' && named !== ''
-            ? `the records hold no row named '${named}', so nothing fixes '${arg}'`
-            : `this call names no row of the records, so nothing fixes '${arg}'`;
+        const latest = ctx.reads.latest(source.read);
+        if (latest === null) {
+          return `${source.read} was not read this conversation, so nothing fixes '${arg}'`;
         }
-        const held = record[field];
+        const held = walkPath(latest.answer, source.at);
         if (held !== undefined && held !== null && String(held) === value) return null;
         return held === undefined || held === null
-          ? `'${arg}' arrived as '${value}', and the record carries no '${field}' to match it`
-          : `'${arg}' arrived as '${value}', and the record carries '${String(held)}' under '${field}'`;
+          ? `'${arg}' arrived as '${value}', and the ${source.read} answer carries nothing at '${source.at}' to match it`
+          : `'${arg}' arrived as '${value}', and the ${source.read} answer carries '${String(held)}' at '${source.at}'`;
       });
     }
   };

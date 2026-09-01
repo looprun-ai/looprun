@@ -192,7 +192,7 @@ export interface InputCtx  { readonly userText: string;
                              readonly turnActs: readonly Act[]; readonly pastActs: readonly Act[] }
 export interface CallCtx   { readonly call: CanonicalCallData; readonly effect: Effect;
                              readonly consented: boolean;      // true only on the engine-fed licensed call
-                             readonly state: StateSnapshot | null;   // frozen; null on a stateless surface
+                             readonly reads: ReadsView;        // what this conversation's calls answered
                              readonly userText: string;
                              // every message the operator has sent, this turn included
                              readonly userTexts: readonly string[];
@@ -201,7 +201,6 @@ export interface CallCtx   { readonly call: CanonicalCallData; readonly effect: 
                              readonly grounded?: readonly string[];
                              readonly turnActs: readonly Act[]; readonly pastActs: readonly Act[] }
 export interface ResultCtx { readonly call: CanonicalCallData; readonly result: Json;
-                             readonly state: StateSnapshot | null;
                              readonly userText: string;
                              readonly turnActs: readonly Act[]; readonly pastActs: readonly Act[] }
 export interface ReplyCtx  { readonly message: string; readonly report: readonly ReportLine[];
@@ -220,6 +219,9 @@ export type StateSnapshot = { readonly [entity: string]: { readonly [id: string]
 export interface ReadsView {
   latest(tool: string, argsKey?: string): { readonly answer: Json; readonly at: number } | null;
 }
+
+/** The empty view: nothing has been read. A stateless ctx and a test both stand on it. */
+export const NO_READS: ReadsView = { latest: () => null };
 export interface InstalledGuard { readonly name: string; readonly rule: string;
                                   readonly home: 'spec' | 'contract' | 'engine';
                                   readonly on: 'input' | 'preTool' | 'postTool' | 'reply';

@@ -12,6 +12,7 @@ import { deepFreeze } from '../contract/freeze.js';
 import type { CompiledAgent } from '../cards/cards.js';
 import type { Rulebook } from './rulebook.js';
 import type { GradeInput, StatusClerk } from './status-clerk.js';
+import type { ReadsLog } from './reads-log.js';
 import type { ActionHistory } from './action-history.js';
 import type { ConsentDesk } from './consent-desk.js';
 import type { DisclosureDesk } from './disclosure-desk.js';
@@ -44,6 +45,8 @@ export interface CallRunnerDeps {
   readonly history: ActionHistory;
   readonly toolPort: ToolPort;
   readonly recordsPort: RecordsPort | null;
+  /** The session's reads log: every done answer lands here, masked, on the clock. */
+  readonly reads: ReadsLog;
   /** The per-session question desk; the hold route issues through it. */
   readonly consent: ConsentDesk;
   /** The record-seam masker: stored calls and results. */
@@ -97,7 +100,7 @@ export class CallRunner {
     }
     const call = coerced;
     const state = recordsPort?.snapshot() ?? null;
-    const ctx = this.callCtx(call, fact, origin, state, draft);
+    const ctx = this.callCtx(call, fact, origin, draft);
     const verdict = origin === 'licence' ? { kind: 'allow' as const } : rulebook.checkPreTool(ctx);
 
     switch (verdict.kind) {
@@ -267,8 +270,10 @@ export class CallRunner {
       result: this.deps.masker.maskData(result)
     }, id);
     if ('answer' in input && grade.status === 'done') {
+      const target = fact.target !== null ? call.args[fact.target] : undefined;
+      this.deps.reads.record(call.tool, typeof target === 'string' ? target : '', act.result);
       const resultCtx = deepFreeze({
-        call: act.call, result: act.result, state: after,
+        call: act.call, result: act.result,
         userText: draft.userText, turnActs: [...draft.acts], pastActs: this.deps.history.pastActs()
       });
       for (const violation of rulebook.checkPostTool(resultCtx)) {
@@ -306,10 +311,10 @@ export class CallRunner {
   }
 
   private callCtx(call: CanonicalCall, fact: ToolFact, origin: Act['origin'],
-                  state: StateSnapshot | null, draft: TurnDraft): CallCtx {
+                  draft: TurnDraft): CallCtx {
     return deepFreeze({
       call: call.data(mask), effect: fact.effect, consented: origin === 'licence',
-      state, userText: draft.userText,
+      reads: this.deps.reads, userText: draft.userText,
       userTexts: [draft.userText, ...this.deps.history.sealed().map(r => r.userText)],
       grounded: [...draft.grounded],
       turnActs: [...draft.acts],

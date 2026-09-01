@@ -1,22 +1,30 @@
-/** The four rungs whose shape is an ARGUMENT the call carries: a law over that argument,
- *  a value the operator wrote or the records hold, a value the record already fixes, and
- *  the order demanded exactly where the record says so. */
+/** The rungs whose shape is an ARGUMENT the call carries: a law over that argument, a
+ *  value the operator wrote or a returned answer carries, a value an answer already
+ *  fixes, and the one owed-read declaration. */
 import { test, expect } from 'vitest';
-import type { CallCtx, Json, StateSnapshot } from '../../src/contract/vocabulary.js';
-import { TurnFailure } from '../../src/contract/vocabulary.js';
+import type { CallCtx, Json, ReadsView } from '../../src/contract/vocabulary.js';
+import { NO_READS } from '../../src/contract/vocabulary.js';
 import { argSatisfiesCondition, argMatchesRecord, needs,
          valueFromUserOrRecord } from '../../src/cards/catalog.js';
 import { factsFromWorld } from '../../src/cards/facts.js';
+import { ReadsLog } from '../../src/run/reads-log.js';
 import { HOSTILE } from '../fixtures/hostile-world.js';
 
 const FACTS = factsFromWorld(HOSTILE);
-const STATE: StateSnapshot = HOSTILE.card.records;
+
+/** What this conversation read: bk_9's own row under getBooking, and the refs list. */
+function readLog(): ReadsLog {
+  const log = new ReadsLog(() => 1_000);
+  log.record('getBooking', 'bk_9', { found: true, booking: { room: '12', day: 'Tuesday' } });
+  log.record('listInvoices', '', { refs: ['bk_9'] });
+  return log;
+}
 
 function callCtx(tool: string, args: Record<string, Json>,
-                 state: StateSnapshot | null = STATE,
+                 reads: ReadsView = readLog(),
                  userTexts: readonly string[] = ['']): CallCtx {
   return { call: { tool, args, key: JSON.stringify({ args, tool }) }, effect: 'destructive',
-           consented: false, state, userText: userTexts[0] ?? '', userTexts,
+           consented: false, reads, userText: userTexts[0] ?? '', userTexts,
            turnActs: [], pastActs: [] };
 }
 
@@ -30,9 +38,13 @@ test('argSatisfiesCondition decides on the value the call itself carries', () =>
   expect(g.deny(callCtx('cancelBooking', { id: 'bk_9', reason: 'no longer wanted' }))).toBe('');
 });
 
-test('argSatisfiesCondition reads the call OWN record beside the argument, and refuses in words', () => {
+test('argSatisfiesCondition reads the returned answers beside the argument, and refuses in words', () => {
   const g = argSatisfiesCondition('cancelBooking', 'day',
-    ({ value, record }) => value === record?.day || 'the booking is not on that day',
+    ({ value, reads }) => {
+      const row = reads.latest('getBooking')?.answer as
+        { booking?: { day?: string } } | undefined;
+      return value === row?.booking?.day || 'the booking is not on that day';
+    },
     'Cancel the booking on the day the register carries.').compile('contract', FACTS);
   expect(g.deny(callCtx('cancelBooking', { id: 'bk_9', day: 'Tuesday' }))).toBeNull();
   expect(g.deny(callCtx('cancelBooking', { id: 'bk_9', day: 'Friday' })))
@@ -44,56 +56,58 @@ test('argSatisfiesCondition stands aside where the argument never arrived', () =
   expect(g.deny(callCtx('cancelBooking', { id: 'bk_9' }))).toBeNull();
 });
 
-test('argSatisfiesCondition decides on a stateless surface — the argument needs no records', () => {
+test('argSatisfiesCondition decides with nothing read — the argument needs no answers', () => {
   const g = argSatisfiesCondition('cancelBooking', 'reason', ({ value }) => value === 'duplicate', 'r')
     .compile('contract', FACTS);
-  expect(g.deny(callCtx('cancelBooking', { reason: 'duplicate' }, null))).toBeNull();
+  expect(g.deny(callCtx('cancelBooking', { reason: 'duplicate' }, NO_READS))).toBeNull();
 });
 
 test('valueFromUserOrRecord licenses the value the operator wrote', () => {
-  const g = valueFromUserOrRecord('cancelBooking', 'day', 'bookings', 'day',
+  const g = valueFromUserOrRecord('cancelBooking', 'day', { read: 'getBooking', at: 'booking.day' },
     'Cancel on the day you were given.').compile('contract', FACTS);
-  expect(g.deny(callCtx('cancelBooking', { day: 'Thursday' }, STATE,
+  expect(g.deny(callCtx('cancelBooking', { day: 'Thursday' }, readLog(),
     ['cancel the Thursday one please']))).toBeNull();
 });
 
-test('valueFromUserOrRecord licenses the value a row of the named entity carries', () => {
-  const g = valueFromUserOrRecord('cancelBooking', 'day', 'bookings', 'day',
+test('valueFromUserOrRecord licenses the value a returned answer carries at the declared path', () => {
+  const g = valueFromUserOrRecord('cancelBooking', 'day', { read: 'getBooking', at: 'booking.day' },
     'Cancel on the day you were given.').compile('contract', FACTS);
-  expect(g.deny(callCtx('cancelBooking', { day: 'Tuesday' }, STATE, ['cancel it']))).toBeNull();
+  expect(g.deny(callCtx('cancelBooking', { day: 'Tuesday' }, readLog(), ['cancel it']))).toBeNull();
 });
 
-test('valueFromUserOrRecord refuses a value neither the operator nor the records carry', () => {
-  const g = valueFromUserOrRecord('cancelBooking', 'day', 'bookings', 'day',
+test('valueFromUserOrRecord refuses a value neither the operator nor an answer carries', () => {
+  const g = valueFromUserOrRecord('cancelBooking', 'day', { read: 'getBooking', at: 'booking.day' },
     'Cancel on the day you were given.').compile('contract', FACTS);
-  expect(g.deny(callCtx('cancelBooking', { day: 'Sunday' }, STATE, ['cancel it'])))
+  expect(g.deny(callCtx('cancelBooking', { day: 'Sunday' }, readLog(), ['cancel it'])))
     .toContain('Sunday');
 });
 
-test('valueFromUserOrRecord reads the field of the named entity, never another entity', () => {
-  const g = valueFromUserOrRecord('cancelBooking', 'ref', 'invoices', 'bookingRef', 'r')
+test('valueFromUserOrRecord reads a list the declared path lands on', () => {
+  const g = valueFromUserOrRecord('cancelBooking', 'ref', { read: 'listInvoices', at: 'refs' }, 'r')
     .compile('contract', FACTS);
-  expect(g.deny(callCtx('cancelBooking', { ref: 'bk_9' }, STATE, ['go']))).toBeNull();
-  expect(g.deny(callCtx('cancelBooking', { ref: 'bk_7' }, STATE, ['go']))).toContain('bk_7');
+  expect(g.deny(callCtx('cancelBooking', { ref: 'bk_9' }, readLog(), ['go']))).toBeNull();
+  expect(g.deny(callCtx('cancelBooking', { ref: 'bk_7' }, readLog(), ['go']))).toContain('bk_7');
 });
 
-test('argMatchesRecord passes the value the target row already carries', () => {
-  const g = argMatchesRecord('cancelBooking', 'room', 'room', 'Cancel the room on file.')
-    .compile('contract', FACTS);
+test('argMatchesRecord passes the value the returned answer already carries', () => {
+  const g = argMatchesRecord('cancelBooking', 'room', { read: 'getBooking', at: 'booking.room' },
+    'Cancel the room on file.').compile('contract', FACTS);
   expect(g.deny(callCtx('cancelBooking', { id: 'bk_9', room: '12' }))).toBeNull();
 });
 
-test('argMatchesRecord refuses with both figures when the argument differs from the record', () => {
-  const g = argMatchesRecord('cancelBooking', 'room', 'room', 'Cancel the room on file.')
-    .compile('contract', FACTS);
+test('argMatchesRecord refuses with both figures when the argument differs from the answer', () => {
+  const g = argMatchesRecord('cancelBooking', 'room', { read: 'getBooking', at: 'booking.room' },
+    'Cancel the room on file.').compile('contract', FACTS);
   const verdict = g.deny(callCtx('cancelBooking', { id: 'bk_9', room: '3' }));
   expect(verdict).toContain('3');
   expect(verdict).toContain('12');
 });
 
-test('argMatchesRecord refuses where the records hold no row for the call', () => {
-  const g = argMatchesRecord('cancelBooking', 'room', 'room', 'r').compile('contract', FACTS);
-  expect(g.deny(callCtx('cancelBooking', { id: 'bk_404', room: '12' }))).toContain('bk_404');
+test('argMatchesRecord refuses where the read was never made — read it first', () => {
+  const g = argMatchesRecord('cancelBooking', 'room', { read: 'getBooking', at: 'booking.room' }, 'r')
+    .compile('contract', FACTS);
+  expect(g.deny(callCtx('cancelBooking', { id: 'bk_404', room: '12' }, NO_READS)))
+    .toBe("getBooking was not read this conversation, so nothing fixes 'room'");
 });
 
 test('needs owes its read with the declared renames resolved from the call', () => {
@@ -135,10 +149,9 @@ test('a needs when that cannot tell yet binds fail-closed', () => {
   expect(debt).toEqual([{ alias: 'getBooking', tool: 'getBooking', args: {} }]);
 });
 
-test('argMatchesRecord names what is missing rather than reporting an empty value', () => {
-  const g = argMatchesRecord('cancelBooking', 'day', 'day', 'r').compile('contract', FACTS);
-  expect(g.deny(callCtx('cancelBooking', { id: 'bk_66', day: 'Friday' })))
-    .toBe("'day' arrived as 'Friday', and the record carries no 'day' to match it");
-  expect(g.deny(callCtx('cancelBooking', { day: 'Friday' })))
-    .toBe("this call names no row of the records, so nothing fixes 'day'");
+test('argMatchesRecord names the empty path rather than reporting an empty value', () => {
+  const g = argMatchesRecord('cancelBooking', 'day', { read: 'getBooking', at: 'booking.checkout' }, 'r')
+    .compile('contract', FACTS);
+  expect(g.deny(callCtx('cancelBooking', { id: 'bk_9', day: 'Friday' })))
+    .toBe("'day' arrived as 'Friday', and the getBooking answer carries nothing at 'booking.checkout' to match it");
 });
