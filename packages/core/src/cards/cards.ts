@@ -5,7 +5,7 @@
  *  a DomainContract says what the business is. Everything else an author writes is
  *  the world card, where the block a tool sits in IS its effect declaration — a tool
  *  under `destructive` needs no other field for the engine to hold it for consent. */
-import type { Act, InputCtx, CallCtx, ResultCtx, ReplyCtx, InstalledGuard, OwedRead } from '../contract/vocabulary.js';
+import type { Act, Denial, InputCtx, CallCtx, ResultCtx, ReplyCtx, InstalledGuard, OwedRead } from '../contract/vocabulary.js';
 import type { EngineSentenceKey, LlmParams, Reason, ResolvedWording, Rewrite, Status, SurfaceFacts } from '../contract/vocabulary.js';
 
 export type { LlmParams, Rewrite } from '../contract/vocabulary.js';
@@ -114,7 +114,7 @@ export interface Guard {
   on: 'input' | 'preTool' | 'postTool' | 'reply';
   /** Pure check over the frozen typed ctx; returns the specific detail for THIS violation
    *  (appended to `rule` in the denial), null = allow. */
-  deny?(ctx: InputCtx | CallCtx | ResultCtx | ReplyCtx): string | null;
+  deny?(ctx: InputCtx | CallCtx | ResultCtx | ReplyCtx): Denial | null;
   /** A yes/no question answered by the session's OWN model. Its phase is 'reply' —
    *  construction validates. An answer the engine cannot read decides nothing, so the
    *  rule stands unmet and the reply is corrected. */
@@ -146,7 +146,7 @@ export const DEFAULT_LIMITS: Required<Limits> =
  *  Method syntax on the checks lets a factory bind a phase-narrowed ctx. */
 export interface CompiledGuard extends InstalledGuard {
   /** Non-null = the specific violation detail; the denial prints rule + detail. */
-  deny(ctx: InputCtx | CallCtx | ResultCtx | ReplyCtx): string | null;
+  deny(ctx: InputCtx | CallCtx | ResultCtx | ReplyCtx): Denial | null;
   /** Non-null = reads the engine owes BEFORE this call may be re-checked. */
   owe?(ctx: CallCtx): readonly OwedRead[] | null;
   /** Non-null = the id of the earlier act whose result answers this duplicate call. */

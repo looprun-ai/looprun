@@ -105,7 +105,11 @@ export class CallRunner {
       case 'allow':
         return this.execute(call, fact, origin, draft);
       case 'refuse': {
-        const rule = rulebook.guards().guards.find(g => g.name === verdict.guardName)?.rule ?? '';
+        // THE WORDS THAT REFUSED. A check that spoke for itself refused for something its
+        // card's rule does not state, and putting the rule in front would tell the operator
+        // a law failed that never ran.
+        const rule = verdict.says ? ''
+          : rulebook.guards().guards.find(g => g.name === verdict.guardName)?.rule ?? '';
         const grade = clerk.grade({ verdict, actId: '' }, fact.effect, draft);
         return this.record(draft, {
           origin, call: call.data(v => this.deps.masker.maskData(v)), effect: fact.effect, said: grade.said,
@@ -293,7 +297,7 @@ export class CallRunner {
                            draft: TurnDraft,
                            debt: { readonly guardName: string; readonly rule: string }): Act {
     const grade = this.deps.clerk.grade(
-      { verdict: { kind: 'refuse', guardName: debt.guardName, detail: '' }, actId: '' },
+      { verdict: { kind: 'refuse', guardName: debt.guardName, detail: '', says: false }, actId: '' },
       fact.effect, draft);
     return this.record(draft, {
       origin, call: call.data(v => this.deps.masker.maskData(v)), effect: fact.effect, said: grade.said,

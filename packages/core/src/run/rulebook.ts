@@ -4,12 +4,21 @@
  *  collect ALL violations (a postTool violation joins the reply corrections — the
  *  call already ran). Pure — judged guards are not here. The census IS the code:
  *  guards() returns the same arrays the four phase checks iterate. */
-import type { GuardCensus, InputCtx, CallCtx, ResultCtx, ReplyCtx, Verdict } from '../contract/vocabulary.js';
+import type { Denial, GuardCensus, InputCtx, CallCtx, ResultCtx, ReplyCtx, Verdict } from '../contract/vocabulary.js';
 import type { CompiledAgent, CompiledGuard } from '../cards/cards.js';
 import { deepFreeze } from '../contract/freeze.js';
 import { HonestyCheck } from './honesty-check.js';
 
 export interface Violation { readonly guardName: string; readonly detail: string }
+
+
+/** A denial read as the verdict carries it: the sentence, and whether the check spoke for
+ *  itself. A check that speaks for itself has refused for something its card's rule does not
+ *  state, and the rule is not put in front of its words. */
+function readDenial(denial: Denial): { readonly detail: string; readonly says: boolean } {
+  return typeof denial === 'string' ? { detail: denial, says: false }
+    : { detail: denial.says, says: true };
+}
 
 export class Rulebook {
   private readonly input: readonly CompiledGuard[];
@@ -57,8 +66,10 @@ export class Rulebook {
 
   checkInput(ctx: InputCtx): Verdict {
     for (const guard of this.input) {
-      const detail = guard.deny(ctx);
-      if (detail !== null) return { kind: 'refuse', guardName: guard.name, detail };
+      const denial = guard.deny(ctx);
+      if (denial !== null) {
+        return { kind: 'refuse', guardName: guard.name, ...readDenial(denial) };
+      }
     }
     return { kind: 'allow' };
   }
@@ -79,8 +90,10 @@ export class Rulebook {
         const reads = guard.owe(ctx);
         if (reads !== null) return { kind: 'owe', guardName: guard.name, rule: guard.rule, reads };
       }
-      const detail = guard.deny(ctx);
-      if (detail !== null) return { kind: 'refuse', guardName: guard.name, detail };
+      const denial = guard.deny(ctx);
+      if (denial !== null) {
+        return { kind: 'refuse', guardName: guard.name, ...readDenial(denial) };
+      }
     }
     for (const guard of covering) {
       if (guard.hold) {
@@ -123,8 +136,11 @@ export class Rulebook {
     const violations: Violation[] = [];
     for (const guard of guards) {
       if (tool !== null && !this.covers(guard, tool)) continue;
-      const detail = guard.deny(ctx);
-      if (detail !== null) violations.push({ guardName: guard.name, detail });
+      const denial = guard.deny(ctx);
+      // A reply violation carries the correction only: the rule rides with it either way.
+      if (denial !== null) {
+        violations.push({ guardName: guard.name, detail: readDenial(denial).detail });
+      }
     }
     return violations;
   }

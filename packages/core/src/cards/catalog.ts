@@ -4,7 +4,7 @@
  *  structural. A factory MINTS its guard's name as kind:tool. Author regex exists
  *  ONLY inside blockPattern, purgePattern and maskPattern; argMatchesFormat evaluates the
  *  schema's own declared pattern. */
-import type { Act, CallCtx, ConsentWhen, InputCtx, Json, OwedRead, ReadsView, ReplyCtx, ReportWord,
+import type { Act, CallCtx, ConsentWhen, Denial, InputCtx, Json, OwedRead, ReadsView, ReplyCtx, ReportWord,
               ResultCtx, Rewrite, SurfaceFacts } from '../contract/vocabulary.js';
 import { TurnFailure } from '../contract/vocabulary.js';
 import { canonicalJson } from '../contract/canonical-call.js';
@@ -49,7 +49,7 @@ function completedActs(ctx: CallCtx, tool: string): readonly Act[] {
 
 /** The phase-generic sibling of installed(): one deny over the factory's own ctx shape. */
 function installedAt<C extends GuardCtx>(seed: SeedGuard, home: 'spec' | 'contract' | 'engine',
-  deny: (ctx: C) => string | null, installedBecause?: string): CompiledGuard {
+  deny: (ctx: C) => Denial | null, installedBecause?: string): CompiledGuard {
   const tools = seed.tool === undefined ? [] : typeof seed.tool === 'string' ? [seed.tool] : [...seed.tool];
   return {
     name: seed.name, rule: seed.rule, home, on: seed.on, tools, kind: seed.kind,
@@ -544,7 +544,7 @@ function walkPath(answer: Json, path: string): Json | undefined {
  *  with WORDS instead of false refuses in those words. */
 export function precondition(tool: string | readonly string[],
   check: (ctx: { readonly args: Readonly<Record<string, Json>>;
-                 readonly reads: ReadsView }) => boolean | string,
+                 readonly reads: ReadsView }) => boolean | Denial,
   reason: string): SeedGuard {
   const tools = typeof tool === 'string' ? [tool] : [...tool];
   return {
@@ -556,7 +556,8 @@ export function precondition(tool: string | readonly string[],
     compile(home) {
       return installedAt<CallCtx>(this, home, ctx => {
         const verdict = check({ args: ctx.call.args, reads: ctx.reads });
-        return verdict === true ? null : typeof verdict === 'string' ? verdict : '';
+        // `false` is the law refusing with nothing to add: the rule speaks alone.
+        return verdict === true ? null : verdict === false ? '' : verdict;
       });
     }
   };

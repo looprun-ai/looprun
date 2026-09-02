@@ -535,8 +535,10 @@ describe('writeCards', () => {
       factory: 'role', args: { read: 'getInvoice', at: 'grade', in: ['owner'], roster: ROSTER },
       rule: 'Moving money needs the money capability.' }] });
     const out = writeCards(declaration, FACTS);
-    expect(out).toContain('the acting record was not read this conversation');
-    expect(out).toContain('the roster was not read this conversation');
+    // Neither read is the law the card states, so each speaks for itself: a check that could
+    // not run has not been refused BY the rule, and the rule never rides in front of it.
+    expect(out).toContain('{ says: \'the acting member record was not read this conversation');
+    expect(out).toContain('{ says: \'the roster was not read this conversation');
   });
 
   test('a role gate states the values its field may carry, and refuses without them', () => {

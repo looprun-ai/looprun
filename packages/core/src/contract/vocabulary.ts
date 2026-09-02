@@ -37,9 +37,18 @@ export interface CanonicalCallData { readonly tool: string;
                                      readonly args: Readonly<Record<string, Json>>;
                                      readonly key: string }
 
+/** What a check answers when it refuses: the sentence that rides after the card's rule, or —
+ *  where the check refuses for something the rule does not state — the sentence that stands in
+ *  its place. A check that could not decide at all has not been refused BY the law, and saying
+ *  so in the law's words tells the operator something that is not true of them. */
+export type Denial = string | { readonly says: string };
+
 export type Verdict =
   | { readonly kind: 'allow' }
-  | { readonly kind: 'refuse'; readonly guardName: string; readonly detail: string }
+  | { readonly kind: 'refuse'; readonly guardName: string; readonly detail: string;
+      /** The check spoke for itself: the detail IS the refusal, and the card's rule
+       *  states a law that is not what refused this call. */
+      readonly says: boolean }
   | { readonly kind: 'hold'; readonly guardName: string;    // consent: hold-and-ask
       readonly sentence: string }
   | { readonly kind: 'restate'; readonly actId: string }      // duplicate call: the first result restated
