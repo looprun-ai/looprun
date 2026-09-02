@@ -149,8 +149,14 @@ export function writeSeam(subjectDir: string, facts: SurfaceFacts,
   // A row is paid by the guard that SAYS it is: the table cannot read a rule and know which
   // refusal it speaks for, and a rule over an act is not a rule about every code that act can
   // answer. `pays` is the author's own word, and it is the only thing that closes a row.
-  const paid = new Set((declaration?.contract.guards ?? []).flatMap(guard =>
-    guard.pays === undefined ? [] : guard.acts.map(act => `${act}|${guard.pays ?? ''}`)));
+  const paid = new Set([
+    ...(declaration?.contract.guards ?? []).flatMap(guard =>
+      guard.pays === undefined ? [] : guard.acts.map(act => `${act}|${guard.pays ?? ''}`)),
+    // A ceiling on a held call's own argument is a rule too: it refuses before the operator is
+    // ever asked, so the row it names is answered on time and closes with the guards'.
+    ...Object.entries(declaration?.contract.disclosure ?? {}).flatMap(([act, entry]) =>
+      entry.cap?.pays === undefined ? [] : [`${act}|${entry.cap.pays}`])
+  ]);
   const rows = [...seamCovered(subjectDir, facts)]
     .sort((a, b) => a.act === b.act ? a.code.localeCompare(b.code) : a.act.localeCompare(b.act));
   return [

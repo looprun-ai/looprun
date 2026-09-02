@@ -35,6 +35,9 @@ export interface DeclaredCap {
   readonly not: string;
   /** The sentence the call is refused with, slots included. */
   readonly refusal?: string;
+  /** The world refusal code this ceiling speaks for. A cap refuses before the operator is ever
+   *  asked, so the row it names is answered on time and closes. */
+  readonly pays?: string;
 }
 
 /** One read the engine performs to fill a disclosure sentence. The read alone names it in the
@@ -254,11 +257,13 @@ function asNumberRecord(map: YAMLMap, path: string, lineCounter: LineCounter): R
 function readCap(map: YAMLMap, path: string, lineCounter: LineCounter): DeclaredCap {
   const arg = readOptionalString(map, 'arg', path, lineCounter);
   const refusal = readOptionalString(map, 'refusal', path, lineCounter);
+  const pays = readOptionalString(map, 'pays', path, lineCounter);
   return {
     at: requireString(map, 'at', path, lineCounter),
     not: requireString(map, 'not', path, lineCounter),
     ...(arg === undefined ? {} : { arg }),
-    ...(refusal === undefined ? {} : { refusal })
+    ...(refusal === undefined ? {} : { refusal }),
+    ...(pays === undefined ? {} : { pays })
   };
 }
 

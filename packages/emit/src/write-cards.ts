@@ -492,18 +492,42 @@ function argSatisfiesConditionLines(guard: DeclaredGuard): readonly string[] {
 /** Two grounds under one law: the entity whose rows may carry the value, and the field of those
  *  rows it is read off. The operator's own words are the other ground and are the engine's to
  *  search, so the declaration states only where the records answer. */
-function valueFromUserOrRecordLines(guard: DeclaredGuard, act: string): readonly string[] {
+/** The declared mapping that names WHICH record a law over the reads is about, written into the
+ *  source the factory takes: the `needs` rule over the same act and the same read already maps
+ *  each of the read's arguments to one of the act's. With no such rule there is nothing to bind
+ *  to, and the law stands on the newest answer the conversation holds. */
+function sourceArgs(guard: DeclaredGuard, read: string,
+                    siblings: readonly DeclaredGuard[]): string {
+  const acts = new Set(guard.acts);
+  const mapping = siblings.find(other => other.factory === 'needs'
+    && other.args?.['read'] === read && other.acts.some(act => acts.has(act))
+    && typeof other.args['args'] === 'object' && other.args['args'] !== null)
+    ?.args?.['args'] as Readonly<Record<string, unknown>> | undefined;
+  if (mapping === undefined) return '';
+  const pairs = Object.entries(mapping)
+    .filter((pair): pair is [string, string] => typeof pair[1] === 'string')
+    .map(([readArg, actArg]) => `${key(readArg)}: ${quote(actArg)}`);
+  return pairs.length === 0 ? '' : `, args: { ${pairs.join(', ')} }`;
+}
+
+function valueFromUserOrRecordLines(guard: DeclaredGuard, act: string,
+                                    siblings: readonly DeclaredGuard[]): readonly string[] {
+  const read = stringArg(guard, 'read');
   return [`valueFromUserOrRecord(${quote(act)}, ${quote(stringArg(guard, 'arg'))}, `
-    + `{ read: ${quote(stringArg(guard, 'read'))}, at: ${quote(stringArg(guard, 'at'))} },`,
+    + `{ read: ${quote(read)}, at: ${quote(stringArg(guard, 'at'))}`
+    + `${sourceArgs(guard, read, siblings)} },`,
     `${quote(ruleOf(guard))})`];
 }
 
 /** The argument the record already fixes: the field of the call's OWN target row the value must
  *  equal. The walk to that row is the engine's, so the declaration names the field and nothing
  *  else. */
-function argMatchesRecordLines(guard: DeclaredGuard, act: string): readonly string[] {
+function argMatchesRecordLines(guard: DeclaredGuard, act: string,
+                               siblings: readonly DeclaredGuard[]): readonly string[] {
+  const read = stringArg(guard, 'read');
   return [`argMatchesRecord(${quote(act)}, ${quote(stringArg(guard, 'arg'))}, `
-    + `{ read: ${quote(stringArg(guard, 'read'))}, at: ${quote(stringArg(guard, 'at'))} },`,
+    + `{ read: ${quote(read)}, at: ${quote(stringArg(guard, 'at'))}`
+    + `${sourceArgs(guard, read, siblings)} },`,
     `${quote(ruleOf(guard))})`];
 }
 
@@ -585,9 +609,9 @@ function factoryCall(guard: DeclaredGuard, facts: SurfaceFacts,
       return { imported: 'argSatisfiesCondition', lines: argSatisfiesConditionLines(guard) };
     case 'valueFromUserOrRecord':
       return { imported: 'valueFromUserOrRecord',
-        lines: valueFromUserOrRecordLines(guard, act) };
+        lines: valueFromUserOrRecordLines(guard, act, siblings) };
     case 'argMatchesRecord':
-      return { imported: 'argMatchesRecord', lines: argMatchesRecordLines(guard, act) };
+      return { imported: 'argMatchesRecord', lines: argMatchesRecordLines(guard, act, siblings) };
     case 'prose':
       return { imported: null, lines: [`prose(${quote(guard.name)}, ${quote(ruleOf(guard))})`] };
   }

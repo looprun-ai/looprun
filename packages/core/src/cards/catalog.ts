@@ -7,6 +7,16 @@
 import type { Act, CallCtx, ConsentWhen, InputCtx, Json, OwedRead, ReadsView, ReplyCtx, ReportWord,
               ResultCtx, Rewrite, SurfaceFacts } from '../contract/vocabulary.js';
 import { TurnFailure } from '../contract/vocabulary.js';
+import { canonicalJson } from '../contract/canonical-call.js';
+
+/** A read a law decides on, and — where the declaration says so — which of the act's own
+ *  arguments name the record it is about. */
+export interface RecordSource {
+  readonly read: string;
+  readonly at: string;
+  /** Each of the read's arguments, mapped to the name of one of the act's own. */
+  readonly args?: Readonly<Record<string, string>>;
+}
 import type { CompiledGuard, Guard, GuardCtx } from './cards.js';
 
 /** An authored guard that carries its own AgentFactory derivation. */
@@ -807,8 +817,29 @@ export function argSatisfiesCondition(tool: string | readonly string[], arg: str
  *  typed and a figure a read answered are both somebody's; a figure that is neither is the
  *  desk's own arithmetic, and the refusal names the value it could not place. The declared
  *  path may land on one value or on a list of them. */
+
+/** The answer a law over the records is about: the one belonging to the CALL, where the source
+ *  says which of the act's arguments name it. Every answer in the reads log is keyed by the
+ *  arguments it was read with, so a conversation that read one row and acts on another is
+ *  answered by the row it acts on. A source naming no mapping has nothing to bind to, and the
+ *  law stands on the newest answer the conversation holds. */
+function answerForCall(ctx: CallCtx, source: RecordSource): Json | undefined {
+  const mapping = source.args;
+  if (mapping !== undefined) {
+    const args: Record<string, Json> = {};
+    let whole = true;
+    for (const [readArg, actArg] of Object.entries(mapping)) {
+      const value = ctx.call.args[actArg];
+      if (value === undefined) { whole = false; break; }
+      args[readArg] = value;
+    }
+    if (whole) return ctx.reads.latest(source.read, canonicalJson(args))?.answer;
+  }
+  return ctx.reads.latest(source.read)?.answer;
+}
+
 export function valueFromUserOrRecord(tool: string, arg: string,
-  source: { readonly read: string; readonly at: string }, reason: string): SeedGuard {
+  source: RecordSource, reason: string): SeedGuard {
   return {
     name: `valueFromUserOrRecord:${tool}:${arg}`,
     rule: reason,
@@ -822,7 +853,7 @@ export function valueFromUserOrRecord(tool: string, arg: string,
           return `'${arg}' must be a value the operator wrote or a read answered`;
         }
         if (writtenByUser(value, ctx.userTexts)) return null;
-        const answer = ctx.reads.latest(source.read)?.answer;
+        const answer = answerForCall(ctx, source);
         const held = answer === undefined ? undefined : walkPath(answer, source.at);
         const carries = Array.isArray(held)
           ? held.some(v => v !== null && String(v) === value)
@@ -841,7 +872,7 @@ export function valueFromUserOrRecord(tool: string, arg: string,
  *  first; a value that differs from the one on file is refused with both figures in the
  *  sentence. */
 export function argMatchesRecord(tool: string, arg: string,
-  source: { readonly read: string; readonly at: string }, reason: string): SeedGuard {
+  source: RecordSource, reason: string): SeedGuard {
   return {
     name: `argMatchesRecord:${tool}:${arg}`,
     rule: reason,
@@ -852,11 +883,11 @@ export function argMatchesRecord(tool: string, arg: string,
       return installedAt<CallCtx>(this, home, ctx => {
         const value = argText(ctx, arg);
         if (value === null) return `'${arg}' must be one value the record can be read against`;
-        const latest = ctx.reads.latest(source.read);
-        if (latest === null) {
+        const answer = answerForCall(ctx, source);
+        if (answer === undefined) {
           return `${source.read} was not read this conversation, so nothing fixes '${arg}'`;
         }
-        const held = walkPath(latest.answer, source.at);
+        const held = walkPath(answer, source.at);
         if (held !== undefined && held !== null && String(held) === value) return null;
         return held === undefined || held === null
           ? `'${arg}' arrived as '${value}', and the ${source.read} answer carries nothing at '${source.at}' to match it`

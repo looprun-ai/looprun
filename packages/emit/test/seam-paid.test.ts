@@ -43,3 +43,21 @@ test('the rule that declares it pays that code closes the row', () => {
 test('a rule paying another code of the same act closes nothing', () => {
   expect(seamRow('SOME_OTHER_CODE')).toContain('SENTENCE ARRIVES LATE');
 });
+
+/** A ceiling on the held call's own argument refuses before the operator is ever asked, so the
+ *  row it names is answered on time — and the cap is the only rung that states it. */
+test('a ceiling closes the row it says it pays', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'seam-'));
+  cpSync(join(HERE, 'fixtures', 'emit-sound'), dir, { recursive: true });
+  const path = join(dir, 'declaration.yaml');
+  const declaration = readFileSync(path, 'utf8')
+    .replace('  guards:\n',
+      '  seam:\n    issueRefund:\n      stateIs:status: >-\n'
+      + '        The invoice is settled, and a settled invoice takes no refund.\n  guards:\n')
+    .replace('        not: above\n', '        not: above\n        pays: \'stateIs:status\'\n');
+  writeFileSync(path, declaration);
+  emit(dir);
+  const row = readFileSync(join(dir, 'gen', 'SEAM.md'), 'utf8')
+    .split('\n').find(line => line.startsWith(ROW)) ?? '';
+  expect(row).not.toContain('SENTENCE ARRIVES LATE');
+});
