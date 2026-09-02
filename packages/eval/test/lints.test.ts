@@ -623,7 +623,7 @@ describe('seamCovered', () => {
       `const H = { cancelBooking: (w, a) => fail('BOOKING_ALREADY_OUT') };`,
       `const CONTRACT = { guards: [] };`);
     const rows = seamCovered(dir, { tools: { cancelBooking: {} } } as never);
-    expect(rows).toEqual([{ act: 'cancelBooking', code: 'BOOKING_ALREADY_OUT', guards: [], where: 'before' }]);
+    expect(rows).toEqual([{ act: 'cancelBooking', code: 'BOOKING_ALREADY_OUT', guards: [], where: 'before', spoken: false }]);
   });
 
   test('a guard over that act claims the row', () => {
@@ -670,7 +670,7 @@ describe('seamCovered', () => {
        } };`,
       `const CONTRACT = { guards: [] };`);
     const rows = seamCovered(dir, { tools: { cancelBooking: {} } } as never);
-    expect(rows).toEqual([{ act: 'cancelBooking', code: 'INVALID_BOOKING_STATUS', guards: [], where: 'before' }]);
+    expect(rows).toEqual([{ act: 'cancelBooking', code: 'INVALID_BOOKING_STATUS', guards: [], where: 'before', spoken: false }]);
   });
 
   test('a handler written as a method keys its act just as a property does', () => {
@@ -678,7 +678,7 @@ describe('seamCovered', () => {
       `const H = { cancelBooking(w, a) { return fail('BOOKING_ALREADY_OUT'); } };`,
       `const CONTRACT = { guards: [] };`);
     const rows = seamCovered(dir, { tools: { cancelBooking: {} } } as never);
-    expect(rows).toEqual([{ act: 'cancelBooking', code: 'BOOKING_ALREADY_OUT', guards: [], where: 'before' }]);
+    expect(rows).toEqual([{ act: 'cancelBooking', code: 'BOOKING_ALREADY_OUT', guards: [], where: 'before', spoken: false }]);
   });
 
   test('a code held in a named constant is the row that constant spells', () => {
@@ -687,7 +687,7 @@ describe('seamCovered', () => {
        const H = { cancelBooking: (w, a) => fail(WORKSPACE_SUSPENDED) };`,
       `const CONTRACT = { guards: [] };`);
     const rows = seamCovered(dir, { tools: { cancelBooking: {} } } as never);
-    expect(rows).toEqual([{ act: 'cancelBooking', code: 'WORKSPACE_SUSPENDED', guards: [], where: 'before' }]);
+    expect(rows).toEqual([{ act: 'cancelBooking', code: 'WORKSPACE_SUSPENDED', guards: [], where: 'before', spoken: false }]);
   });
 
   test('a validator handed a code through a constant is a row too', () => {
@@ -699,7 +699,7 @@ describe('seamCovered', () => {
        } };`,
       `const CONTRACT = { guards: [] };`);
     const rows = seamCovered(dir, { tools: { cancelBooking: {} } } as never);
-    expect(rows).toEqual([{ act: 'cancelBooking', code: 'INVALID_BOOKING_STATUS', guards: [], where: 'before' }]);
+    expect(rows).toEqual([{ act: 'cancelBooking', code: 'INVALID_BOOKING_STATUS', guards: [], where: 'before', spoken: false }]);
   });
 
   test('gates spread from a named list are rows the act carries', () => {

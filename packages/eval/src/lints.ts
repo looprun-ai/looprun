@@ -1062,13 +1062,17 @@ export function overWide(subjectDir: string): readonly LintFinding[] {
  *  `where` — the one thing the row says about THIS code with certainty. `after` means the act
  *  asks the operator for a code first, so this refusal is only ever met once they have answered;
  *  `before` means the call goes straight to the world. Which of the two an act deserves is the
- *  author's judgement and no table's: a tier the workspace itself refuses is met after the
- *  operator's word, on purpose; a deposit a standing claim blocks is not. */
+ *  author's judgement and no table's: a refusal worth putting to the operator is met after their
+ *  word on purpose, and a refusal the reads already carried never should have been. */
 export interface SeamRow {
   readonly act: string;
   readonly code: string;
   readonly guards: readonly string[];
   readonly where: 'before' | 'after';
+  /** Whether the declaration writes the sentence the operator meets THIS code with. A
+   *  sentence that is written and only ever heard after a confirmation code is a sentence
+   *  the operator was asked to buy before reading. */
+  readonly spoken: boolean;
 }
 
 const REFUSAL_CALLS = new Set(['fail', 'gateFail']);
@@ -1241,12 +1245,14 @@ export function seamCovered(subjectDir: string,
       ? String((fact as { readonly effect: unknown }).effect) : '';
   };
 
+  const declaredSentences = seamLawsByAct(sources);
   const rows = new Map<string, SeamRow>();
   const add = (act: string, code: string): void => {
     const key = `${act}|${code}`;
     if (!rows.has(key)) {
       rows.set(key, { act, code, guards: speaksFor.get(act) ?? [],
-        where: effectOf(act) === 'destructive' ? 'after' : 'before' });
+        where: effectOf(act) === 'destructive' ? 'after' : 'before',
+        spoken: (declaredSentences.get(act) ?? []).includes(code) });
     }
   };
   for (const f of sources) {

@@ -161,18 +161,20 @@ export function writeSeam(subjectDir: string, facts: SurfaceFacts): string {
     'operator for a confirmation code before the world is reached, so unless a rule beside it',
     'refuses the call first, this refusal is only ever heard once they have answered.',
     '',
-    'Which of the two a refusal deserves is yours to decide and no table\'s: a tier the workspace',
-    'itself refuses is met after the operator\'s word on purpose, while a deposit a standing claim',
-    'blocks should never have been put to them at all. Where the operator should hear a code',
-    'BEFORE being asked to confirm, and no rule in the row speaks about that code, the rule that',
-    'would speak first is missing.',
+    '**`SENTENCE ARRIVES LATE`** is the row to read first: you wrote the sentence the operator',
+    'meets this code with, and the act asks them to confirm before they ever read it. Two answers',
+    'are right and the row chooses neither. Write a rule that refuses the call, where the records',
+    'the desk already read say the act cannot run — the operator hears your sentence instead of',
+    'being asked. Or leave it, where the refusal is the world\'s own answer to a call worth putting',
+    'to them, and their word is what settles it.',
     '',
     'The last column is yours: the sentence the person meeting that code needs.',
     '',
     '| act | code | rules over the act | met | the sentence the operator needs |',
     '| --- | --- | --- | --- | --- |',
     ...rows.map(row => `| ${row.act} | ${row.code} | ${row.guards.length === 0 ? '—'
-      : row.guards.join(', ')} | ${row.where === 'after' ? 'after the code' : 'before the call'} |  |`),
+      : row.guards.join(', ')} | ${row.where === 'before' ? 'before the call'
+      : row.spoken ? 'after the code — **SENTENCE ARRIVES LATE**' : 'after the code'} |  |`),
     ''
   ].join('\n');
 }

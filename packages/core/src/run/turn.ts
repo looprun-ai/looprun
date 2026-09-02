@@ -93,8 +93,8 @@ export function groundedRecords(operatorTexts: readonly string[], acts: readonly
   const amounts = new Set<string>();
   const ids = new Set<string>();
   // A record's IDENTIFIERS leave its text before its figures are counted, the same walk
-  // the delivered side performs: the digits painted inside `inv_7001` are that invoice's
-  // name, and they ground no amount — a reply stating 7001 as a balance answers for it.
+  // the delivered side performs: the digits painted inside a record's own name are part
+  // of that name and ground no amount — a reply stating them as a balance answers for it.
   const feed = (t: string): void => {
     let bare = t;
     for (const id of carriedIds(t)) {
@@ -525,7 +525,7 @@ export class Turn {
     // The numbered ids and their state tags are bookkeeping between the engine and the
     // desk. One of them in the message is an internal token bolted onto the words the
     // operator reads, and the walk that would catch its digits cannot say why.
-    const labels = engineLabels(finish.message);
+    const labels = engineLabels(finish.message, facts);
     if (labels.length > 0) {
       violations.push({ guardName: 'engineLabelIsUnspoken',
         detail: `your message carries ${labels.join(', ')} — ${

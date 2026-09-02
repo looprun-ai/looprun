@@ -125,12 +125,31 @@ export function gateMisses(facts: readonly DeliveryFact[], message: string): rea
   return misses;
 }
 
+/** Whether a text carries `token` as a word of its own — nothing wordy on either side.
+ *  A label the engine minted is unspeakable in every wrapper the desk might reach for,
+ *  and the wrapper is what varies: brackets, parentheses, a bare word after a comma.
+ *  The record's own names are untouched, because none of them IS the token. */
+function carriesToken(text: string, token: string): boolean {
+  const wordy = (ch: string | undefined): boolean => ch !== undefined
+    && (ch === '_' || (ch >= '0' && ch <= '9')
+      || (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z'));
+  for (let at = text.indexOf(token); at >= 0; at = text.indexOf(token, at + 1)) {
+    if (!wordy(text[at - 1]) && !wordy(text[at + token.length])) return true;
+  }
+  return false;
+}
+
 /** The engine's own labels a text carries: any bracketed fact tag — `[F1]`, `[F7]`,
- *  whatever the number and whether or not this turn numbered it — and the state tags
- *  the prompt stamps beside them. They are this prompt's bookkeeping, and a reply
- *  printing one has bolted an internal token onto the operator's words. The count of
- *  the turn's facts decides nothing: a tag is unspeakable by its shape. */
-export function engineLabels(text: string): readonly string[] {
+ *  whatever the number and whether or not this turn numbered it — every label THIS
+ *  turn minted, standing as a word wherever the desk put it, and the state tags the
+ *  prompt stamps beside them. They are this prompt's bookkeeping, and a reply printing
+ *  one has bolted an internal token onto the operator's words.
+ *
+ *  The minted labels are a closed set the engine wrote itself, so nothing is guessed
+ *  from shape: `F1` answers only where this turn numbered a first fact, and a name the
+ *  records carry is never one of them, in brackets or out. */
+export function engineLabels(text: string, facts: readonly DeliveryFact[] = []):
+  readonly string[] {
   const found = new Set<string>();
   for (let i = 0; i + 3 < text.length + 1; i++) {
     if (text[i] !== '[' || text[i + 1] !== 'F') continue;
@@ -138,6 +157,10 @@ export function engineLabels(text: string): readonly string[] {
     while (at < text.length && text[at] >= '0' && text[at] <= '9') at += 1;
     if (at > i + 2 && text[at] === ']') found.add(text.slice(i, at + 1));
   }
+  facts.forEach((_, i) => {
+    const id = factId(i);
+    if (carriesToken(text, id)) found.add(id);
+  });
   for (const tag of Object.values(STATE_TAG)) {
     if (text.includes(tag)) found.add(tag);
   }
