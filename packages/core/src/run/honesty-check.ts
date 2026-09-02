@@ -34,10 +34,7 @@ export class HonestyCheck {
   /** Write and destructive acts are owed as claims at every status; reads are
    *  engine-rendered, never owed. */
   static mustClaim(act: Act): boolean {
-    // A declination walk is the ENGINE's own record, not a call the MODEL made: the
-    // model's report answers for its own acts, and a no_tool_called row is truthful
-    // beside the engine's walk of the same tool.
-    return act.effect !== 'read' && act.origin !== 'engine';
+    return act.effect !== 'read';
   }
 
   check(ctx: ReplyCtx): readonly HonestyViolation[] {
@@ -61,7 +58,7 @@ export class HonestyCheck {
       // only truthful word then.
       if (line.word === 'no_tool_called') {
         const shadow = ctx.turnActs.find(a => {
-          if (a.call.tool !== line.tool || a.origin === 'engine') return false;
+          if (a.call.tool !== line.tool) return false;
           const target = this.targetOf(a);
           return target === null || target === line.target;
         });
@@ -95,7 +92,7 @@ export class HonestyCheck {
       // accounts for earns a drop-the-row teaching instead: one act, one row.
       // Only an actless claim earns the no_tool_called route.
       const sameCall = ctx.turnActs.find(a => {
-        if (a.call.tool !== line.tool || a.origin === 'engine') return false;
+        if (a.call.tool !== line.tool) return false;
         const target = this.targetOf(a);
         return target === null || target === line.target;
       });

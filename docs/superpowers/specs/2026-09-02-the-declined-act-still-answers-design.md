@@ -17,10 +17,12 @@ route; the silent route stays open.
 
 ## 2 · The implementation
 
-One structural rule at the finish, over data the engine already holds — plus the honest
-boundary of what structure can and cannot guarantee.
+Two structural rules at the finish, both over data the engine already holds:
 
-**What structure GUARANTEES: a `no_tool_called` row runs the declined act's walk.** For each such row, the engine
+1. **An empty report does not close a turn.** A finish whose report carries no row is refused
+   with the correction: name what this turn did — a row per act, or `<tool>: no_tool_called`
+   for the act you chose not to make. (`packages/core/src/run/turn.ts`, the reply funnel.)
+2. **A `no_tool_called` row runs the declined act's walk.** For each such row, the engine
    builds the call — the row's `target` under the surface fact's own `target` argument name —
    and walks the rulebook's deny phase without executing anything. Every deny becomes a
    refused act on the record (origin `engine`), so its sentence becomes a spoken owed fact:
