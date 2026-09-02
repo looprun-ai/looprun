@@ -5,9 +5,10 @@
 **Goal:** One intent decision per turn, as data, at both doors — and on an act turn the finish
 leaves the tool list until an attempt stands, so execution is structural.
 
-**Architecture:** The router's `route` tool gains `act: yes|no|unclear` (chat door); a forced
-`intent` micro-step asks the same question at the pinned door; `turn.ts` withholds the finish
-card on act turns until one non-read attempt is recorded. Nothing desk-side restates the law.
+**Architecture:** ONE door: every message — chat or pinned — enters through the front desk's
+`route()` call, whose schema gains `act: yes|no|unclear` (a pinned turn routes over a one-desk
+window). `turn.ts` withholds the finish card on act turns until one non-read attempt is
+recorded. Nothing desk-side restates the law and no second mechanism exists.
 
 **Tech Stack:** TypeScript, vitest, the bench runners, the subject model of `ask/targets.json`.
 
@@ -39,11 +40,13 @@ card on act turns until one non-read attempt is recorded. Nothing desk-side rest
       routed-agent call sites to thread `act` into the turn options.
 - [ ] Suite green; commit.
 
-### Task 3: The intent micro-step (pinned door)
+### Task 3: The pinned path enters the same door
 
-- [ ] Failing test: a pinned governed turn opens with one forced `intent` step; its answer
-      rides into the same turn option; unreadable twice fails the turn.
-- [ ] Implement beside the owed-read micro-step machinery; commit.
+- [ ] Failing test: a pinned governed turn makes the same `route()` call over a one-desk
+      window; the answered `act` rides into the turn options; unreadable twice fails the
+      turn; the desk half of the answer is the one desk by construction.
+- [ ] Implement by pointing the pinned entry (exam runner / LoopRunAgent path) at the
+      existing front-desk composer — no new machinery; commit.
 
 ### Task 4: The tool list is the law (both doors)
 

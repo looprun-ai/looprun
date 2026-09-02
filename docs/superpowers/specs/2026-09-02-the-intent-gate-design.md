@@ -1,9 +1,11 @@
 # The intent gate — design
 
 An operator's message either asks for an ACT or it does not, and that decision is made ONCE,
-as data, before any desk speaks. On an act turn the desk has no way to answer in words: the
-finish is not among its tools until an attempt stands on the record. Execution is guaranteed
-by the tool list, never by prose, and no law is restated desk-side.
+as data, at ONE door: every message enters through the front desk's `route()` call, chat and
+pinned alike — a single desk just makes the desk half of the answer trivial. On an act turn
+the desk has no way to answer in words: the finish is not among its tools until an attempt
+stands on the record. Execution is guaranteed by the tool list, never by prose, and no law is
+restated desk-side.
 
 ## 1 · The measurement
 
@@ -26,18 +28,18 @@ by the tool list, never by prose, and no law is restated desk-side.
 
 ## 2 · The implementation
 
-One decision, two doors, one structural consequence.
+One decision, ONE door, one structural consequence.
 
-1. **The chat door — the router carries the intent.** The `route` tool's schema gains one
-   field: `act: 'yes' | 'no' | 'unclear'`. Nothing else enters the window — no tool list, no
-   cards, no history beyond what it already reads: naming the TOOL stays the desk's job (the
-   desk has the cards and the history; the router must stay minimal, and its measured score
-   rests on that). `readDecision` validates the enum with the same never-guess discipline.
+1. **Every message enters through `route()`.** The `route` tool's schema gains one field:
+   `act: 'yes' | 'no' | 'unclear'`. Nothing else enters the window — no tool list, no cards,
+   no history beyond what it already reads: naming the TOOL stays the desk's job (the desk
+   has the cards and the history; the router must stay minimal, and its measured score rests
+   on that). `readDecision` validates the enum with the same never-guess discipline.
    (`packages/core/src/run/front-desk.ts`.)
-2. **The pinned door — the same question as a micro-step.** No router exists there, so the
-   turn opens with one forced single-tool step to the desk's own model — `intent({ act })`,
-   same schema, same discipline — whose only responsibility is the act decision. (The forced
-   single-tool mechanism exists: the owed-read micro-step.)
+2. **The pinned path goes through the same door.** Direct-to-desk was a convenience, not an
+   architecture: a pinned turn makes the same `route()` call with a one-desk window — the
+   desk half of the answer is trivial, the `act` half is the decision. One window composer,
+   one reader, one discipline; no second mechanism exists.
 3. **The consequence — the tool list IS the law.** On `act: yes`, the step's tools carry the
    domain tools WITHOUT the finish card until the turn records at least one non-read attempt
    — done, refused or held, any standing. The desk cannot answer in words; it must move. The
