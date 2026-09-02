@@ -593,7 +593,6 @@ export class Turn {
   private async engineClose(session: Session, draft: TurnDraft,
                             operatorTexts: readonly string[], messages: Msg[],
                             drive: StepInput, closeSystem: string): Promise<TurnRecord> {
-    const { deliveryWriter: dw } = this.deps;
     draft.corrections.push({ kind: 'forcedFinish' });
     draft.closedBy = 'engine';
     draft.finish = null;
@@ -602,8 +601,13 @@ export class Turn {
       ...session.consent.laterTexts(draft.turn),
       ...session.consent.codeNotices(draft.userText)];
     const facts = assembleFacts(draft.acts, open, draft.closed, notes);
+    // The floor speaks exactly what the turn OWES: the assembled facts, nothing else.
+    // A read is not owed and never prints; a code prints inside the engine's human
+    // instruction. A turn owing nothing says so.
     const floor = (): string => {
-      const spoken = this.rewrite(dw.compose('', draft.acts, open, draft.closed, notes));
+      const lines = facts.map(f => f.kind === 'code'
+        ? `To proceed, send just this code: ${f.text}.` : f.text);
+      const spoken = this.rewrite(lines.join('\n'));
       return spoken === '' ? 'Nothing changed.' : spoken;
     };
     const records = groundedRecords(operatorTexts,

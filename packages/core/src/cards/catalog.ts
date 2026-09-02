@@ -696,25 +696,17 @@ export function valueFromUser(tool: string, arg: string): SeedGuard {
     arg.split('.').reduce<Json | undefined>((at, step) =>
       typeof at === 'object' && at !== null && !Array.isArray(at)
         ? (at as Readonly<Record<string, Json>>)[step] : undefined, args);
-  // The answered-ask licence: this act was refused over THIS argument on the latest
-  // past turn — the ask rode that delivery — and the operator has spoken since. The
-  // check is structure alone: the recorded refusal quotes the argument's name (data,
-  // never a word of the operator's language); mapping the operator's own words to the
-  // record's token is the model's work, and a value invented with no ask on record
-  // stays refused.
-  const askedAndAnswered = (ctx: CallCtx): boolean => {
-    const lastTurn = Math.max(0, ...ctx.pastActs.map(a => a.turn));
-    return ctx.pastActs.some(a => a.turn === lastTurn && a.call.tool === tool
-      && a.status === 'not-done' && a.sentence.includes(`'${arg}'`));
-  };
   return {
     name: `valueFromUser:${tool}`,
-    rule: `Send ${tool}'s '${arg}' only as the user wrote it, or ask for it and send what `
-      + 'their answer means.',
+    rule: `Send ${tool}'s '${arg}' only as the user wrote it.`,
     tool,
     on: 'preTool',
     kind: 'valueFromUser',
-    compile(home) {
+    compile(home, facts) {
+      // The record's own tokens for this argument, where the schema declares them:
+      // the refusal lists them so the ask reaches the operator with the exact words
+      // an answer can carry — engine data, engine sentence, any language around it.
+      const declared = declaredTokens(facts, tool, arg);
       return installedAt<CallCtx>(this, home, ctx => {
         const raw = dig(ctx.call.args);
         const value = typeof raw === 'number' ? String(raw) : raw;
@@ -725,11 +717,31 @@ export function valueFromUser(tool: string, arg: string): SeedGuard {
           return `'${arg}' carries no word the user could have written`;
         }
         if (writtenByUser(value, ctx.userTexts)) return null;
-        if (askedAndAnswered(ctx)) return null;
-        return `'${arg}' is not written in the user's own words`;
+        return declared.length > 0
+          ? `'${arg}' ${TOKEN_MARK}${declared.join(' | ')} — ask the operator which and `
+            + 'send it verbatim'
+          : `'${arg}' is not written in the user's own words`;
       });
     }
   };
+}
+
+/** The engine's own marker for a listed token set inside a refusal sentence. The
+ *  delivery gate reads the list back through it and forces every token verbatim. */
+export const TOKEN_MARK = 'takes exactly one of: ';
+
+/** The tokens a schema declares for one argument of one tool, or none. */
+export function declaredTokens(facts: SurfaceFacts, tool: string, arg: string):
+  readonly string[] {
+  const schema = facts.tools[tool]?.schema;
+  if (typeof schema !== 'object' || schema === null) return [];
+  const properties = (schema as { readonly properties?: Json }).properties;
+  if (typeof properties !== 'object' || properties === null) return [];
+  const property = (properties as Readonly<Record<string, Json>>)[arg];
+  if (typeof property !== 'object' || property === null) return [];
+  const values = (property as { readonly enum?: Json }).enum;
+  if (!Array.isArray(values)) return [];
+  return values.filter((v): v is string => typeof v === 'string');
 }
 
 /** Whether the operator wrote this value themselves, on ANY turn of the conversation:

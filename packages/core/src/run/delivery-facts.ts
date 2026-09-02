@@ -11,7 +11,7 @@
  *  message, every id must be named, and no label of this prompt may survive into the
  *  words the operator reads. */
 import type { Act, Question, QuestionClose } from '../contract/vocabulary.js';
-import { canonicalAmount, carriedIds, figureRuns } from '../cards/catalog.js';
+import { TOKEN_MARK, canonicalAmount, carriedIds, figureRuns } from '../cards/catalog.js';
 import { FINISH_TOOL } from './finish-desk.js';
 
 export interface DeliveryFact {
@@ -108,6 +108,19 @@ export function gateMisses(facts: readonly DeliveryFact[], message: string): rea
   }
   for (const f of facts) {
     if (f.kind === 'code' && !message.includes(f.text)) misses.push(`code ${f.text}`);
+  }
+  // A fact listing the record's own tokens forces each one verbatim: the ask must
+  // reach the operator with the exact words an answer can carry, in any language.
+  for (const f of facts) {
+    const at = f.text.indexOf(TOKEN_MARK);
+    if (at === -1) continue;
+    const tail = f.text.slice(at + TOKEN_MARK.length);
+    const end = tail.indexOf(' \u2014 ');
+    const listed = (end === -1 ? tail : tail.slice(0, end)).split(' | ');
+    for (const token of listed) {
+      const word = token.trim();
+      if (word !== '' && !message.includes(word)) misses.push(`token ${word}`);
+    }
   }
   return misses;
 }
