@@ -81,7 +81,7 @@ function commaJoin(blocks: readonly (readonly string[])[]): readonly string[] {
  *  would drop it, and the author would read a rule on the card that the engine never enforces. */
 const LAWFUL_ARGS: Readonly<Record<DeclaredGuard['factory'], readonly string[]>> = {
   needs: ['read', 'args', 'pick'],
-  precondition: ['reads', 'read', 'field', 'is', 'in'],
+  precondition: ['reads', 'read', 'field', 'is', 'in', 'absent'],
   role: ['read', 'at', 'in', 'roster'],
   valueFromUser: ['arg'],
   argMatchesFormat: ['arg', 'pattern'],
@@ -239,10 +239,21 @@ function fieldAccess(root: string, field: string): string {
 function fieldTest(guard: DeclaredGuard, subject: string, named = 'args.field'): string {
   const single = guard.args?.is;
   const several = guard.args?.in;
+  const nothing = guard.args?.absent;
+  if (nothing !== undefined) {
+    if (nothing !== true || single !== undefined || several !== undefined) {
+      throw new Error(`contract.guards '${guard.name}' declares args.absent, whose configuration is `
+        + `the flag true and nothing beside it: the act runs while the field carries NOTHING, and `
+        + `a value declared beside it states a second law under one name`);
+    }
+    // A field the answer carries as nothing and a field the answer does not carry are the
+    // same thing to the operator: neither states a claim, a hold or an id.
+    return `${subject} == null`;
+  }
   if ((single === undefined) === (several === undefined)) {
     throw new Error(`contract.guards '${guard.name}' declares ${named}, and its law tests the value `
-      + `against exactly one of args.is — a single value — or args.in — a list of them; this `
-      + `declaration carries ${single === undefined ? 'neither' : 'both'}`);
+      + `against exactly one of args.is — a single value — args.in — a list of them — or `
+      + `args.absent; this declaration carries ${single === undefined ? 'neither' : 'both'}`);
   }
   if (single !== undefined) {
     if (!isScalarValue(single)) {

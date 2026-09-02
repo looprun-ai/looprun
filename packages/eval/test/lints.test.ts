@@ -623,7 +623,7 @@ describe('seamCovered', () => {
       `const H = { cancelBooking: (w, a) => fail('BOOKING_ALREADY_OUT') };`,
       `const CONTRACT = { guards: [] };`);
     const rows = seamCovered(dir, { tools: { cancelBooking: {} } } as never);
-    expect(rows).toEqual([{ act: 'cancelBooking', code: 'BOOKING_ALREADY_OUT', guard: null }]);
+    expect(rows).toEqual([{ act: 'cancelBooking', code: 'BOOKING_ALREADY_OUT', guards: [], where: 'before' }]);
   });
 
   test('a guard over that act claims the row', () => {
@@ -631,7 +631,27 @@ describe('seamCovered', () => {
       `const H = { cancelBooking: (w, a) => fail('BOOKING_ALREADY_OUT') };`,
       `const CONTRACT = { guards: [{ name: 'cancelBeforeItGoesOut', tool: ['cancelBooking'], on: 'preTool', deny: () => null }] };`);
     const rows = seamCovered(dir, { tools: { cancelBooking: {} } } as never);
-    expect(rows[0].guard).toBe('cancelBeforeItGoesOut');
+    expect(rows[0].guards).toEqual(['cancelBeforeItGoesOut']);
+  });
+
+  test('a destructive act meets every refusal of its own AFTER the operator\'s word', () => {
+    const dir = write(
+      `const H = { cancelBooking: (w, a) => fail('BOOKING_ALREADY_OUT') };`,
+      `const CONTRACT = { guards: [] };`);
+    const held = seamCovered(dir, { tools: { cancelBooking: { effect: 'destructive' } } } as never);
+    expect(held[0].where).toBe('after');
+    const plain = seamCovered(dir, { tools: { cancelBooking: { effect: 'write' } } } as never);
+    expect(plain[0].where).toBe('before');
+  });
+
+  test('every rule that can refuse the act is named, not the first one written', () => {
+    const dir = write(
+      `const H = { cancelBooking: (w, a) => fail('BOOKING_ALREADY_OUT') };`,
+      `const CONTRACT = { guards: [`
+      + `{ name: 'moneyReadsTheRole', tool: ['cancelBooking'], on: 'preTool', deny: () => null },`
+      + `{ name: 'cancelBeforeItGoesOut', tool: ['cancelBooking'], on: 'preTool', deny: () => null }] };`);
+    const rows = seamCovered(dir, { tools: { cancelBooking: {} } } as never);
+    expect(rows[0].guards).toEqual(['moneyReadsTheRole', 'cancelBeforeItGoesOut']);
   });
 
   test('a gates entry is a row too', () => {
@@ -650,7 +670,7 @@ describe('seamCovered', () => {
        } };`,
       `const CONTRACT = { guards: [] };`);
     const rows = seamCovered(dir, { tools: { cancelBooking: {} } } as never);
-    expect(rows).toEqual([{ act: 'cancelBooking', code: 'INVALID_BOOKING_STATUS', guard: null }]);
+    expect(rows).toEqual([{ act: 'cancelBooking', code: 'INVALID_BOOKING_STATUS', guards: [], where: 'before' }]);
   });
 
   test('a handler written as a method keys its act just as a property does', () => {
@@ -658,7 +678,7 @@ describe('seamCovered', () => {
       `const H = { cancelBooking(w, a) { return fail('BOOKING_ALREADY_OUT'); } };`,
       `const CONTRACT = { guards: [] };`);
     const rows = seamCovered(dir, { tools: { cancelBooking: {} } } as never);
-    expect(rows).toEqual([{ act: 'cancelBooking', code: 'BOOKING_ALREADY_OUT', guard: null }]);
+    expect(rows).toEqual([{ act: 'cancelBooking', code: 'BOOKING_ALREADY_OUT', guards: [], where: 'before' }]);
   });
 
   test('a code held in a named constant is the row that constant spells', () => {
@@ -667,7 +687,7 @@ describe('seamCovered', () => {
        const H = { cancelBooking: (w, a) => fail(WORKSPACE_SUSPENDED) };`,
       `const CONTRACT = { guards: [] };`);
     const rows = seamCovered(dir, { tools: { cancelBooking: {} } } as never);
-    expect(rows).toEqual([{ act: 'cancelBooking', code: 'WORKSPACE_SUSPENDED', guard: null }]);
+    expect(rows).toEqual([{ act: 'cancelBooking', code: 'WORKSPACE_SUSPENDED', guards: [], where: 'before' }]);
   });
 
   test('a validator handed a code through a constant is a row too', () => {
@@ -679,7 +699,7 @@ describe('seamCovered', () => {
        } };`,
       `const CONTRACT = { guards: [] };`);
     const rows = seamCovered(dir, { tools: { cancelBooking: {} } } as never);
-    expect(rows).toEqual([{ act: 'cancelBooking', code: 'INVALID_BOOKING_STATUS', guard: null }]);
+    expect(rows).toEqual([{ act: 'cancelBooking', code: 'INVALID_BOOKING_STATUS', guards: [], where: 'before' }]);
   });
 
   test('gates spread from a named list are rows the act carries', () => {

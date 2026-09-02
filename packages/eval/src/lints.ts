@@ -1054,7 +1054,22 @@ export function overWide(subjectDir: string): readonly LintFinding[] {
   return findings;
 }
 
-export interface SeamRow { readonly act: string; readonly code: string; readonly guard: string | null }
+/** One refusal the world can answer an act's call with.
+ *
+ *  `guards` — every declared rule that covers the act and can refuse a call. The list is about
+ *  the ACT, not about this code: a rule named here may speak about something else entirely.
+ *
+ *  `where` — the one thing the row says about THIS code with certainty. `after` means the act
+ *  asks the operator for a code first, so this refusal is only ever met once they have answered;
+ *  `before` means the call goes straight to the world. Which of the two an act deserves is the
+ *  author's judgement and no table's: a tier the workspace itself refuses is met after the
+ *  operator's word, on purpose; a deposit a standing claim blocks is not. */
+export interface SeamRow {
+  readonly act: string;
+  readonly code: string;
+  readonly guards: readonly string[];
+  readonly where: 'before' | 'after';
+}
 
 const REFUSAL_CALLS = new Set(['fail', 'gateFail']);
 
@@ -1211,15 +1226,28 @@ export function seamCovered(subjectDir: string,
   const gateLists = namedObjectLists(sources);
   const helpers = helperCodes(sources, named);
   const declared = new Set(Object.keys(facts.tools));
-  const speaksFor = new Map<string, string>();
+  const speaksFor = new Map<string, string[]>();
   for (const f of sources)
     for (const guard of guardsWithTools(parse(f), lists))
-      for (const tool of guard.tools) if (!speaksFor.has(tool)) speaksFor.set(tool, guard.name);
+      for (const tool of guard.tools) {
+        const named = speaksFor.get(tool) ?? [];
+        if (!named.includes(guard.name)) speaksFor.set(tool, [...named, guard.name]);
+      }
+  // An act the world holds for the operator's word meets every one of its refusals AFTER that
+  // word: the consent question is raised before the call ever reaches the world.
+  const effectOf = (act: string): string => {
+    const fact = facts.tools[act];
+    return typeof fact === 'object' && fact !== null && 'effect' in fact
+      ? String((fact as { readonly effect: unknown }).effect) : '';
+  };
 
   const rows = new Map<string, SeamRow>();
   const add = (act: string, code: string): void => {
     const key = `${act}|${code}`;
-    if (!rows.has(key)) rows.set(key, { act, code, guard: speaksFor.get(act) ?? null });
+    if (!rows.has(key)) {
+      rows.set(key, { act, code, guards: speaksFor.get(act) ?? [],
+        where: effectOf(act) === 'destructive' ? 'after' : 'before' });
+    }
   };
   for (const f of sources) {
     const visit = (node: ts.Node): void => {

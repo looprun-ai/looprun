@@ -29,7 +29,7 @@ const BROKEN_DIR = staged('emit-broken');
 
 test('the seam table carries one row per world refusal, third column empty', () => {
   const md = writeSeam(FIXTURE_DIR, FACTS);
-  expect(md).toContain('| act | code | guard | the sentence the operator needs |');
+  expect(md).toContain('| act | code | rules over the act | met | the sentence the operator needs |');
   expect(md.split('\n').filter(l => l.startsWith('| ')).length).toBeGreaterThan(1);
 });
 
@@ -61,14 +61,14 @@ test('emit refuses rather than writing, when the surface refuses', () => {
 test('the seam names the act, the code, and that no rule speaks for a bare code', () => {
   const rows = writeSeam(staged('emit-sound'), FACTS).split('\n').filter(l => l.startsWith('| '));
   const refusal = rows.find(row => row.includes('stateIs:status'));
-  expect(refusal).toBe('| issueRefund | stateIs:status | — |  |');
+  expect(refusal).toBe('| issueRefund | stateIs:status | — | after the code |  |');
 });
 
 test('once the cards are emitted, the seam names the rule that speaks for the act', () => {
   const dir = staged('emit-sound');
   emit(dir);
   expect(readFileSync(join(dir, 'gen', 'SEAM.md'), 'utf8'))
-    .toContain('| issueRefund | stateIs:status | refundReadsTheInvoice |  |');
+    .toContain('| issueRefund | stateIs:status | refundReadsTheInvoice, refundOnlyWhatIsOpen | after the code |  |');
 });
 
 test('the census carries the conduct laws and the consent hold of every destructive act', () => {
