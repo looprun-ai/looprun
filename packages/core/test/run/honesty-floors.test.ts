@@ -111,3 +111,22 @@ describe('a missing argument is never narrated as an absent record', () => {
     expect(sentence).toContain('endDate');
   });
 });
+
+import { unactedLine } from '../../src/run/turn.js';
+
+describe('unactedLine — a report line about a tool nothing touched this turn', () => {
+  test('a claimed word for a tool with no act is the unacted line', () => {
+    expect(unactedLine([{ tool: 'payInvoice', target: 'inv_1', word: 'refused' }], []))
+      .toEqual({ tool: 'payInvoice', target: 'inv_1', word: 'refused' });
+  });
+  test('no_tool_called is the honest no-act row and passes', () => {
+    expect(unactedLine([{ tool: 'payInvoice', target: '', word: 'no_tool_called' }], []))
+      .toBeUndefined();
+  });
+  test('a line matched by any act of its tool passes — contradictedLine owns the word', () => {
+    const acted = [{ call: { tool: 'moveBooking', args: {}, key: 'k' },
+      status: 'not-done' }] as never[];
+    expect(unactedLine([{ tool: 'moveBooking', target: 'bk_1', word: 'done' }], acted))
+      .toBeUndefined();
+  });
+});

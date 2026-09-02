@@ -67,6 +67,16 @@ export function contradictedLine(report: readonly ReportLine[], acts: readonly A
   });
 }
 
+/** The report line about a tool NOTHING touched this turn: a claimed word with no act
+ *  behind it is a claim about nothing — the desk spoke an outcome instead of making
+ *  the call. The honest no-act row, `no_tool_called`, passes; every other word needs
+ *  at least one act of its tool on the record for `contradictedLine` to weigh. */
+export function unactedLine(report: readonly ReportLine[], acts: readonly Act[]):
+    ReportLine | undefined {
+  return report.find(line => line.word !== 'no_tool_called'
+    && !acts.some(a => a.call.tool === line.tool));
+}
+
 /** What the records of this turn carry, harvested once: every canonical AMOUNT and
  *  every IDENTIFIER. The sources are the OPERATOR'S own messages, the turn's and the
  *  history's args, results and sentences, and the turn's own owed facts — every line
@@ -416,9 +426,17 @@ export class Turn {
       message: finish.message, report: finish.report,
       userText: draft.userText, turnActs: [...draft.acts], pastActs
     });
-    const violations = [...(reportIsKept
+    const raw = reportIsKept
       ? this.deps.rulebook.checkReply(replyCtx)
-      : this.deps.rulebook.checkDeliveredReply(replyCtx))];
+      : this.deps.rulebook.checkDeliveredReply(replyCtx);
+    // A machinery refusal hands the desk the lawful material with the correction:
+    // the owed sentences themselves, engine-composed, ready to carry in the
+    // operator's own language with identifiers and figures exact.
+    const violations = raw.map(v => v.guardName === 'brokenReply' && facts.length > 0
+      ? { ...v, detail: `${v.detail}. The sentences owed, ready to carry in the operator's `
+          + `language, identifiers and figures exactly: ${facts.filter(f => f.kind !== 'code')
+            .map(f => f.text).join(' | ')}` }
+      : v);
     // THE OWED FACTS CHARGE THE DESK'S OWN MESSAGE. Every literal the records mint —
     // an id, a figure, a code — must ride in it exactly.
     const owedMisses = gateMisses(facts, finish.message);
@@ -467,6 +485,13 @@ export class Turn {
       violations.push({ guardName: 'reportContradictsRecord',
         detail: `your report says ${contradiction.word} for ${contradiction.tool}; the record `
           + `disagrees — write every report line from the record, not from intention` });
+    }
+    const unacted = reportIsKept ? unactedLine(finish.report, draft.acts) : undefined;
+    if (unacted !== undefined) {
+      violations.push({ guardName: 'reportClaimsUnattempted',
+        detail: `your report says ${unacted.word} for ${unacted.tool} and nothing of that `
+          + `tool ran or was refused this turn — make the call and let the records answer, `
+          + `or report no_tool_called` });
     }
     return violations;
   }
