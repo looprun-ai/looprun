@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** One intent decision per turn, as data, at both doors — and on an act turn the finish
+**Goal:** One intent decision per turn, as data, at ONE door — and on an act turn the finish
 leaves the tool list until an attempt stands, so execution is structural.
 
 **Architecture:** ONE door: every message — chat or pinned — enters through the front desk's
@@ -48,7 +48,7 @@ recorded. Nothing desk-side restates the law and no second mechanism exists.
 - [ ] Implement by pointing the pinned entry (exam runner / LoopRunAgent path) at the
       existing front-desk composer — no new machinery; commit.
 
-### Task 4: The tool list is the law (both doors)
+### Task 4: The tool list is the law
 
 - [ ] Failing tests in `packages/core/test/run/`: on `act: 'yes'`, the step's tools exclude
       the finish card until `draft.acts` holds a non-read attempt; after one, the finish
