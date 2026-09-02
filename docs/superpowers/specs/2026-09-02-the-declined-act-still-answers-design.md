@@ -1,5 +1,9 @@
 # The declined act still answers — design
 
+> **DEPRECATED — 2026-09-02.** Superseded by `2026-09-02-the-intent-gate-design.md`: the
+> intent gate makes the attempt itself structural, so the declination walk this spec builds is
+> not needed. Its engine work lives unmerged on branch `the-declined-act-still-answers`.
+
 Execution is guaranteed by structure, never by prose: a turn cannot close empty-handed, and
 declining an act runs that act's own law so the records answer anyway.
 
