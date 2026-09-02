@@ -157,7 +157,8 @@ export interface RoutedSubjectCfg {
   readonly providerOptions?: ProviderOptions;
 }
 
-interface Decision { readonly desk: string; readonly steps: readonly ModelStep[] }
+interface Decision { readonly desk: string; readonly act: 'yes' | 'no' | 'unclear';
+                     readonly steps: readonly ModelStep[] }
 
 export class RoutedAgent {
   readonly name: string;
@@ -241,7 +242,7 @@ export class RoutedAgent {
     const holder = this.deskNames.find(d =>
       this.desks[d].openQuestions(id).some(q => q.code === given));
     if (holder !== undefined) {
-      const answered = await this.deliver(holder, id, seat, text, false);
+      const answered = await this.deliver(holder, id, seat, text, false, 'no');
       if ('returned' in answered) {
         throw new TurnFailure('executor',
           `the ${holder} desk returned the answer to its own code`);
@@ -253,7 +254,7 @@ export class RoutedAgent {
     if (opened.desk === NONE) {
       return this.remember(id, seat, text, null, { desk: null, returned: null }, opened.steps);
     }
-    const served = await this.deliver(opened.desk, id, seat, text, true);
+    const served = await this.deliver(opened.desk, id, seat, text, true, opened.act);
     if (!('returned' in served)) {
       return this.remember(id, seat, text, served,
         { desk: opened.desk, returned: null }, opened.steps);
@@ -268,7 +269,7 @@ export class RoutedAgent {
     if (again.desk === NONE) {
       return this.remember(id, seat, text, null, { desk: null, returned }, steps, handedBack);
     }
-    const settled = await this.deliver(again.desk, id, seat, text, false);
+    const settled = await this.deliver(again.desk, id, seat, text, false, again.act);
     if ('returned' in settled) {
       throw new TurnFailure('executor',
         `the ${again.desk} desk returned a message the re-delivery never offered`);
@@ -289,22 +290,23 @@ export class RoutedAgent {
     const window = composeWindow(cfg);
     const first = await this.router.step(window);
     const read = readDecision(first, this.deskNames);
-    if (read !== null) return { desk: read, steps: [first] };
+    if (read !== null) return { ...read, steps: [first] };
     const again = await this.router.step(window);
     const reread = readDecision(again, this.deskNames);
     if (reread === null) {
       throw new TurnFailure('network', 'the front desk returned no readable decision');
     }
-    return { desk: reread, steps: [first, again] };
+    return { ...reread, steps: [first, again] };
   }
 
   /** What the desk has not seen rides in as `before` — the history since its own last
    *  entry, delivered words only — and the marks those turns' own acts minted ride as the
    *  grounding provenance. The floor checks ids, so the marks hand over their ids alone. */
   private deliver(desk: string, id: string, seat: Seat, text: string,
-                  returnable: boolean): Promise<GovernedResult | TurnReturned> {
+                  returnable: boolean, act: 'yes' | 'no' | 'unclear'):
+    Promise<GovernedResult | TurnReturned> {
     return this.desks[desk].generateRouted(text,
-      { session: id, before: foreignSince(seat.history, desk), returnable,
+      { session: id, before: foreignSince(seat.history, desk), returnable, act,
         grounded: inheritedBy(seat.history, desk).map(mark => mark.id) });
   }
 

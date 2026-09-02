@@ -139,7 +139,11 @@ export interface TurnReturned {
  *  carries the ids the conversation's own recorded acts returned at other
  *  desks — engine-minted provenance, never text-scraped. */
 export interface ChatOpts { readonly before?: readonly ForeignExchange[]; readonly returnable?: boolean;
-                            readonly grounded?: readonly string[] }
+                            readonly grounded?: readonly string[];
+                            /** The intent gate's answer for this message: on 'yes' the
+                             *  finish leaves the tool list until a non-read attempt
+                             *  stands — the tool list is the law. */
+                            readonly act?: 'yes' | 'no' | 'unclear' }
 /** How the turn's reply reached the operator: the desk's own finish delivered as it
  *  was written, the desk's close-step when the engine ended the turn, or the
  *  deterministic floor — with the owed facts that were on the table either way. */

@@ -22,6 +22,11 @@ Desks:
 - money: invoices and refunds
 
 The conversation is just opening.
+act — does the NEW message ask this house to CHANGE something (open, charge,
+cancel, release, record, update, remove, move...)? yes — the operator wants an operation
+performed. no — the operator wants information, or is only conversing. unclear — a careful
+human reader could not tell.
+
 When more than one desk could serve, pick the most likely. When the task takes
 several desks in sequence, pick the desk that acts first. When no desk's
 surface performs what is asked — anything outside the house's own records and
@@ -31,8 +36,12 @@ operations — the answer is none, however close a desk's territory sounds.`);
     expect(step.llmParams).toEqual({ temperature: 0 });
     expect(step.tools).toHaveLength(1);
     expect(step.tools[0].name).toBe('route');
-    expect((step.tools[0].schema as { properties: { desk: { enum: string[] } } })
-      .properties.desk.enum).toEqual(['counter', 'money', 'none']);
+    const schema = step.tools[0].schema as {
+      properties: { desk: { enum: string[] }; act: { enum: string[] } };
+      required: string[] };
+    expect(schema.properties.desk.enum).toEqual(['counter', 'money', 'none']);
+    expect(schema.properties.act.enum).toEqual(['yes', 'no', 'unclear']);
+    expect(schema.required).toEqual(['desk', 'act']);
   });
 
   it('carries the current desk, the tail exchange and the returned line', () => {
@@ -52,9 +61,13 @@ operations — the answer is none, however close a desk's territory sounds.`);
   it('reads a decision only from the declared enum', () => {
     const stepOf = (args: unknown) =>
       ({ calls: [{ tool: 'route', args: args as Record<string, unknown> }], text: '' });
-    expect(readDecision(stepOf({ desk: 'money' }), ['counter', 'money'])).toBe('money');
-    expect(readDecision(stepOf({ desk: 'none' }), ['counter', 'money'])).toBe('none');
-    expect(readDecision(stepOf({ desk: 'kitchen' }), ['counter', 'money'])).toBe(null);
+    expect(readDecision(stepOf({ desk: 'money', act: 'yes' }), ['counter', 'money']))
+      .toEqual({ desk: 'money', act: 'yes' });
+    expect(readDecision(stepOf({ desk: 'none', act: 'no' }), ['counter', 'money']))
+      .toEqual({ desk: 'none', act: 'no' });
+    expect(readDecision(stepOf({ desk: 'kitchen', act: 'yes' }), ['counter', 'money'])).toBe(null);
+    expect(readDecision(stepOf({ desk: 'money' }), ['counter', 'money'])).toBe(null);
+    expect(readDecision(stepOf({ desk: 'money', act: 'maybe' }), ['counter', 'money'])).toBe(null);
     expect(readDecision({ calls: [], text: '' }, ['counter', 'money'])).toBe(null);
   });
 });

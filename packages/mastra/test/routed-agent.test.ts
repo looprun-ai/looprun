@@ -37,7 +37,7 @@ const DESKS: Record<string, AgentSpec> = {
 
 /** A router decision as the port answers it, with the tokens the provider billed. */
 function routeStep(chosen: string, inputTokens = 0, outputTokens = 0): ModelStep {
-  return { calls: [{ tool: 'route', args: { desk: chosen } }], text: '',
+  return { calls: [{ tool: 'route', args: { desk: chosen, act: 'no' } }], text: '',
            usage: { inputTokens, outputTokens, cachedInputTokens: 0, reasoningTokens: 0 } };
 }
 
@@ -347,7 +347,7 @@ test('the target\'s declared options ride the front desk AND the desk behind it'
       seen.push((opts as { providerOptions?: unknown }).providerOptions);
       call += 1;
       const part = call === 1
-        ? { toolName: 'route', input: JSON.stringify({ desk: 'yard' }) }
+        ? { toolName: 'route', input: JSON.stringify({ desk: 'yard', act: 'no' }) }
         : { toolName: 'finish',
             input: JSON.stringify({ message: 'The crew is on it.', report: [], facts: [] }) };
       return Promise.resolve({

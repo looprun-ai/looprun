@@ -190,6 +190,7 @@ export class Turn {
     Promise<TurnRecord | TurnReturned> {
     const { compiled, seat, rulebook, masker, promptWriter: pw, finishDesk: fd, deliveryWriter: dw } = this.deps;
     const returnable = opts.returnable === true;
+    const actIntent = opts.act ?? null;
     const history = session.history;
     const desk = session.consent;
     // What this conversation read, as the head shows it: every answer still inside
@@ -335,8 +336,15 @@ export class Turn {
         messages: [...messages],
         // The return door goes FIRST — the finish is last on every surface, and
         // forceFinish targets the last card.
-        tools: returnable ? [RETURN_CARD, ...pw.toolCards(), fd.toolCard()]
-          : [...pw.toolCards(), fd.toolCard()],
+        // THE TOOL LIST IS THE LAW: on an act turn the finish is not on the table
+        // until a non-read attempt stands — the desk cannot answer in words, it must
+        // move. A forced turn always carries the finish: the engine's own exit.
+        tools: (() => {
+          const attempted = draft.acts.some(a => a.effect !== 'read');
+          const withFinish = actIntent !== 'yes' || attempted || forced;
+          const base = withFinish ? [...pw.toolCards(), fd.toolCard()] : [...pw.toolCards()];
+          return returnable ? [RETURN_CARD, ...base] : base;
+        })(),
         forceFinish: forced,
         llmParams: seat.llmParams({})
       });
@@ -390,6 +398,23 @@ export class Turn {
           closeSystem);
       }
 
+      if (finish !== null && actIntent === 'yes' && !forced
+        && !draft.acts.some(a => a.effect !== 'read')) {
+        // A finish the table never offered: the message asks for an act and none
+        // stands — the call comes first.
+        draft.corrections.push({ kind: 'redrive', guardName: 'finishWithheld',
+          detail: 'the message asks for an act and none was attempted' });
+        messages.push({ role: 'user', text: pw.correction([
+          'no finish is on the table yet — this message asks for an act: make the call '
+          + 'the operator asked for (the records will answer it), or ask the operator '
+          + 'a question']) });
+        retriesUsed += 1;
+        if (retriesUsed > compiled.limits.retries) {
+          return await this.engineClose(session, draft, operatorTexts, messages, stepInput,
+            closeSystem);
+        }
+        continue;
+      }
       if (finish !== null) {
         const judge = new Judge(port, seat.llmParams({}));
         const closed = await this.tryFinish(finish, draft, messages, operatorTexts,
