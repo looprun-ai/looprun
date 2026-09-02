@@ -48,14 +48,17 @@ recorded. Nothing desk-side restates the law and no second mechanism exists.
 - [ ] Implement by pointing the pinned entry (exam runner / LoopRunAgent path) at the
       existing front-desk composer — no new machinery; commit.
 
-### Task 4: The tool list is the law
+### Task 4: The act micro-step
 
-- [ ] Failing tests in `packages/core/test/run/`: on `act: 'yes'`, the step's tools exclude
-      the finish card until `draft.acts` holds a non-read attempt; after one, the finish
-      returns; `act: 'no'`/`'unclear'` turns are untouched; `forceFinish` on an exhausted act
-      turn still closes through the engine (the floor speaks the owed facts).
-- [ ] Implement in `turn.ts` (the `stepInput.tools` composition — the one place).
-- [ ] Suite green; commit.
+- [x] Failing tests in `packages/core/test/run/intent-gate.test.ts`: on `act: 'yes'`, a desk
+      that ends the turn with no non-read attempt is driven by ONE step whose surface is the
+      act cards alone — no reads, no finish — and a call it yields lands on the record; a desk
+      that calls nothing there ends the turn with the words it wrote; `act: 'no'`/`'unclear'`
+      turns are never driven; the step is spent once per turn.
+- [x] Implement `actAttempt` in `turn.ts` at the two seams where a turn ends (the finish the
+      desk called, and the emission that carried no call), and `actOrder` in
+      `delivery-facts.ts`. The main loop's tool list is left as it was.
+- [x] Suite green; commit.
 
 ### Task 5: The supersession lands
 

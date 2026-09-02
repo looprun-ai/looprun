@@ -180,6 +180,22 @@ export function isCodeShaped(text: string): boolean {
  *  cards, same acts — and carries the numbered owed facts and the order to write. The
  *  ban on bracketed codes is part of the order: a numbered brief teaches a model to
  *  echo the numbers, and the walk that would catch them cannot say why. */
+/** The one user-role message of the act micro-step: the operator's own words, and the
+ *  order to answer them on the record. A rule that forbids the operation is not a
+ *  reason to skip the call — the denial is what names the blocker, and words written
+ *  instead of it name nothing the records can be held to. A surface that performs
+ *  nothing the operator asked for is answered by calling nothing. */
+export function actOrder(userText: string): string {
+  return `The operator's message asks this house to CHANGE something: "${userText}". `
+    + 'Call the one tool below that performs it now — nothing else. Choose its arguments '
+    + 'from the conversation and the records above. If a rule forbids the operation, the '
+    + 'call is still how the records answer it: make the call and the refusal will carry '
+    + 'the reason. A rule you can see in the records does not excuse the call: you are '
+    + 'not the one who decides whether it is allowed, and a refusal you write yourself '
+    + 'stands on nothing the operator can be shown. If no tool below performs what was '
+    + 'asked, call nothing.';
+}
+
 export function closeInstruction(facts: readonly DeliveryFact[]): string {
   return ['THE DESK HOLDS — the complete record of what this turn did. Nothing else ran, '
     + 'was charged, booked, held or changed.',

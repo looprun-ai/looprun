@@ -20,7 +20,7 @@ import type { ModelPort, ToolPort } from '../contract/ports.js';
 import type { CompiledAgent } from '../cards/cards.js';
 import { CallRunner } from './call-runner.js';
 import { canonicalAmount, carriedIds, figureRuns } from '../cards/catalog.js';
-import { assembleFacts, closeInstruction, engineLabels, factIdMisses, gateMisses,
+import { actOrder, assembleFacts, closeInstruction, engineLabels, factIdMisses, gateMisses,
          isCodeShaped, unowedFactIds, withoutFactLabels } from './delivery-facts.js';
 import type { DeliveryFact } from './delivery-facts.js';
 import { languageReference, readProse } from './prose-reader.js';
@@ -318,6 +318,42 @@ export class Turn {
     // The turn's opening move — the only place the return door is open.
     let opening = true;
 
+    // THE ACT MICRO-STEP. A message that asks this house to change something ends its
+    // turn on the record, not in words: when such a turn is about to close with no
+    // attempt standing, ONE step carries the cards that CHANGE something and the order
+    // to make the call. A rule that forbids the operation is not a reason to skip it —
+    // the call is how the records answer the operator, and the denial names the blocker.
+    // The desk either calls, and the turn goes on with the attempt on the record, or it
+    // calls nothing, and the turn ends exactly as a turn with no intent would. One step
+    // per turn, spent whether or not it yields a call.
+    let actStepSpent = false;
+    const actAttempt = async (): Promise<'ran' | 'closed' | 'none'> => {
+      if (actStepSpent || actIntent !== 'yes') return 'none';
+      if (draft.acts.some(a => a.effect !== 'read')) return 'none';
+      if (callsUsed >= compiled.limits.calls) return 'none';
+      actStepSpent = true;
+      const cards = pw.toolCards()
+        .filter(c => compiled.facts.tools[c.name]?.effect !== 'read');
+      if (cards.length === 0) return 'none';
+      const actTail = pw.tail(userText, readsBlock(), desk.open(), owedNow());
+      const step = await port.step(deepFreeze({
+        system: actTail === '' ? pw.system() : `${pw.system()}\n${actTail}`,
+        messages: [...messages, { role: 'user' as const, text: actOrder(userText) }],
+        tools: cards,
+        forceFinish: false,
+        llmParams: seat.llmParams({})
+      }));
+      const offered = new Set(cards.map(c => c.name));
+      const call = step.calls.find(c => offered.has(c.tool));
+      if (call === undefined) return 'none';
+      const before = draft.acts.length;
+      callsUsed += 1;
+      await runner.run(call, 'model', draft);
+      const made = draft.acts.slice(before);
+      if (made.length > 0) messages.push({ role: 'acts', acts: made });
+      return made.some(a => a.reason === 'held' && a.questionId !== null) ? 'closed' : 'ran';
+    };
+
     for (;;) {
       const owed = owedNow();
       const tail = pw.tail(userText, readsBlock(), desk.open(), owed);
@@ -331,15 +367,8 @@ export class Turn {
         messages: [...messages],
         // The return door goes FIRST — the finish is last on every surface, and
         // forceFinish targets the last card.
-        // THE TOOL LIST IS THE LAW: on an act turn the finish is not on the table
-        // until a non-read attempt stands — the desk cannot answer in words, it must
-        // move. A forced turn always carries the finish: the engine's own exit.
-        tools: (() => {
-          const attempted = draft.acts.some(a => a.effect !== 'read');
-          const withFinish = actIntent !== 'yes' || attempted || forced;
-          const base = withFinish ? [...pw.toolCards(), fd.toolCard()] : [...pw.toolCards()];
-          return returnable ? [RETURN_CARD, ...base] : base;
-        })(),
+        tools: returnable ? [RETURN_CARD, ...pw.toolCards(), fd.toolCard()]
+          : [...pw.toolCards(), fd.toolCard()],
         forceFinish: forced,
         llmParams: seat.llmParams({})
       });
@@ -393,22 +422,16 @@ export class Turn {
           closeSystem);
       }
 
-      if (finish !== null && actIntent === 'yes' && !forced
-        && !draft.acts.some(a => a.effect !== 'read')) {
-        // A finish the table never offered: the message asks for an act and none
-        // stands — the call comes first.
-        draft.corrections.push({ kind: 'redrive', guardName: 'finishWithheld',
-          detail: 'the message asks for an act and none was attempted' });
-        messages.push({ role: 'user', text: pw.correction([
-          'no finish is on the table yet — this message asks for an act: make the call '
-          + 'the operator asked for (the records will answer it), or ask the operator '
-          + 'a question']) });
-        retriesUsed += 1;
-        if (retriesUsed > compiled.limits.retries) {
+      // The desk would end an act turn in words alone: the attempt comes first, and
+      // the finish it just wrote is dropped — a turn that now holds an act owes facts
+      // that message never carried.
+      if (finish !== null && !forced) {
+        const attempted = await actAttempt();
+        if (attempted === 'closed') {
           return await this.engineClose(session, draft, operatorTexts, messages, stepInput,
             closeSystem);
         }
-        continue;
+        if (attempted === 'ran') continue;
       }
       if (finish !== null) {
         const judge = new Judge(port, seat.llmParams({}));
@@ -428,6 +451,12 @@ export class Turn {
           closeSystem);
       }
       if (callsUsed >= compiled.limits.calls || domain.length === 0) {
+        const attempted = await actAttempt();
+        if (attempted === 'closed') {
+          return await this.engineClose(session, draft, operatorTexts, messages, stepInput,
+            closeSystem);
+        }
+        if (attempted === 'ran') continue;
         forced = true;
         messages.push({ role: 'user', text: fd.force() });
       }
