@@ -71,3 +71,37 @@ test('brokenReply passes every clean reply — naming a tool in a sentence is sp
     expect(g.deny(replyCtx(text)), `wrongly refused: ${text.slice(0, 60)}`).toBeNull();
   }
 });
+
+const JSON_LEAKED: readonly string[] = [
+  'O registro indica que existe um "openClaimId": "clm_3001" pendente para esta locação, além '
+    + 'de um "activeHolds": [{"holdId": "hold_6004"}].',
+  'The read returned "depositFloatRemaining": 500 for this workspace.'
+];
+
+test('brokenReply refuses a reply pasting record JSON — a quoted key with its colon', () => {
+  const g = brokenReply().compile('engine', FACTS);
+  for (const text of JSON_LEAKED) {
+    expect(g.deny(replyCtx(text)), `not refused: ${text.slice(0, 60)}`).not.toBeNull();
+  }
+  expect(g.deny(replyCtx('The booking is in "confirmed" status: nothing went out.'))).toBeNull();
+});
+
+function replyCtxWithResult(message: string, result: unknown): ReplyCtx {
+  return { message, report: [], userText: '',
+    turnActs: [{ call: { tool: 'getPlanUsage', args: {}, key: 'k' }, status: 'done',
+      effect: 'read', sentence: 'getPlanUsage() — done', owed: null,
+      result } as never], pastActs: [] };
+}
+
+test('brokenReply refuses a camel-shaped read key spoken as a token', () => {
+  const g = brokenReply().compile('engine', FACTS);
+  const usage = { plan: 'starter', depositFloatLimit: 10000, depositFloatRemaining: 500 };
+  expect(g.deny(replyCtxWithResult(
+    'O registro indica que o depositFloatLimit é 10,000 e o depositFloatRemaining é 500.',
+    usage))).toContain('depositFloatLimit');
+  expect(g.deny(replyCtxWithResult(
+    'The starter tier caps the float at 10,000, and 500 is all that is left of it.',
+    usage))).toBeNull();
+  // A single-word key is speech, never machinery: "plan" stays sayable.
+  expect(g.deny(replyCtxWithResult('The plan is starter.', usage))).toBeNull();
+});

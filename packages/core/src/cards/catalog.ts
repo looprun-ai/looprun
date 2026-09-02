@@ -355,6 +355,59 @@ export function actLogLine(text: string): string | null {
   return null;
 }
 
+/** A pasted JSON pair a text carries, or null: a quoted key with its colon —
+ *  `"name":` — the shape a record wears in transit and a sentence never does. A quoted
+ *  word WITHOUT the colon right after it is speech and passes. */
+export function jsonPairLine(text: string): string | null {
+  const isWordy = (ch: string): boolean => (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z')
+    || (ch >= '0' && ch <= '9') || ch === '_';
+  for (let i = 0; i < text.length; i += 1) {
+    if (text[i] !== '"') continue;
+    let at = i + 1;
+    while (at < text.length && isWordy(text[at])) at += 1;
+    if (at === i + 1 || text[at] !== '"') continue;
+    let after = at + 1;
+    while (after < text.length && (text[after] === ' ' || text[after] === '\t')) after += 1;
+    if (text[after] === ':') return text.slice(i, at + 1) + ':';
+  }
+  return null;
+}
+
+/** Every key a returned record carries, at every depth. */
+function recordKeys(value: unknown, into: Set<string>): void {
+  if (Array.isArray(value)) { for (const v of value) recordKeys(v, into); return; }
+  if (typeof value !== 'object' || value === null) return;
+  for (const [k, v] of Object.entries(value)) {
+    into.add(k);
+    recordKeys(v, into);
+  }
+}
+
+/** A key of this turn's read answers spoken as a token of the reply, or null. Only the
+ *  camel-shaped keys count — a lowercase run followed by an uppercase letter is the
+ *  record's own naming, never a word a person says — so `depositFloatLimit` is caught
+ *  and `plan` stays sayable. */
+export function spokenRecordKey(message: string, acts: readonly { readonly result: unknown }[]):
+  string | null {
+  const isWordy = (ch: string): boolean => (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z')
+    || (ch >= '0' && ch <= '9') || ch === '_';
+  const isCamel = (key: string): boolean => {
+    if (key.length < 2 || !(key[0] >= 'a' && key[0] <= 'z')) return false;
+    return [...key].some(ch => ch >= 'A' && ch <= 'Z');
+  };
+  const keys = new Set<string>();
+  for (const a of acts) recordKeys(a.result, keys);
+  for (const key of keys) {
+    if (!isCamel(key)) continue;
+    for (let i = message.indexOf(key); i !== -1; i = message.indexOf(key, i + 1)) {
+      const before = i === 0 ? '' : message[i - 1];
+      const after = message[i + key.length] ?? '';
+      if ((before === '' || !isWordy(before)) && (after === '' || !isWordy(after))) return key;
+    }
+  }
+  return null;
+}
+
 export function brokenReply(): SeedGuard {
   const LEAKS = ['<tool_call>', '</tool_call>', '<|', '{result.', '{args.'];
   return {
@@ -372,6 +425,16 @@ export function brokenReply(): SeedGuard {
         if (log !== null) {
           return `the reply carries the act log line '${log}' — the record is spoken in `
             + 'sentences, never pasted';
+        }
+        const pair = jsonPairLine(ctx.message);
+        if (pair !== null) {
+          return `the reply pastes the record pair ${pair} — say what the record holds in `
+            + 'a sentence, identifiers and figures verbatim';
+        }
+        const key = spokenRecordKey(ctx.message, ctx.turnActs);
+        if (key !== null) {
+          return `the reply speaks the record's own field name '${key}' — name the thing in `
+            + 'the operator\'s words and keep only identifiers, figures and status words verbatim';
         }
         const counts = new Map<string, number>();
         for (const line of ctx.message.split('\n')) {
