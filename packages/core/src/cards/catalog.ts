@@ -696,9 +696,21 @@ export function valueFromUser(tool: string, arg: string): SeedGuard {
     arg.split('.').reduce<Json | undefined>((at, step) =>
       typeof at === 'object' && at !== null && !Array.isArray(at)
         ? (at as Readonly<Record<string, Json>>)[step] : undefined, args);
+  // The answered-ask licence: this act was refused over THIS argument on the latest
+  // past turn — the ask rode that delivery — and the operator has spoken since. The
+  // check is structure alone: the recorded refusal quotes the argument's name (data,
+  // never a word of the operator's language); mapping the operator's own words to the
+  // record's token is the model's work, and a value invented with no ask on record
+  // stays refused.
+  const askedAndAnswered = (ctx: CallCtx): boolean => {
+    const lastTurn = Math.max(0, ...ctx.pastActs.map(a => a.turn));
+    return ctx.pastActs.some(a => a.turn === lastTurn && a.call.tool === tool
+      && a.status === 'not-done' && a.sentence.includes(`'${arg}'`));
+  };
   return {
     name: `valueFromUser:${tool}`,
-    rule: `Send ${tool}'s '${arg}' only as the user wrote it.`,
+    rule: `Send ${tool}'s '${arg}' only as the user wrote it, or ask for it and send what `
+      + 'their answer means.',
     tool,
     on: 'preTool',
     kind: 'valueFromUser',
@@ -712,8 +724,9 @@ export function valueFromUser(tool: string, arg: string): SeedGuard {
         if (!isFigure(value) && tokens(value).length === 0) {
           return `'${arg}' carries no word the user could have written`;
         }
-        return writtenByUser(value, ctx.userTexts) ? null
-          : `'${arg}' is not written in the user's own words`;
+        if (writtenByUser(value, ctx.userTexts)) return null;
+        if (askedAndAnswered(ctx)) return null;
+        return `'${arg}' is not written in the user's own words`;
       });
     }
   };
