@@ -203,6 +203,16 @@ export function assembleFacts(acts: readonly Act[], open: readonly Question[],
     if (a.status === 'done' && a.effect !== 'read') {
       facts.push({ kind: 'receipt', text: spokenActSentence(a.sentence), state: 'ran' });
     }
+    // A refused act is never silent either: the rule that refused it is owed to the
+    // operator, spoken — and its literals (a member id, a figure, a code) are forced
+    // into the delivery in whatever language the reply takes. A held act stays out:
+    // its ask and code already carry the turn.
+    if (a.status === 'not-done' && a.reason !== 'held') {
+      const spoken = spokenActSentence(a.sentence);
+      if (!facts.some(f => f.kind === 'refusal' && f.text === spoken)) {
+        facts.push({ kind: 'refusal', text: spoken, state: 'refused' });
+      }
+    }
   }
   for (const q of open) {
     facts.push({ kind: 'ask', text: q.sentence, state: 'held' });

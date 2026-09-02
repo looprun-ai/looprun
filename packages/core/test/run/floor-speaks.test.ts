@@ -66,3 +66,20 @@ test('the floor is sentences: no act log, no bare code, the ask and its code ins
   expect(text).not.toContain('[101472]');
   expect(text).toContain('To proceed, send just this code: 101472.');
 });
+
+test('a guard-refused act becomes a spoken refusal fact — its literals get forced in any language', () => {
+  const facts = assembleFacts(
+    [act('updateMemberRole(mem_1005) — not-done (Moving money needs the money capability. '
+      + 'Sam Whitfield (mem_1004) can.)', 'not-done')],
+    [], [], []);
+  expect(facts).toHaveLength(1);
+  expect(facts[0].kind).toBe('refusal');
+  expect(facts[0].text).toContain('mem_1004');
+  expect(actLogLine(facts[0].text)).toBeNull();
+});
+
+test('a held act mints no refusal fact — the ask and its code already carry the turn', () => {
+  const held = { ...act('removeMember(mem_1001) — not-done (awaiting approval)', 'not-done'),
+    reason: 'held' } as unknown as Act;
+  expect(assembleFacts([held], [], [], [])).toEqual([]);
+});
