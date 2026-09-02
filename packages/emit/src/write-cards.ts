@@ -398,14 +398,15 @@ function roleLines(guard: DeclaredGuard): readonly string[] {
     `  const answer = reads.latest(${quote(read)}, '')?.answer;`,
     `  if (answer === undefined) {`,
     `    return { says: 'the acting member record was not read this conversation, so nothing `
-      + `here has judged the role — read it and call again' };`,
+      + `here has judged the role. Call ${read} with NO arguments — that call, and only that `
+      + `call, answers who is acting — and then make this call again' };`,
     `  }`,
     `  const value = walkAnswer(answer, ${quote(at)});`,
     `  if (${list(allowed)}.some(declared => declared === value)) return true;`,
     `  const roster = reads.latest(${quote(roster.read)})?.answer;`,
     `  if (roster === undefined) {`,
-    `    return { says: 'the roster was not read this conversation, so nobody can be named — `
-      + `read it and call again' };`,
+    `    return { says: 'the roster was not read this conversation, so nobody can be named. `
+      + `Call ${roster.read}, and then make this call again' };`,
     `  }`,
     `  return nameWhoCan(${roster.at === '' ? 'roster' : `walkAnswer(roster, ${quote(roster.at)})`}, `
       + `${quote(roster.role)}, ${quote(roster.label)}, ${quote(roster.key)}, ${list(allowed)});`,
