@@ -21,23 +21,30 @@ boundary of what structure can and cannot guarantee.
    and walks the rulebook's deny phase without executing anything. Every deny becomes a
    refused act on the record (origin `engine`), so its sentence becomes a spoken owed fact:
    the claim blocker, the who-can names, the ceiling — forced into the delivery in any
-   language by the existing gate. An act nothing refuses records as declined in the engine's
-   own words. (`turn.ts` + the existing `assembleFacts` wrap.)
+language by the existing gate. Declining is STRUCTURALLY EQUIVALENT to attempting — the same
+facts are forced either way, so the desk never has to execute to make the records speak. The
+honesty check treats the engine walk as its own bookkeeping (`honesty-check.ts`), so the
+model's `no_tool_called` row stays truthful beside it.
 
-The shipped pieces this composes with: `reportClaimsUnattempted` (a claimed word with no act
-redrives to the call), the spoken refusal facts, the token forcing, the floor that speaks only
-what is owed.
+**What structure CANNOT guarantee, and why.** Forcing "the desk must attempt or decline every
+act the operator asked for" would need the engine to tell an ACT request from an INFORMATION
+request: a read-then-answer-in-words turn is legitimate when the operator wanted information,
+and only the prose says which it was. The engine may not read prose to decide, so a desk that
+neither attempts, declines, nor asks — refusing in pure prose — is the residue this mechanism
+does not close. That residue is a TEACHING, not a floor. The shipped `reportClaimsUnattempted`
+still catches the variant where the desk CLAIMS a word (`refused`) with no act behind it.
 
 ## 3 · The documentation
 
-`turn.ts` header gains the law: a turn closes by an act, a question, or a named declination —
-never by silence. `delivery-facts.ts` untouched (the wrap already speaks refused acts).
+`turn.ts` header gains the law: a declined act (`no_tool_called`) runs its own walk, so its
+refusal reaches the operator without the act ever executing.
 
 ## 4 · The skill (same session)
 
-`author.md` / `guard-contexts.md` untouched — no authoring surface changes. The exam page
-gains nothing: the mechanism is engine floor. One line in `engine-seams.md` if it lists the
-finish contract: the report is never empty, and `no_tool_called` names the declined act.
+`test.md` gains the repair for the residue: an act the operator asked for that the desk refused
+in PROSE is declined structurally — the desk reports `<tool>: no_tool_called`, and the engine
+walks that act so the blocker, the names and the ceiling speak. Refusing an act in words alone,
+with no report row, forces nothing.
 
 ## Acceptance
 
