@@ -144,7 +144,13 @@ export function writeGateFile(stamp: string): string {
 /** The seam page: every refusal the WORLD spells out, and the card rule that states it in words
  *  before the call is ever made. The fourth column is the operator's own — the emitter knows the
  *  code and never the sentence a person on the other end of it needs. */
-export function writeSeam(subjectDir: string, facts: SurfaceFacts): string {
+export function writeSeam(subjectDir: string, facts: SurfaceFacts,
+                          declaration?: Declaration): string {
+  // A row is paid by the guard that SAYS it is: the table cannot read a rule and know which
+  // refusal it speaks for, and a rule over an act is not a rule about every code that act can
+  // answer. `pays` is the author's own word, and it is the only thing that closes a row.
+  const paid = new Set((declaration?.contract.guards ?? []).flatMap(guard =>
+    guard.pays === undefined ? [] : guard.acts.map(act => `${act}|${guard.pays ?? ''}`)));
   const rows = [...seamCovered(subjectDir, facts)]
     .sort((a, b) => a.act === b.act ? a.code.localeCompare(b.code) : a.act.localeCompare(b.act));
   return [
@@ -168,13 +174,18 @@ export function writeSeam(subjectDir: string, facts: SurfaceFacts): string {
     'being asked. Or leave it, where the refusal is the world\'s own answer to a call worth putting',
     'to them, and their word is what settles it.',
     '',
+    'A row stops reading LATE when a rule declares `pays: <the code>` — your word that this rule',
+    'is the one that speaks for it. Nothing infers it: a rule over an act is not a rule about',
+    'every code that act can answer.',
+    '',
     'The last column is yours: the sentence the person meeting that code needs.',
     '',
     '| act | code | rules over the act | met | the sentence the operator needs |',
     '| --- | --- | --- | --- | --- |',
     ...rows.map(row => `| ${row.act} | ${row.code} | ${row.guards.length === 0 ? '—'
       : row.guards.join(', ')} | ${row.where === 'before' ? 'before the call'
-      : row.spoken ? 'after the code — **SENTENCE ARRIVES LATE**' : 'after the code'} |  |`),
+      : row.spoken && !paid.has(`${row.act}|${row.code}`)
+        ? 'after the code — **SENTENCE ARRIVES LATE**' : 'after the code'} |  |`),
     ''
   ].join('\n');
 }
@@ -256,6 +267,6 @@ export function emit(subjectDir: string): readonly string[] {
   writeFileSync(gatePath, writeGateFile(stamp));
   writeFileSync(tsconfigPath, writeTsconfig());
   mkdirSync(join(subjectDir, 'gen'), { recursive: true });
-  writeFileSync(seamPath, writeSeam(subjectDir, facts));
+  writeFileSync(seamPath, writeSeam(subjectDir, facts, declaration));
   return [cardsPath, subjectPath, gatePath, tsconfigPath, seamPath];
 }

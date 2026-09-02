@@ -4,7 +4,7 @@ import type { Declaration, DeclaredDisclosure, DeclaredGuard, DeclaredSeam } fro
 /** The seam of the fixture world: one refusal the world spells out, on the destructive act. A
  *  declaration paying any other row is paying a row this table does not carry. */
 export const SEAM: readonly SeamRow[] = [
-  { act: 'issueRefund', code: 'stateIs:status', guard: null }
+  { act: 'issueRefund', code: 'stateIs:status', guards: [], where: 'after', spoken: false }
 ];
 
 export const FACTS = { tools: {

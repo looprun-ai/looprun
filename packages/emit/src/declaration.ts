@@ -16,6 +16,10 @@ export interface DeclaredGuard {
     | 'prose' | 'deny';
   readonly args?: Readonly<Record<string, unknown>>;
   readonly rule?: string;
+  /** The world refusal code this rule speaks for, of the act it names. A row of the seam table
+   *  is paid by the guard that says so: the table cannot read a rule and know which refusal it
+   *  is about, and a rule over an act is not a rule about every code that act can answer. */
+  readonly pays?: string;
   readonly wide?: 'oneLawEveryAct' | 'sameRefusal';
 }
 
@@ -339,12 +343,14 @@ function readGuard(map: YAMLMap, path: string, lineCounter: LineCounter): Declar
   const argsMap = readOptionalMap(map, 'args', path, lineCounter);
   const rule = readOptionalString(map, 'rule', path, lineCounter);
   const wide = readOptionalEnum(map, 'wide', WIDE_KINDS, path, lineCounter);
+  const pays = readOptionalString(map, 'pays', path, lineCounter);
   return {
     name,
     acts,
     factory,
     ...(argsMap === undefined ? {} : { args: argsMap.toJSON() as Record<string, unknown> }),
     ...(rule === undefined ? {} : { rule }),
+    ...(pays === undefined ? {} : { pays }),
     ...(wide === undefined ? {} : { wide })
   };
 }

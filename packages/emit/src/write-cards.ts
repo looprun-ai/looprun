@@ -295,7 +295,37 @@ function testedField(guard: DeclaredGuard): string | null {
  *  not hold refuses on the rule alone — the rule teaches the read. `reads: record` alone
  *  tests that the answer is there; a `field` beside it tests what the answer carries at that
  *  declared path. */
-function preconditionLines(guard: DeclaredGuard): readonly string[] {
+
+/** The declared mapping that names WHICH record a law over the reads is about: the `needs` rule
+ *  over the same act and the same read. Its `args` map each of the read's own arguments to one of
+ *  the act's, which is exactly what the reads log keyed the answer under.
+ *
+ *  The key the log holds is the read's target value where the read declares one, and otherwise
+ *  the read's arguments written canonically — the same string `canonicalJson` writes. */
+function keyLines(guard: DeclaredGuard, read: string,
+                  siblings: readonly DeclaredGuard[]): readonly string[] {
+  const loose = [`  const answer = reads.latest(${quote(read)})?.answer;`];
+  const acts = new Set(guard.acts);
+  const mapping = siblings.find(other => other.factory === 'needs'
+    && other.args?.['read'] === read && other.acts.some(act => acts.has(act))
+    && typeof other.args['args'] === 'object' && other.args['args'] !== null)
+    ?.args?.['args'] as Readonly<Record<string, unknown>> | undefined;
+  if (mapping === undefined) return loose;
+  const pairs = Object.entries(mapping)
+    .filter((pair): pair is [string, string] => typeof pair[1] === 'string')
+    .sort(([a], [b]) => a.localeCompare(b));
+  if (pairs.length === 0) return loose;
+  const parts = pairs.map(([readArg, actArg]) =>
+    `${quote(`${JSON.stringify(readArg)}:`)} + JSON.stringify(args[${quote(actArg)}])`);
+  const named = pairs.map(([, actArg]) => `args[${quote(actArg)}] !== undefined`).join(' && ');
+  return [`  const bound = ${named}`,
+    `    ? '{' + ${parts.join(` + ',' + `)} + '}' : null;`,
+    `  const answer = (bound === null`,
+    `    ? reads.latest(${quote(read)}) : reads.latest(${quote(read)}, bound))?.answer;`];
+}
+
+function preconditionLines(guard: DeclaredGuard, facts: SurfaceFacts,
+                           siblings: readonly DeclaredGuard[]): readonly string[] {
   if (guard.args?.reads !== 'record') {
     throw new Error(`contract.guards '${guard.name}' declares factory 'precondition' with a `
       + `reading this emitter has no check for — the one it writes is \`reads: record\``);
@@ -305,8 +335,16 @@ function preconditionLines(guard: DeclaredGuard): readonly string[] {
   const test = field === null ? 'true'
     : fieldTest(guard, `walkAnswer(answer, ${quote(field)})`);
   const acts = guard.acts.length === 1 ? quote(guard.acts[0]) : list(guard.acts);
-  return [`precondition(${acts}, ({ reads }) => {`,
-    `  const answer = reads.latest(${quote(read)})?.answer;`,
+  // THE ANSWER IS THE CALL'S OWN. Every answer in the reads log is keyed by the arguments it
+  // was read with, so a law over an act that names the record it touches is decided on THAT
+  // record's answer and never on whichever one the conversation read last. What names it is
+  // the read-order rule beside this one: `needs` over the same act and the same read already
+  // maps each of the read's arguments to one of the act's, and the key is that same call
+  // written canonically. With no such mapping there is nothing to bind to, and the law stands
+  // on the newest answer the conversation holds.
+  const answerLines = keyLines(guard, read, siblings);
+  return [`precondition(${acts}, ({ args, reads }) => {`,
+    ...answerLines,
     `  if (answer === undefined) return false;`,
     `  return ${test};`,
     `},`,
@@ -504,7 +542,8 @@ function needsLines(guard: DeclaredGuard, act: string): readonly string[] {
  *  call itself. A factory configured from one act takes the first act the guard names and the
  *  rest arrive as the guard's own `tool` scope; `precondition` and `role` take them all. `prose`
  *  imports nothing — it is the card's own helper — and states the whole law in its sentence. */
-function factoryCall(guard: DeclaredGuard): { readonly imported: string | null;
+function factoryCall(guard: DeclaredGuard, facts: SurfaceFacts,
+                     siblings: readonly DeclaredGuard[]): { readonly imported: string | null;
                                               readonly lines: readonly string[] } {
   const [act] = guard.acts;
   if (act === undefined) throw new Error(`contract.guards '${guard.name}' names no act`);
@@ -533,7 +572,7 @@ function factoryCall(guard: DeclaredGuard): { readonly imported: string | null;
     case 'resultSatisfiesCondition':
       return { imported: 'resultSatisfiesCondition', lines: resultSatisfiesConditionLines(guard, act) };
     case 'precondition':
-      return { imported: 'precondition', lines: preconditionLines(guard) };
+      return { imported: 'precondition', lines: preconditionLines(guard, facts, siblings) };
     case 'role':
       return { imported: 'precondition', lines: roleLines(guard) };
     case 'maxCalls':
@@ -559,8 +598,9 @@ function factoryCall(guard: DeclaredGuard): { readonly imported: string | null;
  *  rule where the factory does not already take it. A `prose` rule carries its name and its
  *  sentence inside the call, so its literal states nothing but the acts the sentence is stamped
  *  on and the whole guard stands on one line. */
-function guardLines(guard: DeclaredGuard, depth: number): readonly string[] {
-  const call = factoryCall(guard);
+function guardLines(guard: DeclaredGuard, depth: number, facts: SurfaceFacts,
+                    siblings: readonly DeclaredGuard[]): readonly string[] {
+  const call = factoryCall(guard, facts, siblings);
   if (guard.factory === 'prose') {
     return [indent(depth, `{ ...${call.lines[0]}, tool: ${list(guard.acts)} }`)];
   }
@@ -754,7 +794,7 @@ function contractLines(declaration: Declaration, facts: SurfaceFacts): readonly 
     [indent(1, `name: ${quote(contract.name)}`)],
     [indent(1, `voice: ${quote(contract.voice)}`)],
     block('facts: [', commaJoin(contract.facts.map(fact => [indent(2, quote(fact))])), ']'),
-    block('guards: [', commaJoin(contract.guards.map(guard => guardLines(guard, 2))), ']'),
+    block('guards: [', commaJoin(contract.guards.map(guard => guardLines(guard, 2, facts, contract.guards))), ']'),
     block('disclosure: {', commaJoin(Object.entries(contract.disclosure)
       .map(([act, entry]) => disclosureLines(act, entry, facts, 2))), '}'),
     ...(contract.rewrites === undefined ? [] : [block('rewrites: [',
@@ -956,7 +996,7 @@ export function writeCards(declaration: Declaration, facts: SurfaceFacts): strin
   const types = ['AgentSpec', 'DomainContract', ...(teaches ? ['Guard'] : []),
     ...(readsResults ? ['Json'] : [])];
   const imported = [
-    ...declaration.contract.guards.map(guard => factoryCall(guard).imported)
+    ...declaration.contract.guards.map(guard => factoryCall(guard, facts, declaration.contract.guards).imported)
       .filter((name): name is string => name !== null),
     ...(declaration.contract.rewrites ?? []).map(rewrite => rewrite.kind),
     ...declaration.desks.flatMap(desk => (desk.judged ?? []).map(check => check.factory))
