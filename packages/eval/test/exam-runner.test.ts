@@ -18,7 +18,7 @@ const finish = (message: string, report: { tool: string; target: string; word: s
                 facts: readonly string[] = []):
   ModelStep => ({ calls: [{ tool: 'finish', args: { message, report, facts } }], text: '' });
 const routeStep = (desk: string): ModelStep =>
-  ({ calls: [{ tool: 'route', args: { desk } }], text: '' });
+  ({ calls: [{ tool: 'route', args: { desk, act: 'no' } }], text: '' });
 
 /** A two-desk house, world-free — these cases only ever call finish. */
 function routedSubject(): Subject {
