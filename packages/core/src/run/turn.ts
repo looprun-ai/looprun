@@ -63,6 +63,11 @@ export function contradictedLine(report: readonly ReportLine[], acts: readonly A
   return report.find(line => {
     const matching = acts.filter(a => a.call.tool === line.tool
       && (line.target === '' || JSON.stringify(a.call.args).includes(line.target)));
+    // A declination row is contradicted only by an act that RAN: the walk the row
+    // itself minted records not-done and supports it.
+    if (line.word === 'no_tool_called') {
+      return matching.some(a => a.status === 'done' || a.status === 'unknown');
+    }
     return matching.length > 0 && !matching.some(a => wordOf(a) === line.word);
   });
 }
@@ -388,7 +393,7 @@ export class Turn {
       if (finish !== null) {
         const judge = new Judge(port, seat.llmParams({}));
         const closed = await this.tryFinish(finish, draft, messages, operatorTexts,
-          history.pastActs(), desk.open(), notesNow(), owed, judge);
+          history.pastActs(), desk.open(), notesNow(), owed, judge, runner);
         if (closed === 'sealed') return session.seal(draft);
         retriesUsed += 1;
         if (retriesUsed > compiled.limits.retries) {
@@ -502,14 +507,22 @@ export class Turn {
   private async tryFinish(finish: RawCall, draft: TurnDraft, messages: Msg[],
                           operatorTexts: readonly string[],
                           pastActs: readonly Act[], open: readonly Question[],
-                          notes: readonly string[], facts: readonly DeliveryFact[],
-                          judge: Judge): Promise<'sealed' | 'redrive'> {
+                          notes: readonly string[], staleFacts: readonly DeliveryFact[],
+                          judge: Judge, runner: CallRunner): Promise<'sealed' | 'redrive'> {
     const { compiled, finishDesk: fd, promptWriter: pw } = this.deps;
     const parsed = fd.parse(finish.args);
     if (!parsed.ok) {
       messages.push({ role: 'user', text: pw.correction([parsed.detail]) });
       return 'redrive';
     }
+    // A named declination runs the declined act's own walk, no execution: every deny
+    // becomes a refused act whose sentence is a spoken owed fact — the blocker, the
+    // names, the ceiling — forced into the delivery in any language.
+    const declinedRows = parsed.finish.report.filter(r => r.word === 'no_tool_called'
+      && r.tool !== '' && !draft.acts.some(a => a.call.tool === r.tool));
+    for (const row of declinedRows) await runner.decline(row.tool, row.target, draft);
+    const facts = declinedRows.length > 0
+      ? assembleFacts(draft.acts, open, draft.closed, notes) : staleFacts;
     const records = groundedRecords(operatorTexts, [...draft.acts, ...pastActs], facts);
     const violations = [...this.replyViolations(parsed.finish, draft, pastActs, facts,
       records, true)];

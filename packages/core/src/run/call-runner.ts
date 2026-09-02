@@ -65,6 +65,55 @@ export class CallRunner {
     this.deps = deps;
   }
 
+  /** The declined act's walk: build the call the row names — the row's target under
+   *  the surface fact's own target argument — and walk the deny phase without
+   *  executing anything. A deny records exactly as a refusal does, so its sentence
+   *  becomes a spoken owed fact; an act nothing refuses records as declined in the
+   *  engine's own words. Nothing runs, nothing holds, nothing is asked. */
+  async decline(tool: string, targetValue: string, draft: TurnDraft): Promise<Act> {
+    const { rulebook, compiled } = this.deps;
+    const fact = compiled.facts.tools[tool];
+    if (!fact) {
+      return this.record(draft, {
+        origin: 'engine', call: deepFreeze({ tool, args: {}, key: `off-surface:${tool}` }),
+        effect: 'read', said: null, status: 'not-done', reason: 'blocked', evidence: 'engine',
+        sentence: `${tool} — not-done (no tool by that name is on this surface)`,
+        owed: null, result: null
+      });
+    }
+    const args = fact.target !== null && fact.target !== undefined && targetValue !== ''
+      ? { [fact.target]: targetValue } : {};
+    const coerced = CanonicalCall.of(tool, args, fact);
+    const call = 'badArg' in coerced ? CanonicalCall.of(tool, {}, fact) : coerced;
+    if ('badArg' in call) {
+      return this.record(draft, {
+        origin: 'engine', call: deepFreeze({ tool, args: {}, key: `declined:${tool}` }),
+        effect: fact.effect, said: null, status: 'not-done', reason: 'refused',
+        evidence: 'engine',
+        sentence: `${tool}() — not-done (the desk declined to make this call)`,
+        owed: null, result: null
+      });
+    }
+    const ctx = this.callCtx(call, fact, 'engine', draft);
+    const verdict = rulebook.checkPreTool(ctx);
+    if (verdict.kind === 'refuse') {
+      const rule = rulebook.guards().guards.find(g => g.name === verdict.guardName)?.rule ?? '';
+      return this.record(draft, {
+        origin: 'engine', call: call.data(v => this.deps.masker.maskData(v)), effect: fact.effect,
+        said: null, status: 'not-done', reason: 'refused', evidence: 'engine',
+        sentence: `${this.head(call, fact)} — not-done (${`${rule} ${verdict.detail}`.trim()})`,
+        owed: { kind: 'refusal', text: `${rule} ${verdict.detail}`.trim() },
+        result: null
+      }, undefined, null, verdict.guardName);
+    }
+    return this.record(draft, {
+      origin: 'engine', call: call.data(v => this.deps.masker.maskData(v)), effect: fact.effect,
+      said: null, status: 'not-done', reason: 'refused', evidence: 'engine',
+      sentence: `${this.head(call, fact)} — not-done (the desk declined to make this call)`,
+      owed: null, result: null
+    });
+  }
+
   async run(raw: RawCall, origin: Act['origin'], draft: TurnDraft): Promise<Act> {
     return this.runChecked(raw, origin, draft, this.oweBudget(raw.tool));
   }
