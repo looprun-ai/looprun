@@ -89,7 +89,9 @@ One decision, ONE door, one consequence.
 
 ## 5 · Acceptance
 
-1. Workspace green; rendered prompts byte-identical except the router schema field.
+1. Workspace green. The only prompt the change touches is the front desk's own window: it
+   gains the `act` field on the `route` schema and the sentence that asks for it. Every desk
+   prompt is byte-identical — the act micro-step composes a step of its own and edits none.
 2. Pinned 12 and chat EN letters: no point lost.
 3. Chat PT: 55, 100 and 48 pay — the driven attempt fires the guards and the forced facts
    cross the language. The full run judged in session, floors and letters together.
