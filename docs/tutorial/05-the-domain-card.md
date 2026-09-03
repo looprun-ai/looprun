@@ -103,6 +103,37 @@ Two consequences follow from `tools` alone:
 Both desks share the contract: the same voice, the same facts, the same tool guards, the same
 disclosure sentences, the same secrets. Nothing is copied between them.
 
+## Step 14 — the desk for whoever arrives
+
+A guest who says hello asks for neither desk, and so does a guest asking something this
+business does not hold. That message reaches a desk anyway. Mark one of your own with
+`default: true` — at most one desk of a house carries it — and every message the front desk
+matched to nobody is delivered there:
+
+```typescript
+export const reception: AgentSpec = {
+  name: 'reception',
+  persona: 'Reception: it welcomes the guest and says which desk holds what.',
+  tools: [],
+  description: 'welcoming a guest and pointing them at the desk that holds their question',
+  summary: 'the reception that welcomes you',
+  default: true
+};
+```
+
+Mark none, and the house seats its own front of house: it performs nothing, reads nothing,
+greets whoever arrives, states what the house covers in the desks' own summaries, and declines
+what the house does not hold — in the language the guest wrote in. It stands outside the desk
+list, so the front desk still chooses between exactly the desks you declared.
+
+```
+  the delivery      unreturnable, and carried as asking for no change: a message no desk
+                    performs asks this house to change nothing, and there is nowhere left
+                    to hand it back to
+  the record        routing names the desk that spoke and says the router never chose it,
+                    which the chat door reads back as `none → reception`
+```
+
 ## The whole card, in one view
 
 ```
@@ -113,6 +144,8 @@ disclosure sentences, the same secrets. Nothing is copied between them.
   tools         the lane              facts         truths every desk states
   description   what it does, in verbs guards        what ANY lane owes
   summary       the house's own words
+  default       serves what matched
+                nobody, one per house
   guards        this desk's rules     disclosure    per tool, three tenses
   llmParams     per-field merge       secrets       masked at every seam
   limits        per-field merge       rewrites      edit the reply, decide nothing

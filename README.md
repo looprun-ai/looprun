@@ -160,6 +160,13 @@ can return it once; the front desk re-routes with the desk's own reason. The dec
 `TurnRecord.routing`, never a side channel, so the record says who served the turn and why it
 moved.
 
+A message the front desk matches to no desk still reaches one. A subject marks a desk of its
+own with `default: true` — at most one, and only in a house of several — and a house that marks
+none is served by the front of house the engine seats: it performs nothing and reads nothing,
+it greets whoever arrives, it states what the house covers in the desks' own summaries, and it
+declines what the house does not hold — in the language the person wrote in. The routing line
+names who spoke and who chose them, so a desk the router never picked reads as `none → general`.
+
 Talk to any generated subject the same way, from a terminal:
 
 ```bash
@@ -168,11 +175,17 @@ npx looprun chat subjects/atlas-equipment-rentals
 
 ```
 atlas-equipment-rentals · 3 desks: billing claims rentals
+you > Hello?
+[none → general]
+Hello, and welcome to atlas-equipment-rentals. This house covers the rental
+counter, the claims desk and the billing desk. How can I help?
 you > Cancel booking bk_1001, the customer backed out.
 [router → rentals]
 Booking bk_1001 is ready to cancel: cancelling ends the rental and returns the
 equipment to the yard. To go ahead, reply with just 733412.
 ```
+
+`--quiet` leaves the conversation alone on the terminal: no desk list, no routing line.
 
 ## Framework-agnostic by construction
 

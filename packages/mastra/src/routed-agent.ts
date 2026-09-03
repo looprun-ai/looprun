@@ -107,16 +107,16 @@ function descriptionsOf(specs: Readonly<Record<string, AgentSpec>>): Readonly<Re
   return Object.fromEntries(lines.filter(stated));
 }
 
-/** What a person at the counter calls each desk. The house's own refusal is built from
- *  these, so an operator whose message no desk performs hears what the house does cover. */
+/** What a person at the counter calls each desk. The house's front of house states what the
+ *  house covers in these words, so an operator whose message no desk performs hears it. */
 function summariesOf(specs: Readonly<Record<string, AgentSpec>>): readonly string[] {
   const lines = Object.entries(specs).map(([name, spec]) => [name, spec.summary] as const);
   const missing = lines.filter(e => !stated(e)).map(([name]) => name);
   if (missing.length > 0) {
     throw new CardError(missing.map(name => ({ code: 'SUMMARY_MISSING',
-      sentence: `Desk '${name}' states no summary: the house refuses a message no desk `
-        + 'performs by naming what it does cover, and a desk with no summary would be named '
-        + 'to the operator by its label instead.' })));
+      sentence: `Desk '${name}' states no summary: the house's front of house says what the `
+        + 'house covers in these words, and a desk with no summary would be named to the '
+        + 'operator by its label instead.' })));
   }
   return lines.filter(stated).map(([, line]) => line);
 }

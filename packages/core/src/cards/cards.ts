@@ -28,8 +28,8 @@ export interface AgentSpec {
    *  Required on every desk of a multi-desk subject; never on a single desk. */
   description?: string;
   /** The same desk in a handful of words — what a person at the counter would call it.
-   *  The house's own refusal is built from these, so an operator asking for something no
-   *  desk performs hears what the house does cover, and never a label like 'desk2'.
+   *  The house's front of house states what the house covers in these words, so an operator
+   *  asking for something no desk performs hears it, and never a label like 'desk2'.
    *  Required on every desk of a multi-desk subject; never on a single desk. */
   summary?: string;
   /** The desk a message no desk matched is delivered to. At most ONE desk of a house

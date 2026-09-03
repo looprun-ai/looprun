@@ -491,17 +491,18 @@ function checkRoutingLines(declaration: Declaration): readonly string[] {
           + `${desks.length} desks routes every message by the description line each desk states, and a `
           + `blank line matches no message — write the routing line '${desk.name}' answers to.`];
       }
-      // The house refuses a message no desk performs by naming what it DOES cover. Without a
+      // The house's own front of house states what the house covers in these words. Without a
       // summary the operator would be handed the desk's label, which is a name for the author.
-      if (desk.summary !== undefined && desk.summary.includes(',')) {
-        return [`desks[${deskIndex}].summary on '${desk.name}' carries a comma: the comma is the `
-          + 'house\'s own list separator when it names what it covers, so a summary carrying one '
-          + 'dissolves the boundary between two desks.'];
+      if (desk.summary !== undefined
+          && (desk.summary.includes(',') || desk.summary.includes(';'))) {
+        return [`desks[${deskIndex}].summary on '${desk.name}' carries a comma or a semicolon: `
+          + 'those are the separators the house uses when it names what it covers, so a summary '
+          + 'carrying one dissolves the boundary between two desks.'];
       }
       if (desk.summary === undefined || desk.summary.trim() === '') {
-        return [`desks[${deskIndex}].summary is missing on '${desk.name}': the house refuses a `
-          + 'message no desk performs by naming what it does cover, in the words a person at the '
-          + `counter would use — write what somebody would call '${desk.name}'.`];
+        return [`desks[${deskIndex}].summary is missing on '${desk.name}': the house's front of `
+          + 'house says what the house covers in these words, in the way a person at the counter '
+          + `would say it — write what somebody would call '${desk.name}'.`];
       }
       return [];
     });
