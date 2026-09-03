@@ -535,10 +535,12 @@ describe('writeCards', () => {
       factory: 'role', args: { read: 'getInvoice', at: 'grade', in: ['owner'], roster: ROSTER },
       rule: 'Moving money needs the money capability.' }] });
     const out = writeCards(declaration, FACTS);
-    // Neither read is the law the card states, so each speaks for itself: a check that could
-    // not run has not been refused BY the rule, and the rule never rides in front of it.
+    // The acting record is not the law the card states: with it unread the role was never
+    // judged, so that branch speaks for itself. The roster branch IS the law refusing —
+    // the role has already failed the gate and only the names are missing — so its words
+    // ride after the rule.
     expect(out).toContain('{ says: \'the acting member record was not read this conversation');
-    expect(out).toContain('{ says: \'the roster was not read this conversation');
+    expect(out).toContain('return \'the roster was not read this conversation');
   });
 
   test('a role gate states the values its field may carry, and refuses without them', () => {

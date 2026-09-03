@@ -404,9 +404,10 @@ function roleLines(guard: DeclaredGuard): readonly string[] {
     `  const value = walkAnswer(answer, ${quote(at)});`,
     `  if (${list(allowed)}.some(declared => declared === value)) return true;`,
     `  const roster = reads.latest(${quote(roster.read)})?.answer;`,
+    // The roster branch is the LAW refusing: the acting role has already failed the gate,
+    // and only the names are missing — so the card's rule speaks, and this rides after it.
     `  if (roster === undefined) {`,
-    `    return { says: 'the roster was not read this conversation, so nobody can be named. `
-      + `Call ${roster.read}, and then make this call again' };`,
+    `    return 'the roster was not read this conversation — read it, then name who can';`,
     `  }`,
     `  return nameWhoCan(${roster.at === '' ? 'roster' : `walkAnswer(roster, ${quote(roster.at)})`}, `
       + `${quote(roster.role)}, ${quote(roster.label)}, ${quote(roster.key)}, ${list(allowed)});`,
