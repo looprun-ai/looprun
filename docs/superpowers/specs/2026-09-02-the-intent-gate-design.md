@@ -1,5 +1,9 @@
 # The intent gate — design
 
+Date: 2026-09-02 · Status: CLOSED — shipped. `act` rides the `route` schema in
+`packages/core/src/run/front-desk.ts`, both doors read it, and the act micro-step lives in
+`packages/core/src/run/turn.ts` beside the owed-read one it is shaped after.
+
 An operator's message either asks for an ACT or it does not, and that decision is made ONCE,
 as data, at ONE door: every message enters through the front desk's `route()` call, chat and
 pinned alike — a single desk just makes the desk half of the answer trivial. A turn the

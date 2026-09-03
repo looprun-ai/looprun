@@ -1,5 +1,10 @@
 # The seam says where — design
 
+Date: 2026-09-02 · Status: CLOSED — shipped. `SeamRow.where` and `SeamRow.spoken` live in
+`packages/eval/src/lints.ts`, the table in `packages/emit/src/write-artifacts.ts`, and
+`absent: true` in `packages/emit/src/write-cards.ts`. The skill teaches the row and the flag in
+`references/norms.md` and `references/author.md`.
+
 A refusal the world spells out reaches the operator at one of two moments: straight from the
 call, or after they have already sent a confirmation code. The seam table now states which,
 act by act, and names every rule that covers the act rather than the first one written. What
