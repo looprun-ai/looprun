@@ -39,7 +39,7 @@ test('a desk that calls nothing on the act step ends the turn as it would have',
   const model = payingDesk([
     finishStep('I cannot do that.', []),
     // the act micro-step: the desk answers with no call at all
-    { calls: [], usage: { inputTokens: 0, outputTokens: 0, cachedInputTokens: 0,
+    { calls: [], text: '', usage: { inputTokens: 0, outputTokens: 0, cachedInputTokens: 0,
       reasoningTokens: 0 } }
   ]);
   const { engine } = testEngine({ model, guards: [] });
@@ -70,7 +70,7 @@ test('a no turn and an unclear turn are never driven to a call', async () => {
 test('the act step is spent once — a second refusal is not driven again', async () => {
   const model = payingDesk([
     finishStep('I cannot do that.', []),
-    { calls: [], usage: { inputTokens: 0, outputTokens: 0, cachedInputTokens: 0,
+    { calls: [], text: '', usage: { inputTokens: 0, outputTokens: 0, cachedInputTokens: 0,
       reasoningTokens: 0 } },
     finishStep('Still no.', [])
   ]);

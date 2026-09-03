@@ -21,7 +21,7 @@ function readingScript() {
 
 /** The assistant messages of one window, oldest first — one per sealed turn. */
 function assistantTexts(input: StepInput): readonly string[] {
-  return input.messages.filter(m => m.role === 'assistant').map(m => m.text);
+  return input.messages.flatMap(m => m.role === 'assistant' ? [m.text] : []);
 }
 
 /** The window each turn opened with, turn 1 first. */

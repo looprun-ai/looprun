@@ -92,7 +92,7 @@ member to the owner role. Would you like to do that?"*
 
 The differing cases were re-judged by one judge each: verify1 38 PASS / 0 FAIL / 1 hedge, verify2
 37 / 0 / 1 (case 36 both times, the same gap REPORTED carries). That judge read more leniently
-than the panel — 10, 75 and 97 pass for it — so the re-runs' band is not the panel's band; what
+than the panel — 10, 75 and 97 pass for it — so the re-runs' range is not the panel's range; what
 the re-runs establish is narrower and enough: the same build produces the same defect classes
 on 38–39 changed replies per run, and never an invariant failure. REPORTED is the top draw of
 four self-reads on one build (99 · 96 · 99 · 100); whether that is selection or chance cannot be
@@ -152,7 +152,7 @@ report — they are recorded here (§5).
 
 In 400 exam executions and nine probes, no gated act ran without a token in the operator's
 message. The exam's 88 licensed two-step acts (22 per run) were cleared by tokens the runner
-typed from the desk's ledger — that is how an `approve` turn is scripted, on both sides — so
+typed from the desk's consent record — that is how an `approve` turn is scripted, on both sides — so
 the exam does not test a human mistyping; the probes do: a re-typed spent token, a wrong token,
 a pre-authorisation smuggled into the message, two acts with one token, all held. That is the
 training set run four times plus nine hand-written attacks; it is not a production measurement,
@@ -279,7 +279,7 @@ so today neither side has a working structural answer for a bare booking request
 Read at the closest available strictness, the governed main build is a few points ahead in
 English (92–94 one reader vs 86–90 panel) and the instruments differ in three measurable ways
 (panel size, hedge bucket, evidence package: the certification reader had the dumps, the panel
-had rubric + transcript + trace JSON). The old ledger's "governed 92 vs traditional 78" is dead —
+had rubric + transcript + trace JSON). The old tally's "governed 92 vs traditional 78" is dead —
 that 78 was an earlier build (dispatch of Aug 23, judged Aug 29) that also had to write its own
 backend simulator; the rebuilt agent is different and cleaner. The Portuguese column is the one
 a Brazilian deployment decides on, and today only the traditional side has a panel number there.
@@ -321,7 +321,7 @@ trialworks         5 rounds, $0.30, 29/29, English SYNONYMS regexes       9 roun
 | 3 | **The exam is the training set** — rubric sentences in the gate directives (§1.3); all 100 cases `fix` | every failing letter becomes a directive | the T-loop trains on the same `fix` set and the declaration carries rubric sentences too (§1.3) |
 | 4 | **Self-judging, net-positive rounds, one run is the score** | 100 self / 86–90 strict; rounds 6–10 read 96–99 | self 96 / strict 92; a round that pays one line and breaks another "has paid nothing" |
 
-And the recipe itself is looprun's law list in prose (consent ledger with a minted code, owed
+And the recipe itself is looprun's law list in prose (a consent record with a minted code, owed
 content checked in conversation, figures from records, role table in data, record text as data,
 repeats restated). Between the earlier traditional attempt (self-read 78) and this one, three
 things changed at once — that recipe section, a given backend instead of a self-written
@@ -391,7 +391,7 @@ are not counted against the traditional side here.
 
 | process | why |
 |---|---|
-| **No self-judged score is recorded, on either side.** A written panel protocol (three readers, disjoint thirds, the same evidence package — rubric, transcript, trace — and the certification's hedge rule), the panel's band is the number | every ruling of the month was made on a number 2–14 points high, on both sides |
+| **No self-judged score is recorded, on either side.** A written panel protocol (three readers, disjoint thirds, the same evidence package — rubric, transcript, trace — and the certification's hedge rule), the panel's range is the number | every ruling of the month was made on a number 2–14 points high, on both sides |
 | **The T-loop author gets the full dump row and a seam-report channel** in place of "stop at the boundary" | Q2.1 |
 | **The reply-layer freeze is a file list**, not a sentence: `turn.ts`, `delivery-facts.ts`, `choice-desk.ts`, `finish-desk.ts`, `prompt-writer.ts` change only through the program below | five reply-layer refactors in a month, each ±5–10 points |
 | **METRICS.md on the governed side**, every run: steps, tokens, cache share, cost, redrives | none exists today |
@@ -399,7 +399,7 @@ are not counted against the traditional side here.
 #### Q3.1 · A super-minimal looprun as the base for the simple mechanism?
 
 The traditional build is already that shape: ~700 generic lines (loop, control answers, redrive,
-best draft, figure/date/id checks, ledger, reads in hand) + ~1,250 subject lines (`policy.ts`
+best draft, figure/date/id checks, consent record, reads in hand) + ~1,250 subject lines (`policy.ts`
 and the per-act directives in `gate.ts`) that the declaration (1,450) + generated cards (590)
 express on the governed side. Minimal-core went half way — it deleted before it replaced. The
 order is: add the two mechanisms, measure on the panel, then delete what no longer pays.
@@ -523,13 +523,13 @@ by eye before it entered the text.
 
 | the draft said | the review showed | now |
 |---|---|---|
-| "trad 86–95 vs governed 92–94 — the same band" | a three-judge band with a hedge bucket next to a one-reader point with none; 5 of the 9 hedges are the shape the certification fails | 86–90 under the cert's rule; instruments named in every table |
+| "trad 86–95 vs governed 92–94 — the same range" | a three-judge range with a hedge bucket next to a one-reader point with none; 5 of the 9 hedges are the shape the certification fails | 86–90 under the cert's rule; instruments named in every table |
 | "governed 96 in Portuguese" on the c20 row | that 96 is atlas-c17-ptbr (2026-08-24), self-read, and 54 of its 153 replies were English act-line dumps | "no valid number"; a governed PT panel run is step 3 of the program |
 | "void under its own recipe" (trad only) | the governed declaration carries the same rubric sentences (cases 53, 42: `cards.ts:540`); the phrase scan has no control (479 vs 286) | "the exam is inside the rules on both sides" |
 | `carries()` substring = a second named void | the recipe's ban is scoped to the operator's words; `carries()` reads the model's draft | a production defect, not a rule breach |
 | "the exam files are byte-identical" | the governed copy carries `covers` (guard names for the eval gate — not rubric text) | "identical field for field"; `covers` is not an answer key |
 | "the 78 → 100 jump came with the recipe" | the earlier build also had to write its own simulator; dates Aug 23/29 | three changes at once; not attributable to the recipe alone |
-| minimal-core "lost 11 points on atlas, 4 on trialworks" | the ledger's comparable set: 89.8 % vs 95.5 % (5.7); 12 rows are D-4 script debt; trialworks 3 real rows | both numbers, set named |
+| minimal-core "lost 11 points on atlas, 4 on trialworks" | the tally's comparable set: 89.8 % vs 95.5 % (5.7); 12 rows are D-4 script debt; trialworks 3 real rows | both numbers, set named |
 | "judge noise ±5 measured today" | no two judges read the same text | removed; the hedge-bucket asymmetry (EN 9, PT 2) stated instead |
 | "269 vs 804 calls" | 269 are invocations of 730 provider steps; governed counts steps | 730 vs 804; input per step 10.9 k vs 4.1 k |
 | "a byte-stable prefix for cache" as a mechanism to take across | governed is 2.3× cheaper uncached; the provider cache returned 0 at 4,051 tokens; STATE-last lost 6.5× on llama.cpp | dropped; §6.4 lists what does pay |
@@ -539,6 +539,6 @@ by eye before it entered the text.
 | "the choice rule fell in Portuguese" | the exam's own PT case 44 (a price request) asked first; the probe's bare booking goes to `createBooking` where no gate exists | reworded: prompt-sentence class, language-sensitive on a bare booking |
 | "no reuse: ~2,000 lines per subject" | the subject part is ~1,250 lines against a 1,450-line declaration; the generic 700 are simply not packaged | reworded |
 | stop rule: governed must reach 92 or trad wins by default | trad has never met 92 in any language and has never run blind | symmetric decision rule, same panel, same bar |
-| "the same world-layer profile as the governed engine" | the nine probes never ran on c20; the exam's approve turns are typed by the runner from the ledger | scoped; the probes on c20 are step 0 |
+| "the same world-layer profile as the governed engine" | the nine probes never ran on c20; the exam's approve turns are typed by the runner from the consent record | scoped; the probes on c20 are step 0 |
 | "freeze the reply layer" | unenforceable as a sentence; steps 0–2 edit that layer | a file list |
 | campaign table mixing a strict-corrected atlas with self-read harborpoint/trialworks | those are the older, confounded builds | labelled |

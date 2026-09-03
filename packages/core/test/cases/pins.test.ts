@@ -22,6 +22,7 @@ test('a precondition refuses what this conversation has not read', async () => {
     { calls: [], text: '' }
   ]);
   const r = await twoEntityChat(compiled, TWO, model, 'cancel x_1');
+  if (!('acts' in r)) throw new Error('the turn was returned to the front desk');
   expect(r.acts[0]).toMatchObject({ status: 'not-done', reason: 'blocked' });
   expect(r.acts[0].sentence).toContain('read it first');
 });
@@ -37,6 +38,7 @@ test('the answer a read returned licenses the precondition, and consent asks', a
     { calls: [], text: '' }, { calls: [], text: '' }, { calls: [], text: '' }
   ]);
   const r = await twoEntityChat(compiled, TWO, model, 'read and cancel x_1');
+  if (!('acts' in r)) throw new Error('the turn was returned to the front desk');
   expect(r.acts[0]).toMatchObject({ call: { tool: 'getBooking' }, status: 'done' });
   expect(r.acts.at(-1)).toMatchObject({ status: 'not-done', reason: 'held' });
 });

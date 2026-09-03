@@ -62,6 +62,8 @@ const ALLOW = [
   // `probe` also names an OFFLINE MEASURING INSTRUMENT — an experiment run against the engine, not
   // a world answering a question. "The margin simulate" is not a phrase.
   { path: 'docs/analysis/2026-08-04-lie-check-model-portability.md', word: 'probe', why: "the instrument's own report" },
+  { path: 'docs/analysis/2026-08-31-governed-vs-traditional-verdict.md', word: 'probe', why: "the instrument's own report: nine adversarial runs against both engines" },
+  { path: 'docs/analysis/2026-08-31-governed-vs-traditional-verdict.md', word: 'ledger', text: 'ledger.ts', why: 'a file name on the traditional side, outside this repository' },
   // ── the agentspec skill (gate this repo with --root ../agentspec) ────────────────────────────
   { path: 'skill/scripts/margin-probe.mjs', word: 'probe', why: 'the instrument itself' },
   { path: 'skill/scripts/serve-local.sh', word: 'probe', why: 'the instrument, in its serving recipe' },

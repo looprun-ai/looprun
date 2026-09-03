@@ -4,6 +4,10 @@
 import { test, expect } from 'vitest';
 import { argMatchesRecord, valueFromUserOrRecord } from '../../src/cards/catalog.js';
 import type { CallCtx } from '../../src/contract/vocabulary.js';
+import { factsFromWorld } from '../../src/cards/facts.js';
+import { HOSTILE } from '../fixtures/hostile-world.js';
+
+const FACTS = factsFromWorld(HOSTILE);
 
 const ANSWERS: Readonly<Record<string, unknown>> = {
   '{"bookingId":"bk_1"}': { booking: { id: 'bk_1', bay: 'north' } },
@@ -26,8 +30,11 @@ function ctxFor(bookingId: string): CallCtx {
 const BOUND = { read: 'getBooking', at: 'booking.bay', args: { bookingId: 'bookingId' } };
 const LOOSE = { read: 'getBooking', at: 'booking.bay' };
 
-const denial = (guard: ReturnType<typeof argMatchesRecord>, ctx: CallCtx): string | null =>
-  guard.compile('contract').deny(ctx as never);
+/** The words a denial carries: a plain string, or what a check that spoke for itself said. */
+const denial = (guard: ReturnType<typeof argMatchesRecord>, ctx: CallCtx): string | null => {
+  const denied = guard.compile('contract', FACTS).deny(ctx as never);
+  return denied === null ? null : typeof denied === 'string' ? denied : denied.says;
+};
 
 test('the argument is compared against the row the call names', () => {
   const bound = argMatchesRecord('moveBooking', 'bay', BOUND, 'The bay is the one on file.');

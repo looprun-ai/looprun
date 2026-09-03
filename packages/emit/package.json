@@ -3,16 +3,57 @@
   "version": "0.20.0",
   "type": "module",
   "description": "looprun emit: one YAML declaration of business sentences in, every line of a subject's TypeScript out. The emitter writes no sentence — a declaration missing a rule is an error, never a default.",
+  "keywords": [
+    "ai",
+    "agents",
+    "llm",
+    "governance",
+    "guardrails",
+    "agentspec",
+    "emit",
+    "yaml"
+  ],
   "license": "Apache-2.0",
+  "author": "LoopRun Team",
+  "homepage": "https://looprun.ai",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/looprun-ai/looprun.git",
+    "directory": "packages/emit"
+  },
+  "bugs": {
+    "url": "https://github.com/looprun-ai/looprun/issues"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
-  "bin": { "looprun-emit": "./dist/cli.js" },
-  "scripts": { "build": "tsc -p tsconfig.build.json", "clean": "rm -rf dist", "typecheck": "tsc --noEmit", "test": "vitest run" },
+  "bin": {
+    "looprun-emit": "./dist/cli.js"
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "rm -rf dist",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
   "dependencies": {
     "@looprun-ai/core": "workspace:^",
     "@looprun-ai/eval": "workspace:^",
     "yaml": "^2.6.0"
   },
-  "devDependencies": { "typescript": "^5.7.0", "vitest": "^2.0.0" },
-  "engines": { "node": ">=20" }
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "vitest": "^2.0.0"
+  },
+  "engines": {
+    "node": ">=20"
+  }
 }

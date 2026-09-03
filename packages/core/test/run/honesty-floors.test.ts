@@ -14,7 +14,7 @@ import { CanonicalCall } from '../../src/contract/canonical-call.js';
 function blankDraft(): TurnDraft {
   return { turn: 1, userText: '', servedBy: '', acts: [], corrections: [],
     issued: [], consumed: [], closed: [], finish: null, closedBy: 'model', text: '',
-    delivery: null, microTried: [], grounded: [],
+    delivery: null, microTried: [], grounded: [], unspokenReadReply: null,
     usage: { inputTokens: 0, outputTokens: 0, cachedInputTokens: 0, reasoningTokens: 0,
       modelCalls: 0 } };
 }

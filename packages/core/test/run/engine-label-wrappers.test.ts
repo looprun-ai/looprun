@@ -7,7 +7,7 @@ import type { DeliveryFact } from '../../src/run/delivery-facts.js';
 
 /** A turn owing three facts numbers them F1, F2, F3. */
 const THREE: readonly DeliveryFact[] = [
-  { kind: 'act', text: 'The records refuse it: SOLE_OWNER_PROTECTED.', state: 'refused' },
+  { kind: 'refusal', text: 'The records refuse it: SOLE_OWNER_PROTECTED.', state: 'refused' },
   { kind: 'ask', text: 'Removing mem_1001 frees their seat.', state: 'held' },
   { kind: 'code', text: '006353', state: null }
 ];

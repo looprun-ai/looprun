@@ -13,7 +13,7 @@ const clerk = new StatusClerk();
 function draft(): TurnDraft {
   return { turn: 1, userText: '', servedBy: '', acts: [], corrections: [],
            issued: [], consumed: [], closed: [], finish: null, closedBy: 'model', text: '', delivery: null,
-           microTried: [], grounded: [],
+           microTried: [], grounded: [], unspokenReadReply: null,
            usage: { inputTokens: 0, outputTokens: 0, cachedInputTokens: 0, reasoningTokens: 0,
                     modelCalls: 0 } };
 }
@@ -46,7 +46,7 @@ test('a throw on a write grades unknown — it may have landed', () => {
 });
 
 test('a veto grades not-done/blocked with engine evidence', () => {
-  expect(clerk.grade({ verdict: { kind: 'refuse', guardName: 'g', detail: 'd' }, actId: 'a1' },
+  expect(clerk.grade({ verdict: { kind: 'refuse', guardName: 'g', detail: 'd', says: false }, actId: 'a1' },
     'destructive', draft()))
     .toMatchObject({ status: 'not-done', reason: 'blocked', evidence: 'engine' });
 });
