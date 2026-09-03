@@ -1,12 +1,18 @@
 /** The chat door's entry, always run under the tsx loader: loads the subject door,
- *  composes the routed house, and hands the terminal to the REPL. */
+ *  composes the routed house, and hands the terminal to the REPL. The terminal carries
+ *  the conversation and nothing else: the model SDK's own warnings go to the console the
+ *  operator is reading, so they are turned off here. */
 import { SubjectLoader } from '@looprun-ai/eval';
 import { LoopRunAgent, RoutedAgent } from '@looprun-ai/mastra';
 import { startChat } from '@looprun-ai/server';
 
-const dir = process.argv[2];
+(globalThis as { AI_SDK_LOG_WARNINGS?: boolean }).AI_SDK_LOG_WARNINGS = false;
+
+const args = process.argv.slice(2);
+const quiet = args.includes('--quiet');
+const dir = args.find(a => !a.startsWith('--'));
 if (dir === undefined) {
-  console.error('usage: looprun chat <subject-dir>');
+  console.error('usage: looprun chat <subject-dir> [--quiet]');
   process.exit(2);
 }
 
@@ -31,4 +37,4 @@ const agent = RoutedAgent.fromSubject({ specs: subject.specs, contract: subject.
   world: subject.world, model: `${target.target.provider}/${target.model}` });
 const deskNames = Object.keys(subject.specs);
 await startChat({ agent, name: agent instanceof LoopRunAgent ? deskNames[0] : agent.name,
-  deskNames });
+  deskNames, quiet });

@@ -23,19 +23,23 @@ export interface ChatCfg {
   readonly agent: ChatAgent;
   readonly name: string;
   readonly deskNames: readonly string[];
+  /** Hides the routing line and the house's opening line, leaving the conversation as
+   *  the person on the other side reads it. */
+  readonly quiet?: boolean;
   readonly input?: NodeJS.ReadableStream;
   readonly output?: NodeJS.WritableStream;
 }
 
 /** The front desk's own verdict, read back as the one dim line the operator sees before
  *  the reply. The record can carry BOTH facts at once — a desk handed the message
- *  back AND the house's second decision was still no desk — so a return always names
- *  who returned it, with the desk rendered as `none` when there is none. */
+ *  back AND the house's second decision matched nothing — so a return always names who
+ *  returned it. A turn the router matched to no desk names the desk that spoke as the
+ *  house's default, never as the router's choice. */
 function routingLine(routing: TurnRouting): string {
   const desk = routing.desk ?? 'none';
+  const chose = routing.unmatched === true ? 'none' : 'router';
   const body = routing.returned !== null ? `${routing.returned.by} returned → ${desk}`
-    : routing.desk === null ? 'none'
-    : `router → ${desk}`;
+    : `${chose} → ${desk}`;
   return `${DIM}[${body}]${RESET}`;
 }
 
@@ -44,7 +48,9 @@ export async function startChat(cfg: ChatCfg): Promise<void> {
   const output = cfg.output ?? process.stdout;
   const write = (line: string): void => { output.write(`${line}\n`); };
 
-  write(`${cfg.name} · ${cfg.deskNames.length} desks: ${cfg.deskNames.join(' ')}`);
+  if (cfg.quiet !== true) {
+    write(`${cfg.name} · ${cfg.deskNames.length} desks: ${cfg.deskNames.join(' ')}`);
+  }
   const rl = createInterface({ input, output, prompt: PROMPT });
   // A piped, non-interactive input closes itself at EOF the moment every line has been
   // read — which can land while a turn is still mid-flight on its `await`. The prompt
@@ -61,7 +67,9 @@ export async function startChat(cfg: ChatCfg): Promise<void> {
     }
     try {
       const out = await cfg.agent.generate(line, { session: SESSION });
-      if (out.loopRun.routing !== undefined) write(routingLine(out.loopRun.routing));
+      if (out.loopRun.routing !== undefined && cfg.quiet !== true) {
+        write(routingLine(out.loopRun.routing));
+      }
       write(out.text);
     } catch (e: unknown) {
       if (!(e instanceof TurnFailure)) throw e;

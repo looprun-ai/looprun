@@ -4,7 +4,7 @@ import type { AgentSpec, ChatMsg, DeclaredWorld, ForeignExchange, ModelStep, Mod
               Msg, TurnReturned } from '@looprun-ai/core';
 import { ModelSeat, ScriptedModel, TurnFailure, WorldBuilder, mcpWorld,
          world } from '@looprun-ai/core';
-import { RoutedAgent, type RoutedSubjectCfg } from '../src/routed-agent.js';
+import { RoutedAgent, frontOfHouse, type RoutedSubjectCfg } from '../src/routed-agent.js';
 import { LoopRunAgent, type GovernedResult } from '../src/loop-run-agent.js';
 import { assemble } from '../src/agent-assembly.js';
 import { BOOKING, callStep, finishStep, payingDesk } from './fixtures/booking-world.js';
@@ -82,9 +82,12 @@ function desk(name: string, steps: readonly ModelStep[], card: DeclaredWorld = B
   return { agent, model };
 }
 
-function house(router: ScriptedModel, desks: Record<string, LoopRunAgent>): RoutedAgent {
+function house(router: ScriptedModel, desks: Record<string, LoopRunAgent>,
+               fallback?: { agent: Desk; name?: string }): RoutedAgent {
+  const front = fallback ?? { agent: desk('general', [finishStep('This house rents plant.')]).agent };
   return new RoutedAgent({ name: 'northgate', desks, description: DESCRIPTIONS,
-    summaries: ['the yard', 'the billing'], router });
+    summaries: ['the yard', 'the billing'],
+    fallback: front.agent, fallbackName: front.name ?? 'general', router });
 }
 
 test('a message routes to a desk; the record carries the routing and the router\'s tokens', async () => {
@@ -120,31 +123,30 @@ test('a continuation carries the current desk and the last exchange into the win
     { role: 'user', text: 'when?' }]);
 });
 
-test('none refuses at the front desk, touches no desk, and the history still grows', async () => {
+test('none reaches the default desk, touches no other, and the history still grows', async () => {
   const router = new ScriptedModel([routeStep('none', 300, 6), routeStep('billing')]);
   const yard = desk('yard', []);
   const billing = desk('billing', [finishStep('The invoice is paid.')]);
-  const agent = house(router, { yard: yard.agent, billing: billing.agent });
+  const general = desk('general', [finishStep('This house rents plant; nobody here reads a forecast.')]);
+  const agent = house(router, { yard: yard.agent, billing: billing.agent },
+    { agent: general.agent });
 
   const out = await agent.generate('what is the weather tomorrow?', { session: 's1' });
 
-  expect(out.text).toBe(
-    'No desk at northgate performs this. The house covers: the yard and the billing.');
-  expect(out.loopRun).toEqual({
-    turn: 1, servedBy: 'front-desk', userText: 'what is the weather tomorrow?',
-    acts: [], questions: { issued: [], consumed: [], closed: [] },
-    finish: null, corrections: [], text: out.text,
-    delivery: { by: 'floor', retried: false, facts: [] }, closedBy: 'engine',
-    usage: { inputTokens: 300, outputTokens: 6, cachedInputTokens: 0,
-             reasoningTokens: 0, modelCalls: 1 },
-    routing: { desk: null, returned: null } });
+  expect(out.text).toContain('nobody here reads a forecast');
+  expect(out.loopRun.routing).toEqual({ desk: 'general', returned: null, unmatched: true });
+  // One router step and the default desk that spoke.
+  expect(out.loopRun.usage.modelCalls).toBe(2);
+  expect(out.loopRun.usage.inputTokens).toBe(300);
   expect(yard.model.seen).toHaveLength(0);
   expect(billing.model.seen).toHaveLength(0);
+  // The message asks this house to change nothing, and the door back is shut: there is
+  // nowhere left to send it.
+  expect(general.model.seen[0].tools.map(t => t.name)).not.toContain('notMine');
 
-  // The house said it; the history carries it, so the next window reads it back.
+  // The default desk said it; the history carries it, so the next window reads it back.
   await agent.generate('has the invoice been paid?', { session: 's1' });
   expect(router.seen[1].messages[1]).toEqual({ role: 'assistant', text: out.text });
-  expect(router.seen[1].system).toContain('The conversation is just opening.');
 });
 
 test('a returned message re-routes once; the reason rides the window and the door is gone', async () => {
@@ -187,9 +189,10 @@ test('a return the front desk answers with none still bills the desk that read i
 
   const out = await agent.generate('what is the weather tomorrow?', { session: 's1' });
 
-  expect(out.loopRun.routing).toEqual(
-    { desk: null, returned: { by: 'yard', reason: 'that is nobody\'s work here' } });
-  expect(out.loopRun.usage.modelCalls).toBe(3);
+  expect(out.loopRun.routing).toEqual({ desk: 'general', unmatched: true,
+    returned: { by: 'yard', reason: 'that is nobody\'s work here' } });
+  // Two router steps, the yard's read that handed it back, and the default desk.
+  expect(out.loopRun.usage.modelCalls).toBe(4);
   expect(out.loopRun.usage.inputTokens).toBe(730);
   expect(out.loopRun.usage.outputTokens).toBe(15);
 });
@@ -437,6 +440,40 @@ test('fromSubject refuses a description line that says nothing — blank is no l
     billing: { name: 'billing', persona: 'You run billing.', description: '   ', summary: 'the desk' } };
   expect(() => RoutedAgent.fromSubject({ specs, world: BOOKING,
     model: { scripted: { steps: [] } } })).toThrow(/billing/);
+});
+
+test('a desk the subject marked default serves what the front desk matched to nobody', async () => {
+  const router = new ScriptedModel([routeStep('none')]);
+  const reception = desk('reception', [finishStep('I can point you at the right desk.')]);
+  const agent = house(router, { yard: desk('yard', []).agent, billing: desk('billing', []).agent,
+                                reception: reception.agent },
+    { agent: reception.agent, name: 'reception' });
+
+  const out = await agent.generate('hello there', { session: 's1' });
+
+  expect(out.text).toContain('point you at the right desk');
+  expect(out.loopRun.routing).toEqual({ desk: 'reception', returned: null, unmatched: true });
+});
+
+test('fromSubject refuses two desks that each declare themselves the default', () => {
+  const specs: Record<string, AgentSpec> = {
+    yard: { ...DESKS.yard, default: true },
+    billing: { ...DESKS.billing, default: true } };
+  expect(() => RoutedAgent.fromSubject({ specs, world: BOOKING,
+    model: { scripted: { steps: [] } } })).toThrow(/yard, billing/);
+});
+
+test('fromSubject refuses a lone desk that declares itself the default', () => {
+  const specs: Record<string, AgentSpec> = { yard: { ...DESKS.yard, default: true } };
+  expect(() => RoutedAgent.fromSubject({ specs, world: BOOKING,
+    model: { scripted: { steps: [] } } })).toThrow(/only desk/);
+});
+
+test('the front of house the engine seats states what the house covers and holds no tool', () => {
+  const spec = frontOfHouse('northgate', ['the yard', 'the billing']);
+  expect(spec.tools).toEqual([]);
+  expect(spec.persona).toContain('northgate');
+  expect(spec.persona).toContain('the yard; the billing');
 });
 
 /** The plain user and assistant lines of a desk's window — an acts message is the

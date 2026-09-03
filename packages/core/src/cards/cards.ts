@@ -32,6 +32,12 @@ export interface AgentSpec {
    *  desk performs hears what the house does cover, and never a label like 'desk2'.
    *  Required on every desk of a multi-desk subject; never on a single desk. */
   summary?: string;
+  /** The desk a message no desk matched is delivered to. At most ONE desk of a house
+   *  carries it, and only a house of several desks has one: a lone agent has no front
+   *  desk in front of it and nothing to fall back from. Omitted on every desk — the
+   *  house seats its own front of house, which greets whoever arrives, says what the
+   *  house covers and declines what the house does not hold. */
+  default?: boolean;
   /** Guards about how THIS desk works. Highest priority. Omitted = []. */
   guards?: readonly Guard[];
   /** THE JUDGED PASS, opted into by the desk that pays for it: one extra model call

@@ -6,7 +6,7 @@
  *   looprun models status [alias]
  *   looprun models pull <alias> [--yes]
  *   looprun models serve <alias>
- *   looprun chat <subject-dir>
+ *   looprun chat <subject-dir> [--quiet]
  */
 import { createInterface } from 'node:readline/promises';
 
@@ -16,7 +16,8 @@ const HELP = `looprun <command>
   models status [alias]            Binary / model file / server health per alias.
   models pull <alias> [--yes]      Download the model GGUF (asks consent — sizes are 2.5–17 GB).
   models serve <alias>             Start llama-server with the validated flags (Ctrl-C stops).
-  chat <subject-dir>               Talk to a generated subject in the terminal.
+  chat <subject-dir> [--quiet]     Talk to a generated subject in the terminal.
+                                   --quiet hides the routing line and the desk list.
 
 Local model tiers: ram24 (default, ~11.8 GB) · ram16 (16 GB machines) ·
 ram32 (~17.2 GB) · ram8 (8 GB machines, ~2.5 GB) · qwen3.5-4b (plain fallback, ~2.9 GB)
@@ -118,8 +119,11 @@ async function main() {
     const here = createRequire(import.meta.url);
     const loader = here.resolve('tsx');
     const main = fileURLToPath(new URL('../dist/chat-main.js', import.meta.url));
+    // The command's own words are stripped of flags above; the chat door reads its own,
+    // so they are handed back to it here.
+    const flags = process.argv.slice(2).filter((a) => a.startsWith('--'));
     const child = spawn(process.execPath,
-      ['--import', loader, main, ...(dir === undefined ? [] : [dir, ...rest])],
+      ['--import', loader, main, ...(dir === undefined ? [] : [dir, ...rest, ...flags])],
       { stdio: 'inherit' });
     child.on('exit', (code) => process.exit(code ?? 1));
     return;

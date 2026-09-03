@@ -134,7 +134,11 @@ export interface ProvenanceMark { readonly id: string; readonly origin: string }
  *  the turn — the provenance the desk was allowed to stand on; absent when none did. */
 export interface TurnRouting { readonly desk: string | null;
                                readonly returned: null | { readonly by: string; readonly reason: string };
-                               readonly grounded?: readonly ProvenanceMark[] }
+                               readonly grounded?: readonly ProvenanceMark[];
+                               /** The front desk matched no desk and the house's default
+                                *  desk served the turn: `desk` names who spoke, and this
+                                *  says the router never chose them. */
+                               readonly unmatched?: true }
 /** A desk's own decision to hand a message back to the front desk, with the reason the
  *  operator reads and what the desk spent reading the message. A returning turn seals no
  *  record, so `usage` is the only place those model calls are ever named — the front desk

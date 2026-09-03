@@ -28,6 +28,8 @@ import { MastraModelPort } from './mastra-model-port.js';
 /** The decision that names no desk, and the name the history gives the turn it refuses. */
 const NONE = 'none';
 const FRONT_DESK = 'front-desk';
+/** The name the engine's own default desk carries on the record and in the routing line. */
+const FRONT_OF_HOUSE = 'general';
 
 /** One delivered exchange of the house's history: the desk that served, the operator's
  *  words, the words the operator read back, and the provenance that turn's own recorded
@@ -119,6 +121,33 @@ function summariesOf(specs: Readonly<Record<string, AgentSpec>>): readonly strin
   return lines.filter(stated).map(([, line]) => line);
 }
 
+/** The desk a message no desk matched is delivered to. A house names at most one, and a
+ *  house that names none is served by the front of house the engine seats itself. */
+function defaultOf(specs: Readonly<Record<string, AgentSpec>>): string | null {
+  const marked = Object.entries(specs).filter(([, spec]) => spec.default === true).map(([n]) => n);
+  if (marked.length > 1) {
+    throw new CardError([{ code: 'DEFAULT_DESK_DUP',
+      sentence: `Desks ${marked.join(', ')} each declare themselves the default: a message no `
+        + 'desk matched is delivered to ONE desk, and a house that names several names none.' }]);
+  }
+  return marked[0] ?? null;
+}
+
+/** The front of house the engine seats when the subject marks no desk its default. It
+ *  performs nothing and reads nothing: it greets whoever arrives, states what the house
+ *  covers in the words the desks state about themselves, and declines what the house does
+ *  not hold — in the language the person wrote in. */
+export function frontOfHouse(houseName: string, summaries: readonly string[]): AgentSpec {
+  return { name: FRONT_OF_HOUSE,
+    persona: `You are the front of house at ${houseName}. You perform nothing and you read `
+      + 'no record. You greet whoever arrives, and you say what this house covers: '
+      + `${summaries.join('; ')}. You answer in the language the person wrote in. A request `
+      + 'this house does not hold you decline in one sentence, naming what the house does '
+      + 'cover. You never state a figure, a price, a date, an identifier or a record: those '
+      + 'belong to the desks that hold them, and you name the desk instead.',
+    tools: [] };
+}
+
 /** The front desk's own seat: the subject's model, or the subject's script when a script
  *  is what drives it. Temperature 0 — the window declares it and the seat carries it.
  *  The front desk sits at the same target as the desks behind it, so it asks its
@@ -138,6 +167,11 @@ export interface RoutedHouse {
   readonly description: Readonly<Record<string, string>>;
   /** What a person at the counter calls each desk, in the order they are covered. */
   readonly summaries: readonly string[];
+  /** The desk a message no desk matched is delivered to, and its name. A desk the
+   *  subject marked stands among `desks`; the engine's own front of house does not,
+   *  so the router's window carries exactly the desks the subject declared. */
+  readonly fallback: LoopRunAgent;
+  readonly fallbackName: string;
   readonly router: ModelPort;
 }
 
@@ -165,7 +199,8 @@ export class RoutedAgent {
   readonly deskNames: readonly string[];
   private readonly desks: Readonly<Record<string, LoopRunAgent>>;
   private readonly description: Readonly<Record<string, string>>;
-  private readonly summaries: readonly string[];
+  private readonly fallback: LoopRunAgent;
+  private readonly fallbackName: string;
   private readonly router: ModelPort;
   private readonly seats = new Map<string, Seat>();
   /** One promise chain per session — the queue a turn joins, never a lock it holds. */
@@ -175,7 +210,8 @@ export class RoutedAgent {
     this.name = house.name;
     this.desks = house.desks;
     this.description = house.description;
-    this.summaries = house.summaries;
+    this.fallback = house.fallback;
+    this.fallbackName = house.fallbackName;
     this.router = house.router;
     this.deskNames = Object.keys(house.desks);
   }
@@ -186,12 +222,19 @@ export class RoutedAgent {
                      portFactory?: (params: LlmParams) => ModelPort): RoutedAgent | LoopRunAgent {
     const names = Object.keys(cfg.specs);
     if (names.length === 1) {
+      if (cfg.specs[names[0]].default === true) {
+        throw new CardError([{ code: 'DEFAULT_DESK_ALONE',
+          sentence: `Desk '${names[0]}' declares itself the default, and it is the only desk: `
+            + 'a lone agent has no front desk in front of it, so no message can fail to match '
+            + 'it and there is nothing to fall back from.' }]);
+      }
       return new LoopRunAgent({ spec: cfg.specs[names[0]], contract: cfg.contract,
                                 model: cfg.model, world: cfg.world, preset: cfg.preset,
                                 providerOptions: cfg.providerOptions });
     }
     const description = descriptionsOf(cfg.specs);
     const summaries = summariesOf(cfg.specs);
+    const marked = defaultOf(cfg.specs);
     // The house acts on ONE world. It is built here, once, from the scenario the subject
     // named, and every desk is handed that same instance — so a record one desk writes is
     // the record the next desk reads. The preset rides the build, never a desk's config:
@@ -208,11 +251,23 @@ export class RoutedAgent {
       providerOptions: cfg.providerOptions });
     const mint = portFactory
       ?? ((params: LlmParams) => routerPort(cfg.model, params, cfg.providerOptions ?? {}));
+    const houseName = cfg.contract?.name ?? cfg.specs[names[0]].name;
+    const desks = Object.fromEntries(names.map(n => [n, new LoopRunAgent(deskCfg(n))]));
+    // The engine's own front of house is seated only where the subject marked no desk. It
+    // stands outside `desks`, so the router's window and the house's desk list carry
+    // exactly what the subject declared.
+    const fallback = marked === null
+      ? new LoopRunAgent({ spec: frontOfHouse(houseName, summaries), contract: cfg.contract,
+                           model: cfg.model, world: cfg.world, built,
+                           providerOptions: cfg.providerOptions })
+      : desks[marked];
     return new RoutedAgent({
-      name: cfg.contract?.name ?? cfg.specs[names[0]].name,
-      desks: Object.fromEntries(names.map(n => [n, new LoopRunAgent(deskCfg(n))])),
+      name: houseName,
+      desks,
       description,
       summaries,
+      fallback,
+      fallbackName: marked ?? FRONT_OF_HOUSE,
       router: mint({ temperature: 0 }) });
   }
 
@@ -251,9 +306,7 @@ export class RoutedAgent {
     }
 
     const opened = await this.decide({ ...front, returnedFrom: null });
-    if (opened.desk === NONE) {
-      return this.remember(id, seat, text, null, { desk: null, returned: null }, opened.steps);
-    }
+    if (opened.desk === NONE) return this.unmatched(id, seat, text, null, opened.steps);
     const served = await this.deliver(opened.desk, id, seat, text, true, opened.act);
     if (!('returned' in served)) {
       return this.remember(id, seat, text, served,
@@ -266,9 +319,7 @@ export class RoutedAgent {
     const handedBack = served.usage;
     const again = await this.decide({ ...front, returnedFrom: returned });
     const steps = [...opened.steps, ...again.steps];
-    if (again.desk === NONE) {
-      return this.remember(id, seat, text, null, { desk: null, returned }, steps, handedBack);
-    }
+    if (again.desk === NONE) return this.unmatched(id, seat, text, returned, steps, handedBack);
     const settled = await this.deliver(again.desk, id, seat, text, false, again.act);
     if ('returned' in settled) {
       throw new TurnFailure('executor',
@@ -278,8 +329,32 @@ export class RoutedAgent {
       handedBack);
   }
 
+  /** A desk by name, and the house's default desk by its own. The engine's front of house
+   *  stands outside `desks`, so it is reached here and nowhere else. */
+  private agentAt(desk: string): LoopRunAgent {
+    return this.desks[desk] ?? this.fallback;
+  }
+
+  /** A message the front desk matched to no desk. The house's default desk serves it and
+   *  its words are the reply: it is told nothing was matched by the act intent it is
+   *  handed — a message no desk performs asks this house to change nothing — and it may
+   *  not hand the message back, because there is nowhere left to send it. */
+  private async unmatched(id: string, seat: Seat, text: string,
+                          returned: { by: string; reason: string } | null,
+                          steps: readonly ModelStep[],
+                          handedBack: Usage = NOTHING_BILLED): Promise<GovernedResult> {
+    const served = await this.deliver(this.fallbackName, id, seat, text, false, 'no');
+    if ('returned' in served) {
+      throw new TurnFailure('executor',
+        `the ${this.fallbackName} desk returned a message the house cannot re-route`);
+    }
+    return this.remember(id, seat, text, served,
+      { desk: this.fallbackName, returned, unmatched: true }, steps, handedBack);
+  }
+
   endSession(id: string): void {
     for (const agent of Object.values(this.desks)) agent.endSession(id);
+    this.fallback.endSession(id);
     this.seats.delete(id);
     this.queues.delete(id);
   }
@@ -305,7 +380,7 @@ export class RoutedAgent {
   private deliver(desk: string, id: string, seat: Seat, text: string,
                   returnable: boolean, act: 'yes' | 'no' | 'unclear'):
     Promise<GovernedResult | TurnReturned> {
-    return this.desks[desk].generateRouted(text,
+    return this.agentAt(desk).generateRouted(text,
       { session: id, before: foreignSince(seat.history, desk), returnable, act,
         grounded: inheritedBy(seat.history, desk).map(mark => mark.id) });
   }
@@ -314,7 +389,7 @@ export class RoutedAgent {
    *  provenance that rode in — the house's own turn count and the router's tokens, and the
    *  history gains the exchange the next window reads. A refusal names no desk, so the
    *  conversation keeps the seat it had, and it mints nothing: no act ran. */
-  private remember(id: string, seat: Seat, userText: string, served: GovernedResult | null,
+  private remember(id: string, seat: Seat, userText: string, served: GovernedResult,
                    decided: TurnRouting, steps: readonly ModelStep[],
                    handedBack: Usage = NOTHING_BILLED): GovernedResult {
     // What the turn cost outside the desk that served it: every front-desk step, and
@@ -323,37 +398,14 @@ export class RoutedAgent {
     const inherited = decided.desk === null ? [] : inheritedBy(seat.history, decided.desk);
     const routing: TurnRouting = inherited.length === 0
       ? decided : { ...decided, grounded: inherited };
-    const out: GovernedResult = served === null
-      ? { text: this.refusalText(),
-          loopRun: this.refusal(seat, userText, routing, beyond) }
-      : { text: served.text,
-          loopRun: { ...served.loopRun, turn: seat.history.length + 1, routing,
-                     usage: merge(served.loopRun.usage, beyond) } };
+    const out: GovernedResult = { text: served.text,
+      loopRun: { ...served.loopRun, turn: seat.history.length + 1, routing,
+                 usage: merge(served.loopRun.usage, beyond) } };
     const desk = routing.desk ?? FRONT_DESK;
     this.seats.set(id, {
       history: [...seat.history,
-        { desk, userText, replyText: out.text,
-          minted: served === null ? [] : mintedBy(desk, served.loopRun.acts) }],
+        { desk, userText, replyText: out.text, minted: mintedBy(desk, served.loopRun.acts) }],
       currentDesk: routing.desk ?? seat.currentDesk });
     return out;
-  }
-
-  private refusalText(): string {
-    const covered = this.summaries.length > 1
-      ? `${this.summaries.slice(0, -1).join(', ')} and ${this.summaries[this.summaries.length - 1]}`
-      : this.summaries.join('');
-    return `No desk at ${this.name} performs this. The house covers: ${covered}.`;
-  }
-
-  /** The front desk's own turn: no desk served, so no act, no question and no finish
-   *  exists — only the words the operator reads and what the house paid to reach them,
-   *  the front desk's steps and any desk that read the message and handed it back. */
-  private refusal(seat: Seat, userText: string, routing: TurnRouting,
-                  usage: Usage): TurnRecord {
-    return { turn: seat.history.length + 1, servedBy: FRONT_DESK, userText,
-             acts: [], questions: { issued: [], consumed: [], closed: [] },
-             finish: null, corrections: [], text: this.refusalText(),
-             delivery: { by: 'floor', retried: false, facts: [] },
-             closedBy: 'engine', usage, routing };
   }
 }
