@@ -260,7 +260,7 @@ export class Turn {
     // what the engine charges it against, one assembly serving both.
     const notesNow = (): readonly string[] => [
       ...desk.staleAnswers(userText, draft.turn), ...desk.laterTexts(draft.turn),
-      ...desk.codeNotices(userText)];
+      ...desk.codeNotices(userText), ...this.findingNotes(draft)];
     const owedNow = (): readonly DeliveryFact[] =>
       assembleFacts(draft.acts, desk.open(), draft.closed, notesNow());
 
@@ -679,7 +679,7 @@ export class Turn {
     const open = session.consent.open();
     const notes = [...session.consent.staleAnswers(draft.userText, draft.turn),
       ...session.consent.laterTexts(draft.turn),
-      ...session.consent.codeNotices(draft.userText)];
+      ...session.consent.codeNotices(draft.userText), ...this.findingNotes(draft)];
     let facts = assembleFacts(draft.acts, open, draft.closed, notes);
     // The floor speaks exactly what the turn OWES: the assembled facts, nothing else.
     // A read is not owed and never prints; a code prints inside the engine's human
@@ -727,6 +727,19 @@ export class Turn {
       withdrawn = true;
     });
     return withdrawn;
+  }
+
+  /** What a result check found, owed to the operator as a note: the check's own words
+   *  where it spoke, and the guard's rule where it did not. A result that fails its
+   *  declared check is never reported as a plain success — the note rides the delivery
+   *  and the reply has to express it. */
+  private findingNotes(draft: TurnDraft): readonly string[] {
+    const rules = this.deps.rulebook.guards().guards;
+    return draft.corrections.flatMap(c => {
+      if (c.kind !== 'postToolFinding') return [];
+      const rule = rules.find(g => g.name === c.guardName)?.rule ?? '';
+      return [(c.detail !== '' ? c.detail : rule).trim()].filter(t => t !== '');
+    });
   }
 
   /** The close-step itself: null when the desk cannot be asked or does not pay. */

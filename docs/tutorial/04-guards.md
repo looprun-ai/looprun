@@ -144,7 +144,7 @@ machine can never disagree. Use one instead of hand-writing a `deny` wherever it
 | `valueFromUser(tool, arg)` | tool + arg name | a value the user never wrote, matched as whole tokens | the model inventing an amount, an address, a date |
 | `argMatchesFormat(tool, arg, pattern)` | a pattern string | a value the declared shape rejects | a well-formed guess passing as an identifier |
 | `argForbidden(tool, arg)` | tool + arg name | the call when the forbidden argument arrives | a banned field being used anyway |
-| `resultSatisfiesCondition(tool, check)` | `(ctx) => string \| null` over the RESULT | after execution, into the reply's corrections | reporting a success the result does not show |
+| `resultSatisfiesCondition(tool, check)` | `(ctx) => string \| null` over the RESULT | after execution — the finding is owed to the operator as a note the reply must express: the check's own words where it spoke, the rule where it did not | reporting a success the result does not show |
 | `mustAccountFor({ records, status })` | ids + a status word | a report that leaves a named record unaccounted for | silently dropping the very act the turn was about |
 | `maxCalls(tool, n, { scope, reason })` | tool + ceiling | the n+1-th completed call | a retry storm on a write |
 | `blockPattern(name, regex, rule, { on })` | a regex, on input or reply | text carrying the pattern | a card number or a secret crossing a seam |
