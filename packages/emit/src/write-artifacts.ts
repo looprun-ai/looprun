@@ -233,6 +233,25 @@ function sentenceOf(error: unknown): string {
  *  authored artifacts — `declaration.yaml` and the world card `world.ts` — and receives five:
  *  `cards.ts`, `subject.ts`, `check-subject.test.ts`, `tsconfig.json` and `gen/SEAM.md`. The seam
  *  is read after the cards land, so its guard column names the rules this run wrote. */
+/** The predicates a subject writes in code: every name guards.ts beside the declaration exports.
+ *  No guards.ts is a subject with no such law, and a `code:` then names nothing. */
+export function authoredNames(guardsPath: string): readonly string[] {
+  if (!existsSync(guardsPath)) return [];
+  const source = readFileSync(guardsPath, 'utf8');
+  const isNameChar = (c: string): boolean =>
+    (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c === '_';
+  return source.split('\n').flatMap(line => {
+    const head = ['export const ', 'export function '].find(h => line.startsWith(h));
+    if (head === undefined) return [];
+    let name = '';
+    for (const c of line.slice(head.length)) {
+      if (!isNameChar(c)) break;
+      name += c;
+    }
+    return name === '' ? [] : [name];
+  });
+}
+
 export function emit(subjectDir: string): readonly string[] {
   const declarationPath = join(subjectDir, 'declaration.yaml');
   const worldPath = join(subjectDir, 'world.ts');
@@ -252,7 +271,7 @@ export function emit(subjectDir: string): readonly string[] {
   const seam = seamCovered(subjectDir, facts);
   let cards = '';
   const composed: string[] = [];
-  try { cards = writeCards(declaration, facts); }
+  try { cards = writeCards(declaration, facts, authoredNames(join(subjectDir, 'guards.ts'))); }
   catch (error) { composed.push(sentenceOf(error)); }
 
   const refusals = [...empty, ...checkAgainstSurface(declaration, facts, seam), ...composed];

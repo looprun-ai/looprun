@@ -8,7 +8,7 @@ import { decl, FACTS } from './helpers.js';
 
 const LAW: DeclaredGuard = { name: 'noRefundUnderAnOpenClaim', acts: ['issueRefund'],
   factory: 'precondition',
-  args: { reads: 'record', read: 'listClaims',
+  args: { read: 'listClaims',
     pick: { list: 'claims', by: 'invoiceId', key: 'invoiceId' },
     field: 'status', in: ['settled', 'denied'] },
   rule: 'A refund waits while a claim against the invoice is open; say which claim stands.' };
@@ -24,7 +24,7 @@ test('the picked rows are the ones carrying the call\'s own argument, and each i
 });
 
 test('a pick with no field to test is refused', () => {
-  expect(() => cards([{ ...LAW, args: { reads: 'record', read: 'listClaims',
+  expect(() => cards([{ ...LAW, args: { read: 'listClaims',
     pick: { list: 'claims', by: 'invoiceId', key: 'invoiceId' } } }]))
     .toThrow('declares args.pick and no args.field');
 });

@@ -16,7 +16,7 @@ describe('checkAgainstSurface', () => {
 
   test('a precondition naming a read the surface does not declare', () => {
     expect(checkAgainstSurface(decl({ guards: [{ name: 'g', acts: ['closeBooking'], factory: 'precondition',
-                                                 args: { reads: 'record', read: 'getInvioce' } }] }), FACTS, SEAM))
+                                                 args: { read: 'getInvioce' } }] }), FACTS, SEAM))
       .toEqual([expect.stringContaining("args.read names 'getInvioce'")]);
   });
 

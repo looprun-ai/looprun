@@ -11,7 +11,7 @@ contract:
     - name: refundFollowsTheRead
       acts: [getInvioce]
       factory: precondition
-      args: { reads: record, read: getInvoice }
+      args: { read: getInvoice }
       rule: Read the invoice this desk was asked about before you speak for it.
   disclosure:
     issueRefund:

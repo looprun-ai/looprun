@@ -81,7 +81,7 @@ function commaJoin(blocks: readonly (readonly string[])[]): readonly string[] {
  *  would drop it, and the author would read a rule on the card that the engine never enforces. */
 const LAWFUL_ARGS: Readonly<Record<DeclaredGuard['factory'], readonly string[]>> = {
   needs: ['read', 'args', 'pick'],
-  precondition: ['reads', 'read', 'field', 'is', 'in', 'absent', 'pick'],
+  precondition: ['read', 'field', 'is', 'in', 'absent', 'pick', 'code'],
   role: ['read', 'at', 'in', 'roster'],
   valueFromUser: ['arg'],
   argMatchesFormat: ['arg', 'pattern'],
@@ -292,9 +292,9 @@ function testedField(guard: DeclaredGuard): string | null {
 
 /** A `precondition` reading a returned answer: the acts it covers, the read whose last valid
  *  answer the law walks, and the sentence it refuses with. An answer this conversation does
- *  not hold refuses on the rule alone — the rule teaches the read. `reads: record` alone
- *  tests that the answer is there; a `field` beside it tests what the answer carries at that
- *  declared path. */
+ *  not hold refuses on the rule alone — the rule teaches the read. A `field` tests what the
+ *  answer carries at that declared path; `pick` tests the rows of a list that name the call;
+ *  `code` hands the whole decision to a predicate guards.ts exports. */
 
 /** The declared mapping that names WHICH record a law over the reads is about: the `needs` rule
  *  over the same act and the same read. Its `args` map each of the read's own arguments to one of
@@ -325,14 +325,36 @@ function keyLines(guard: DeclaredGuard, read: string,
 }
 
 function preconditionLines(guard: DeclaredGuard, facts: SurfaceFacts,
-                           siblings: readonly DeclaredGuard[]): readonly string[] {
-  if (guard.args?.reads !== 'record') {
-    throw new Error(`contract.guards '${guard.name}' declares factory 'precondition' with a `
-      + `reading this emitter has no check for — the one it writes is \`reads: record\``);
-  }
+                           siblings: readonly DeclaredGuard[],
+                           authored: readonly string[]): readonly string[] {
   const read = stringArg(guard, 'read');
-  const field = testedField(guard);
   const acts = guard.acts.length === 1 ? quote(guard.acts[0]) : list(guard.acts);
+  const code = guard.args?.code;
+  if (code !== undefined) {
+    // THE LAW IS THIS BUSINESS'S OWN CODE. The predicate is exported by name from guards.ts
+    // beside the declaration, typed by the engine, and the card imports it. The declaration
+    // still says which act, which read and which sentence — the data every lint reads.
+    if (typeof code !== 'string' || !isPlainName(code)) {
+      throw new Error(`contract.guards '${guard.name}' declares args.code, whose configuration is `
+        + `the name of one export of guards.ts — a plain identifier — which this declaration does `
+        + `not carry`);
+    }
+    for (const key of ['field', 'is', 'in', 'absent', 'pick']) {
+      if (guard.args?.[key] !== undefined) {
+        throw new Error(`contract.guards '${guard.name}' declares args.code beside args.${key} — a `
+          + `law in code decides everything itself, and a value declared beside it states a second `
+          + `law under one name`);
+      }
+    }
+    if (!authored.includes(code)) {
+      throw new Error(`contract.guards '${guard.name}' declares args.code: ${code}, and guards.ts `
+        + `beside the declaration exports no such name — export it there `
+        + `(\`export const ${code}: Precondition = ({ args, reads }) => ...\`), or declare the law `
+        + `as one of the data forms`);
+    }
+    return [`precondition(${acts}, ${code},`, `${quote(ruleOf(guard))})`];
+  }
+  const field = testedField(guard);
   const pick = pickArg(guard);
   if (pick !== null) {
     // THE LAW IS OVER THE ROWS THE CALL NAMES. The read answers a list; the rows whose declared
@@ -612,8 +634,9 @@ function needsLines(guard: DeclaredGuard, act: string): readonly string[] {
  *  rest arrive as the guard's own `tool` scope; `precondition` and `role` take them all. `prose`
  *  imports nothing — it is the card's own helper — and states the whole law in its sentence. */
 function factoryCall(guard: DeclaredGuard, facts: SurfaceFacts,
-                     siblings: readonly DeclaredGuard[]): { readonly imported: string | null;
-                                              readonly lines: readonly string[] } {
+                     siblings: readonly DeclaredGuard[], authored: readonly string[] = []):
+  { readonly imported: string | null; readonly lines: readonly string[];
+    readonly authored?: string | null } {
   const [act] = guard.acts;
   if (act === undefined) throw new Error(`contract.guards '${guard.name}' names no act`);
   // The factory is read before its configuration: a factory this emitter cannot write is the
@@ -641,7 +664,8 @@ function factoryCall(guard: DeclaredGuard, facts: SurfaceFacts,
     case 'resultSatisfiesCondition':
       return { imported: 'resultSatisfiesCondition', lines: resultSatisfiesConditionLines(guard, act) };
     case 'precondition':
-      return { imported: 'precondition', lines: preconditionLines(guard, facts, siblings) };
+      return { imported: 'precondition', lines: preconditionLines(guard, facts, siblings, authored),
+        authored: typeof guard.args?.code === 'string' ? guard.args.code : null };
     case 'role':
       return { imported: 'precondition', lines: roleLines(guard) };
     case 'maxCalls':
@@ -668,8 +692,8 @@ function factoryCall(guard: DeclaredGuard, facts: SurfaceFacts,
  *  sentence inside the call, so its literal states nothing but the acts the sentence is stamped
  *  on and the whole guard stands on one line. */
 function guardLines(guard: DeclaredGuard, depth: number, facts: SurfaceFacts,
-                    siblings: readonly DeclaredGuard[]): readonly string[] {
-  const call = factoryCall(guard, facts, siblings);
+                    siblings: readonly DeclaredGuard[], authored: readonly string[]): readonly string[] {
+  const call = factoryCall(guard, facts, siblings, authored);
   if (guard.factory === 'prose') {
     return [indent(depth, `{ ...${call.lines[0]}, tool: ${list(guard.acts)} }`)];
   }
@@ -854,7 +878,8 @@ function secretLiteral(secret: DeclaredSecret): string {
     : `{ path: ${quote(secret.path)}, mode: ${quote(secret.mode)} }`;
 }
 
-function contractLines(declaration: Declaration, facts: SurfaceFacts): readonly string[] {
+function contractLines(declaration: Declaration, facts: SurfaceFacts,
+                       authored: readonly string[]): readonly string[] {
   const { contract } = declaration;
   const block = (open: string, body: readonly string[], close: string): readonly string[] =>
     body.length === 0 ? [indent(1, `${open}${close}`)]
@@ -863,7 +888,7 @@ function contractLines(declaration: Declaration, facts: SurfaceFacts): readonly 
     [indent(1, `name: ${quote(contract.name)}`)],
     [indent(1, `voice: ${quote(contract.voice)}`)],
     block('facts: [', commaJoin(contract.facts.map(fact => [indent(2, quote(fact))])), ']'),
-    block('guards: [', commaJoin(contract.guards.map(guard => guardLines(guard, 2, facts, contract.guards))), ']'),
+    block('guards: [', commaJoin(contract.guards.map(guard => guardLines(guard, 2, facts, contract.guards, authored))), ']'),
     block('disclosure: {', commaJoin(Object.entries(contract.disclosure)
       .map(([act, entry]) => disclosureLines(act, entry, facts, 2))), '}'),
     ...(contract.rewrites === undefined ? [] : [block('rewrites: [',
@@ -1001,7 +1026,8 @@ function divider(label: string): string {
  *  The order is the order a reader needs it in: what the file is, the imports it uses, the helpers
  *  the cards call, the licence maps, the DomainContract, and one AgentSpec per desk under the SPECS map
  *  the subject door re-exports. */
-export function writeCards(declaration: Declaration, facts: SurfaceFacts): string {
+export function writeCards(declaration: Declaration, facts: SurfaceFacts,
+                           authored: readonly string[] = []): string {
   if (!isSlug(declaration.contract.name)) {
     throw new Error(`contract.name is '${declaration.contract.name}', and the domain's name is `
       + `written into the header comment of the file this emits — declare a name of letters, `
@@ -1009,7 +1035,7 @@ export function writeCards(declaration: Declaration, facts: SurfaceFacts): strin
   }
   refuseUnfilledSlots(declaration);
   const seam = seamLaws(declaration);
-  const contract = contractLines(declaration, facts);
+  const contract = contractLines(declaration, facts, authored);
   const desks = commaJoin(declaration.desks.map(desk => deskLines(desk, 1, seam)));
   const teaches = declaration.desks.some(desk => Object.keys(desk.conduct).length > 0)
     || declaration.contract.guards.some(guard => guard.factory === 'prose')
@@ -1064,9 +1090,12 @@ export function writeCards(declaration: Declaration, facts: SurfaceFacts): strin
   const helpers = helperBlocks.flatMap((block, at) => at === 0 ? [...block] : ['', ...block]);
   const types = ['AgentSpec', 'DomainContract', ...(teaches ? ['Guard'] : []),
     ...(readsResults ? ['Json'] : [])];
+  const calls = declaration.contract.guards.map(guard =>
+    factoryCall(guard, facts, declaration.contract.guards, authored));
+  const fromGuards = [...new Set(calls.map(c => c.authored ?? null)
+    .filter((name): name is string => name !== null))].sort();
   const imported = [
-    ...declaration.contract.guards.map(guard => factoryCall(guard, facts, declaration.contract.guards).imported)
-      .filter((name): name is string => name !== null),
+    ...calls.map(c => c.imported).filter((name): name is string => name !== null),
     ...(declaration.contract.rewrites ?? []).map(rewrite => rewrite.kind),
     ...declaration.desks.flatMap(desk => (desk.judged ?? []).map(check => check.factory))
   ];
@@ -1082,6 +1111,7 @@ export function writeCards(declaration: Declaration, facts: SurfaceFacts): strin
     ' *  card. */',
     `import type { ${types.join(', ')} } from '@looprun-ai/core';`,
     ...(factories.length === 0 ? [] : [`import { ${factories.join(', ')} } from '@looprun-ai/core';`]),
+    ...(fromGuards.length === 0 ? [] : [`import { ${fromGuards.join(', ')} } from './guards.js';`]),
     ...(helpers.length === 0 ? [] : ['', divider('helpers'), '', ...helpers]),
     ...licenceLines('WHY', [
       '/** Why each prose rule exists. Every name prose() mints appears here, claiming one of',

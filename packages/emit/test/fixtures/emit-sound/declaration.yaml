@@ -11,7 +11,7 @@ contract:
     - name: refundOnlyWhatIsOpen
       acts: [issueRefund]
       factory: precondition
-      args: { reads: record, read: getInvoice }
+      args: { read: getInvoice }
       rule: Refund an invoice while it is still open, and never one already settled.
     - name: closingNoteReadsTheInvoice
       acts: [closeBooking]

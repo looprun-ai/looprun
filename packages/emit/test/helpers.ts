@@ -35,7 +35,7 @@ export const SIX_VOICES: Readonly<Record<string, string>> = {
 export const SOUND_GUARDS: readonly DeclaredGuard[] = [
   { name: 'confirmBeforeRefund', acts: ['issueRefund'], factory: 'needs', args: { read: 'getInvoice' } },
   { name: 'confirmInvoiceKnown', acts: ['issueRefund'], factory: 'precondition',
-    args: { reads: 'record', read: 'getInvoice' },
+    args: { read: 'getInvoice' },
     rule: 'Read the invoice this desk was asked about before you speak for it.' }
 ];
 

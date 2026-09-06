@@ -13,24 +13,24 @@ const gate = (args: Readonly<Record<string, unknown>>): Declaration =>
 
 test('a field carrying nothing is declared, and the walk covers the missing field too', () => {
   const written = writeCards(
-    gate({ reads: 'record', read: 'getInvoice', field: 'invoice.openClaimId', absent: true }), FACTS);
+    gate({ read: 'getInvoice', field: 'invoice.openClaimId', absent: true }), FACTS);
   expect(written).toContain("walkAnswer(answer, 'invoice.openClaimId') == null");
 });
 
 test('a value declared beside it states a second law under one name', () => {
-  expect(() => writeCards(gate({ reads: 'record', read: 'getInvoice',
+  expect(() => writeCards(gate({ read: 'getInvoice',
     field: 'invoice.openClaimId', absent: true, is: 'open' }), FACTS))
     .toThrow('the flag true and nothing beside it');
 });
 
 test('the flag is the word true, never a value of its own', () => {
-  expect(() => writeCards(gate({ reads: 'record', read: 'getInvoice',
+  expect(() => writeCards(gate({ read: 'getInvoice',
     field: 'invoice.openClaimId', absent: 'yes' }), FACTS))
     .toThrow('the flag true and nothing beside it');
 });
 
 test('a declaration carrying none of the three states no law at all', () => {
-  expect(() => writeCards(gate({ reads: 'record', read: 'getInvoice',
+  expect(() => writeCards(gate({ read: 'getInvoice',
     field: 'invoice.openClaimId' }), FACTS))
     .toThrow('args.absent');
 });

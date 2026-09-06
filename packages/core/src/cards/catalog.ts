@@ -542,9 +542,12 @@ function walkPath(answer: Json, path: string): Json | undefined {
  *  answer the conversation does not hold refuses in words — the row was not read
  *  this conversation, so nothing here can decide on it. A predicate that answers
  *  with WORDS instead of false refuses in those words. */
-export function precondition(tool: string | readonly string[],
-  check: (ctx: { readonly args: Readonly<Record<string, Json>>;
-                 readonly reads: ReadsView }) => boolean | Denial,
+/** A law over what the conversation read, written in code: true lets the call run, false
+ *  refuses with the guard's rule, and words refuse in those words. */
+export type Precondition = (ctx: { readonly args: Readonly<Record<string, Json>>;
+                                   readonly reads: ReadsView }) => boolean | Denial;
+
+export function precondition(tool: string | readonly string[], check: Precondition,
   reason: string): SeedGuard {
   const tools = typeof tool === 'string' ? [tool] : [...tool];
   return {

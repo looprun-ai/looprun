@@ -8,7 +8,7 @@ import { decl, FACTS } from './helpers.js';
 
 const LAW: DeclaredGuard = { name: 'refundOnlyWhileOpen', acts: ['issueRefund'],
   factory: 'precondition',
-  args: { reads: 'record', read: 'getInvoice', field: 'settled', is: false },
+  args: { read: 'getInvoice', field: 'settled', is: false },
   rule: 'A settled invoice takes no refund; read its state and say what it carries.' };
 
 const READ_ORDER: DeclaredGuard = { name: 'refundReadsTheInvoice', acts: ['issueRefund'],
