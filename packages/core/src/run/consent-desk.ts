@@ -124,12 +124,13 @@ export class ConsentDesk {
 
   /** A code consumed in an EARLIER turn arriving again is answered by the record:
    *  the sentence the licensed act sealed with, restated — never a dead turn. The
-   *  code consumed this turn already has its answer beside it on this reply. */
+   *  code consumed this turn already has its answer beside it on this reply. A spent
+   *  code names nothing, so the answer never repeats its digits. */
   staleAnswers(userText: string, turn: number): readonly string[] {
     return [...this.working.values()]
       .filter(s => s.state === 'consumed' && userText.includes(s.question.code)
         && s.consumedAtTurn !== null && s.consumedAtTurn < turn)
-      .map(s => `${s.question.code} was already answered — ${
+      .map(s => `That confirmation was already answered — ${
         s.outcome ?? 'the act it licensed stands on the record'}`);
   }
 
