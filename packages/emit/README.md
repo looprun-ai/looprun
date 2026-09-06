@@ -25,7 +25,7 @@ contract:
   guards:                                # required, a sequence of mappings
     - name: read-before-cancel           # unique; the census keys on it
       acts: [cancelBooking]              # every act must exist on the surface
-      factory: onlyAfter                 # onlyAfter · precondition · role · valueFromUser · idNamedByUser ·
+      factory: onlyAfter                 # onlyAfter · precondition · role · valueFromUser · idNamedByUser · argRequired ·
                                          # valueFromUserOrRecord · argMatchesRecord ·
                                          # argSatisfiesCondition · onlyAfterWhen ·
                                          # argMatchesFormat · argForbidden · cap ·
@@ -114,6 +114,7 @@ of them printed together, so one run shows everything.
 | `precondition` reads a record over a targetless act | `contract.guards[i] reads 'getX' over 'X', and X declares no target — point the guard at an act with a target, or drop the record read.` |
 | `precondition` names a code export guards.ts lacks | `contract.guards 'X' declares args.code: name, and guards.ts beside the declaration exports no such name — export it there (export const name: Precondition = ({ args, reads }) => ...), or declare the law as one of the data forms` |
 | `precondition` declares code beside a data form | `contract.guards 'X' declares args.code beside args.field — a law in code decides everything itself, and a value declared beside it states a second law under one name` |
+| `argRequired` conditions on a broken block | `contract.guards 'X' declares args.when, whose configuration is { arg, is \| in } — the other argument and the value that makes this one required — which this declaration does not carry whole` |
 | `precondition` picks rows and tests no field | `contract.guards 'X' declares args.pick and no args.field — a law over picked rows tests a field of each row, and this declaration names none` |
 | `precondition` picks with a broken block | `contract.guards 'X' declares args.pick, whose configuration is { list, by, key } — the path to the rows inside the answer, the row field that names the record, and the act's own argument it is matched against — which this declaration does not carry whole` |
 | a `needs` alias names a missing tool | `contract.disclosure.<act>.needs.<alias> names 'Y', and the surface declares no such tool — did you mean 'Z'?` |

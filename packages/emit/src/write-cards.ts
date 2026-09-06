@@ -94,6 +94,7 @@ const LAWFUL_ARGS: Readonly<Record<DeclaredGuard['factory'], readonly string[]>>
   valueFromUserOrRecord: ['arg', 'read', 'at'],
   argMatchesRecord: ['arg', 'read', 'at'],
   idNamedByUser: ['arg', 'read', 'list', 'key', 'label'],
+  argRequired: ['arg', 'when'],
   prose: ['why'],
   deny: []
 };
@@ -124,6 +125,7 @@ const ACT_SHAPE: Readonly<Record<DeclaredGuard['factory'], 'all' | 'first' | 'no
   valueFromUserOrRecord: 'first',
   argMatchesRecord: 'first',
   idNamedByUser: 'first',
+  argRequired: 'first',
   prose: 'none',
   deny: 'none'
 };
@@ -132,13 +134,13 @@ const ACT_SHAPE: Readonly<Record<DeclaredGuard['factory'], 'all' | 'first' | 'no
  *  states the correction the reply owes. A factory that mints its sentence from its own
  *  configuration is not here — a `rule` beside it overrides that sentence and is optional. */
 const OWES_RULE: ReadonlySet<DeclaredGuard['factory']> = new Set(['precondition', 'role', 'maxCalls', 'resultSatisfiesCondition', 'blockPattern', 'prose',
-  'argSatisfiesCondition', 'valueFromUserOrRecord', 'argMatchesRecord']);
+  'argSatisfiesCondition', 'valueFromUserOrRecord', 'argMatchesRecord', 'argRequired']);
 
 /** The factories handed the declared sentence inside the call itself. Every other factory mints
  *  its own, and a `rule` declared beside one of those is emitted as a field of the literal. */
 const TAKES_RULE: ReadonlySet<DeclaredGuard['factory']> = new Set(['precondition', 'role',
   'maxCalls', 'blockPattern',
-  'argSatisfiesCondition', 'valueFromUserOrRecord', 'argMatchesRecord']);
+  'argSatisfiesCondition', 'valueFromUserOrRecord', 'argMatchesRecord', 'argRequired']);
 
 function checkArgs(guard: DeclaredGuard): void {
   const lawful = LAWFUL_ARGS[guard.factory];
@@ -416,6 +418,52 @@ function pickArg(guard: DeclaredGuard): { readonly list: string; readonly by: st
   return { list, by, key };
 }
 
+/** A law over one value, as a block of its own: `is` or `in`, exactly one. */
+function blockTest(guard: DeclaredGuard, block: { readonly is?: unknown; readonly in?: unknown },
+                   subject: string, named: string): string {
+  const single = block.is;
+  const several = block.in;
+  if ((single === undefined) === (several === undefined)) {
+    throw new Error(`contract.guards '${guard.name}' declares ${named}, whose value is tested `
+      + `against exactly one of is — a single value — or in — a list of them; this declaration `
+      + `carries ${single === undefined ? 'neither' : 'both'}`);
+  }
+  if (single !== undefined) {
+    if (!isScalarValue(single)) {
+      throw new Error(`contract.guards '${guard.name}' declares ${named}.is as a block of its own — `
+        + `declare it as a word, a figure or a flag`);
+    }
+    return `${subject} === ${scalarLiteral(single)}`;
+  }
+  if (!Array.isArray(several) || several.length === 0 || !several.every(isScalarValue)) {
+    throw new Error(`contract.guards '${guard.name}' declares ${named}.in, whose configuration is a `
+      + `list of one or more words, figures or flags, which this declaration does not carry`);
+  }
+  return `[${several.map(scalarLiteral).join(', ')}].some(declared => declared === ${subject})`;
+}
+
+/** `argRequired`: the argument must arrive on every call, or — with `when` — on every call whose
+ *  other argument carries the declared value. Both are laws over the call's own arguments,
+ *  written as one, refusing with the declared rule. */
+function argRequiredLines(guard: DeclaredGuard): readonly string[] {
+  const arg = stringArg(guard, 'arg');
+  const when = guard.args?.when as Readonly<Record<string, unknown>> | undefined;
+  const act = quote(guard.acts[0]);
+  const present = [`  const value = args[${quote(arg)}];`,
+    `  return !(value === undefined || (typeof value === 'string' && value.trim() === ''));`];
+  if (when === undefined) {
+    return [`precondition(${act}, ({ args }) => {`, ...present, `},`, `${quote(ruleOf(guard))})`];
+  }
+  if (typeof when !== 'object' || when === null || typeof when['arg'] !== 'string') {
+    throw new Error(`contract.guards '${guard.name}' declares args.when, whose configuration is `
+      + `{ arg, is | in } — the other argument and the value that makes this one required — `
+      + `which this declaration does not carry whole`);
+  }
+  return [`precondition(${act}, ({ args }) => {`,
+    `  if (!(${blockTest(guard, { is: when['is'], in: when['in'] }, `args[${quote(when['arg'])}]`, 'args.when')})) return true;`,
+    ...present, `},`, `${quote(ruleOf(guard))})`];
+}
+
 /** The values `args.in` names: the ones the acting record's field may carry for the act to run.
  *  A gate standing on an empty list refuses every call it covers, so the list is required to
  *  carry at least one value and every value is a word of the field's own. */
@@ -665,6 +713,8 @@ function factoryCall(guard: DeclaredGuard, facts: SurfaceFacts,
         lines: [`argForbidden(${quote(act)}, ${quote(stringArg(guard, 'arg'))})`] };
     case 'resultSatisfiesCondition':
       return { imported: 'resultSatisfiesCondition', lines: resultSatisfiesConditionLines(guard, act) };
+    case 'argRequired':
+      return { imported: 'precondition', lines: argRequiredLines(guard) };
     case 'idNamedByUser':
       return { imported: 'idNamedByUser', lines: [`idNamedByUser(${quote(act)}, { arg: ${quote(stringArg(guard, 'arg'))}, read: ${quote(stringArg(guard, 'read'))}, list: ${quote(stringArg(guard, 'list'))}, key: ${quote(stringArg(guard, 'key'))}, label: ${quote(stringArg(guard, 'label'))} })`] };
     case 'precondition':

@@ -158,6 +158,8 @@ const SCHEMA_ARGS: Readonly<Record<string, { readonly args: readonly string[];
   valueFromUserOrRecord: { args: ['arg'], costs: 'the guard refuses every call of it' },
   argMatchesRecord: { args: ['arg'], costs: 'the guard refuses every call of it' },
   idNamedByUser: { args: ['arg'], costs: 'the guard reads undefined on every call and stands aside' },
+  argRequired: { args: ['arg', 'when.arg'],
+    costs: 'the guard reads undefined on every call and refuses every one of them' },
   argMatchesFormat: { args: ['arg'],
     costs: 'the guard never fires — it sits in the census as a check that decides nothing' },
   argSatisfiesCondition: { args: ['arg'],
