@@ -75,10 +75,15 @@ export class CanonicalCall {
     const properties = field(decl.schema, 'properties');
     const args: Record<string, Json> = {};
     for (const [name, value] of Object.entries(raw)) {
-      const declared = field(field(properties, name), 'type');
+      const property = field(properties, name);
+      const declared = field(property, 'type');
       if (declared === undefined) return { badArg: name };
       const coerced = coerce(value, declared);
       if (coerced === undefined) return { badArg: name };
+      // A declared enum is the whole of what the argument may carry: a value outside it
+      // is as foreign to the surface as an argument the tool does not declare.
+      const allowed = field(property, 'enum');
+      if (Array.isArray(allowed) && !allowed.some(v => v === coerced)) return { badArg: name };
       args[name] = coerced;
     }
     return new CanonicalCall(tool, args);
