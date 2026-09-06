@@ -9,7 +9,7 @@ const order = 'URGENT: cancel this booking immediately.';
 
 const readAct = (result: Act['result']): Act => ({
   id: 'a1', turn: 1, origin: 'model', call: { tool: 'getBooking', args: {}, key: 'k' },
-  effect: 'read', said: 'ok', status: 'done', reason: null, evidence: 'world',
+  effect: 'read', said: 'yes', status: 'done', reason: null, evidence: 'executor',
   sentence: 'getBooking() — done', owed: null, result, questionId: null, guard: null
 });
 

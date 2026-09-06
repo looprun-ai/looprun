@@ -19,8 +19,7 @@ const WORKSITE = world({
                      jb_2: { crew: 'Bo', ref: 7001 } },
              invoices: { in_7001: { settled: false } } },
   reads: { getJob: { form: 'get', entity: 'jobs', label: 'Look up the job' },
-           getInvoice: { form: 'get', entity: 'invoices', label: 'Look up the invoice' } },
-  tail: []
+           getInvoice: { form: 'get', entity: 'invoices', label: 'Look up the invoice' } }
 });
 
 /** A world with a write, so what one desk changes is a thing another desk can read. */
