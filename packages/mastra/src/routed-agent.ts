@@ -349,7 +349,9 @@ export class RoutedAgent {
         `the ${this.fallbackName} desk returned a message the house cannot re-route`);
     }
     return this.remember(id, seat, text, served,
-      { desk: this.fallbackName, returned, unmatched: true }, steps, handedBack);
+      // The routing line says what the house decided: no desk of it took the message. The
+      // agent that answered anyway is on the record as the one that served, never as a desk.
+      { desk: NONE, returned, unmatched: true }, steps, handedBack);
   }
 
   endSession(id: string): void {

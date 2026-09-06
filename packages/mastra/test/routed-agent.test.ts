@@ -134,7 +134,7 @@ test('none reaches the default desk, touches no other, and the history still gro
   const out = await agent.generate('what is the weather tomorrow?', { session: 's1' });
 
   expect(out.text).toContain('nobody here reads a forecast');
-  expect(out.loopRun.routing).toEqual({ desk: 'general', returned: null, unmatched: true });
+  expect(out.loopRun.routing).toEqual({ desk: 'none', returned: null, unmatched: true });
   // One router step and the default desk that spoke.
   expect(out.loopRun.usage.modelCalls).toBe(2);
   expect(out.loopRun.usage.inputTokens).toBe(300);
@@ -189,7 +189,7 @@ test('a return the front desk answers with none still bills the desk that read i
 
   const out = await agent.generate('what is the weather tomorrow?', { session: 's1' });
 
-  expect(out.loopRun.routing).toEqual({ desk: 'general', unmatched: true,
+  expect(out.loopRun.routing).toEqual({ desk: 'none', unmatched: true,
     returned: { by: 'yard', reason: 'that is nobody\'s work here' } });
   // Two router steps, the yard's read that handed it back, and the default desk.
   expect(out.loopRun.usage.modelCalls).toBe(4);
