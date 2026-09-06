@@ -3,7 +3,7 @@ import { HonestyCheck } from '../../src/run/honesty-check.js';
 import type { Act, ReplyCtx } from '../../src/contract/vocabulary.js';
 import { BOOKING_SURFACE, fact } from '../fixtures/compiled-agents.js';
 
-// A tool that takes no target answers this workspace and nothing else. A report row that
+// A tool that takes no argument answers this workspace and nothing else. A report row that
 // names a target for it claims a question nobody can put to the surface: the row is refused
 // by name, whatever word it carries, and the desk is told to drop it and answer in words.
 
@@ -24,7 +24,7 @@ const check = new HonestyCheck(SURFACE);
 test('a row naming a target for a targetless tool is refused, whatever its word', () => {
   for (const word of ['refused', 'no_tool_called', 'done'] as const) {
     const found = check.check(ctx([{ tool: 'listBookings', target: 'ws_4402', word }], [ran('listBookings')]));
-    expect(found.map(v => v.detail).join(' ')).toContain("listBookings takes no target — it cannot be asked about 'ws_4402'");
+    expect(found.map(v => v.detail).join(' ')).toContain("listBookings takes no argument — it cannot be asked about 'ws_4402'");
   }
 });
 

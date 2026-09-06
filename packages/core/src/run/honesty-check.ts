@@ -52,13 +52,13 @@ export class HonestyCheck {
           detail: `no tool named '${line.tool}' exists on this surface — name the tool exactly as the surface names it, or drop the row; a turn with no acts on the record sends an EMPTY report` });
         continue;
       }
-      // A row names a target only where the tool can be asked for one. A tool with
-      // no target argument answers this workspace and nothing else: a row naming a
-      // target for it claims a question nobody can put to the surface — the row is
+      // A row names a target only where the tool can be asked for one. A tool that
+      // takes no argument at all answers this workspace and nothing else: a row naming
+      // a target for it claims a question nobody can put to the surface — the row is
       // dropped, and the words say that no tool here reaches what was asked.
-      if (this.facts.tools[line.tool]?.target === null && line.target !== '') {
+      if (line.target !== '' && this.takesNoArgument(line.tool)) {
         violations.push({ guardName: 'claimIsGrounded',
-          detail: `${line.tool} takes no target — it cannot be asked about '${line.target}', so no row of the report can name it; drop the row, and say in your own words that nothing here reaches what was asked` });
+          detail: `${line.tool} takes no argument — it cannot be asked about '${line.target}', so no row of the report can name it; drop the row, and say in your own words that nothing here reaches what was asked` });
         continue;
       }
       // no_tool_called is the agent's own word for a decision to act in words
@@ -125,6 +125,15 @@ export class HonestyCheck {
         detail: `nothing in your report accounts for what ${act.call.tool} did to ${this.targetOf(act) ?? 'its target'}` });
     }
     return violations;
+  }
+
+  /** Whether the tool's declared schema accepts no argument at all. */
+  private takesNoArgument(tool: string): boolean {
+    const schema = this.facts.tools[tool]?.schema;
+    if (typeof schema !== 'object' || schema === null || Array.isArray(schema)) return true;
+    const properties = (schema as { readonly properties?: unknown }).properties;
+    return typeof properties !== 'object' || properties === null
+      || Object.keys(properties as object).length === 0;
   }
 
   /** A blank or absent target value leaves the act target-less: the tool and word
