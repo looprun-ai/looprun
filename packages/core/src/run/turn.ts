@@ -80,8 +80,9 @@ export function unactedLine(report: readonly ReportLine[], acts: readonly Act[])
 }
 
 /** What the records of this turn carry, harvested once: every canonical AMOUNT and
- *  every IDENTIFIER. The sources are the OPERATOR'S own messages, the turn's and the
- *  history's args, results and sentences, and the turn's own owed facts — every line
+ *  every IDENTIFIER. The sources are the OPERATOR'S own messages, the contract's own
+ *  facts as the desk was handed them, the turn's and the history's args, results and
+ *  sentences, and the turn's own owed facts — every line
  *  the engine mints and demands the reply carry is a record the reply may stand on.
  *  The engine's own corrections are not records and never ground anything — a figure
  *  named in a redrive stays as ungrounded as it was. */
@@ -91,7 +92,8 @@ export interface GroundedRecords {
 }
 
 export function groundedRecords(operatorTexts: readonly string[], acts: readonly Act[],
-                                facts: readonly DeliveryFact[]): GroundedRecords {
+                                facts: readonly DeliveryFact[],
+                                stated: readonly string[] = []): GroundedRecords {
   const amounts = new Set<string>();
   const ids = new Set<string>();
   // A record's IDENTIFIERS leave its text before its figures are counted, the same walk
@@ -106,6 +108,10 @@ export function groundedRecords(operatorTexts: readonly string[], acts: readonly
     for (const run of figureRuns(bare)) amounts.add(canonicalAmount(run));
   };
   for (const t of operatorTexts) feed(t);
+  // The contract's own facts are words the engine put in front of the desk: a reference
+  // date, a currency, a ceiling stated there is a figure the desk was handed, not one it
+  // worked out.
+  for (const t of stated) feed(t);
   for (const a of acts) {
     feed(JSON.stringify(a.call.args));
     feed(JSON.stringify(a.result ?? null));
@@ -566,7 +572,8 @@ export class Turn {
       messages.push({ role: 'user', text: pw.correction([parsed.detail]) });
       return 'redrive';
     }
-    const records = groundedRecords(operatorTexts, [...draft.acts, ...pastActs], facts);
+    const records = groundedRecords(operatorTexts, [...draft.acts, ...pastActs], facts,
+      this.deps.compiled.promptParts.facts);
     const payload = this.withoutImpossibleRows(parsed.finish, draft);
     const violations = [...this.replyViolations(payload, draft, pastActs, facts,
       records, true)];
@@ -695,7 +702,7 @@ export class Turn {
       return spoken === '' ? this.deps.compiled.wording.sentence.nothingOwed : spoken;
     };
     const records = groundedRecords(operatorTexts,
-      [...draft.acts, ...session.history.pastActs()], facts);
+      [...draft.acts, ...session.history.pastActs()], facts, this.deps.compiled.promptParts.facts);
     const delivered = await this.closeStep(draft, messages, drive, closeSystem, facts,
       records, session.history.pastActs(), operatorTexts, session.consent,
       () => (facts = assembleFacts(draft.acts, session.consent.open(), draft.closed, notes)));
@@ -804,7 +811,8 @@ export class Turn {
       if (this.withdrawRefusedHolds(finishNow.report, draft, consent)) {
         const before = facts;
         facts = factsNow();
-        records = groundedRecords(operatorTexts, [...draft.acts, ...pastActs], facts);
+        records = groundedRecords(operatorTexts, [...draft.acts, ...pastActs], facts,
+          this.deps.compiled.promptParts.facts);
         // The desk named the facts as the instruction numbered them; the withdrawal
         // renumbers what survives, and its claims follow the facts they named.
         finishNow = { ...finishNow,
