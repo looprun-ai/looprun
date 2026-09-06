@@ -81,7 +81,7 @@ function commaJoin(blocks: readonly (readonly string[])[]): readonly string[] {
  *  would drop it, and the author would read a rule on the card that the engine never enforces. */
 const LAWFUL_ARGS: Readonly<Record<DeclaredGuard['factory'], readonly string[]>> = {
   needs: ['read', 'args', 'pick'],
-  precondition: ['reads', 'read', 'field', 'is', 'in', 'absent'],
+  precondition: ['reads', 'read', 'field', 'is', 'in', 'absent', 'pick'],
   role: ['read', 'at', 'in', 'roster'],
   valueFromUser: ['arg'],
   argMatchesFormat: ['arg', 'pattern'],
@@ -332,9 +332,30 @@ function preconditionLines(guard: DeclaredGuard, facts: SurfaceFacts,
   }
   const read = stringArg(guard, 'read');
   const field = testedField(guard);
+  const acts = guard.acts.length === 1 ? quote(guard.acts[0]) : list(guard.acts);
+  const pick = pickArg(guard);
+  if (pick !== null) {
+    // THE LAW IS OVER THE ROWS THE CALL NAMES. The read answers a list; the rows whose declared
+    // field carries the held call's own argument are the ones the law reads, and every one of
+    // them has to carry the declared value. No row naming the call is a law with nothing to
+    // refuse on: the act runs.
+    if (field === null) {
+      throw new Error(`contract.guards '${guard.name}' declares args.pick and no args.field — a `
+        + `law over picked rows tests a field of each row, and this declaration names none`);
+    }
+    const answerLines = keyLines(guard, read, siblings);
+    return [`precondition(${acts}, ({ args, reads }) => {`,
+      ...answerLines,
+      `  if (answer === undefined) return false;`,
+      `  const rows = walkAnswer(answer, ${quote(pick.list)});`,
+      `  const picked = (Array.isArray(rows) ? rows : [])`,
+      `    .filter(row => walkAnswer(row, ${quote(pick.by)}) === args[${quote(pick.key)}]);`,
+      `  return picked.every(row => ${fieldTest(guard, `walkAnswer(row, ${quote(field)})`)});`,
+      `},`,
+      `${quote(ruleOf(guard))})`];
+  }
   const test = field === null ? 'true'
     : fieldTest(guard, `walkAnswer(answer, ${quote(field)})`);
-  const acts = guard.acts.length === 1 ? quote(guard.acts[0]) : list(guard.acts);
   // THE ANSWER IS THE CALL'S OWN. Every answer in the reads log is keyed by the arguments it
   // was read with, so a law over an act that names the record it touches is decided on THAT
   // record's answer and never on whichever one the conversation read last. What names it is
@@ -349,6 +370,26 @@ function preconditionLines(guard: DeclaredGuard, facts: SurfaceFacts,
     `  return ${test};`,
     `},`,
     `${quote(ruleOf(guard))})`];
+}
+
+/** The rows a law over a list read picks: the declared path to the rows inside the answer, the
+ *  row field that names the record, and the held call's argument it is matched against. */
+function pickArg(guard: DeclaredGuard): { readonly list: string; readonly by: string;
+  readonly key: string } | null {
+  const declared = guard.args?.pick;
+  if (declared === undefined) return null;
+  const block = declared as Readonly<Record<string, unknown>> | null;
+  const list = block?.['list'];
+  const by = block?.['by'];
+  const key = block?.['key'];
+  if (typeof block !== 'object' || block === null || Array.isArray(block)
+    || typeof list !== 'string' || typeof by !== 'string' || typeof key !== 'string') {
+    throw new Error(`contract.guards '${guard.name}' declares args.pick, whose configuration is `
+      + `{ list, by, key } — the path to the rows inside the answer, the row field that names `
+      + `the record, and the act's own argument it is matched against — which this declaration `
+      + `does not carry whole`);
+  }
+  return { list, by, key };
 }
 
 /** The values `args.in` names: the ones the acting record's field may carry for the act to run.

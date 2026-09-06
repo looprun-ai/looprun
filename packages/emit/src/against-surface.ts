@@ -162,7 +162,9 @@ const SCHEMA_ARGS: Readonly<Record<string, { readonly args: readonly string[];
   argSatisfiesCondition: { args: ['arg'],
     costs: 'the guard never fires — it sits in the census as a check that decides nothing' },
   argForbidden: { args: ['arg'],
-    costs: 'the guard never fires — no call carries an argument the act does not declare' }
+    costs: 'the guard never fires — no call carries an argument the act does not declare' },
+  precondition: { args: ['pick.key'],
+    costs: 'the pick matches no row and the law refuses nothing' }
 };
 
 /** Every argument a guard's CONFIGURATION names is an argument the act itself declares. A guard
@@ -178,7 +180,7 @@ function checkGuardArgsOnSchema(declaration: Declaration, facts: SurfaceFacts): 
     const reads = SCHEMA_ARGS[guard.factory];
     if (reads === undefined) return;
     for (const argName of reads.args) {
-      const named = guard.args?.[argName];
+      const named = argAt(guard.args, argName);
       if (typeof named !== 'string') continue;
       for (const act of guard.acts) {
         const fact = facts.tools[act];
