@@ -71,9 +71,9 @@ test('a finish that does not express the note is redriven', async () => {
 
   const r = await engine.chat('s1', 'email ana@example.com the confirmation');
 
-  const redrives = r.corrections.flatMap(c =>
+  const corrected = r.corrections.flatMap(c =>
     c.kind === 'redrive' && c.guardName === 'owedFactIsExpressed' ? [c.detail] : []);
-  expect(redrives.some(d => d.includes('name F2') && d.includes(RULE))).toBe(true);
+  expect(corrected.some(d => d.includes('name F2') && d.includes(RULE))).toBe(true);
   expect(r.text).toBe('Sent to ana@example.com, but it bounced.');
 });
 
