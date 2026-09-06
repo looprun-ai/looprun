@@ -11,7 +11,11 @@ export type ReportWord = 'done' | 'held' | 'refused' | 'unknown'
                                               //   (by the system or a rule); no_tool_called = a
                                               //   decision to act in words only
 export type Evidence = 'executor' | 'engine';                // who grounded the status
-export type QuestionClose = 'declined' | 'superseded' | 'expired' | 'vetoed';
+/** How an open question ends without its code: declined by the operator, superseded by
+ *  the act that ran, expired by the clock or the turn ttl, vetoed by a rule, or WITHDRAWN
+ *  by the desk itself — its closing report says `refused` for the held call, so the act is
+ *  never put to the operator. */
+export type QuestionClose = 'declined' | 'superseded' | 'expired' | 'vetoed' | 'withdrawn';
 export type QuestionState = 'open' | 'consumed' | { readonly closed: QuestionClose };
 export interface ChatMsg { readonly role: 'user' | 'assistant'; readonly text: string }
 /** What this turn's calls did, typed — the seat renders it in its own dialect

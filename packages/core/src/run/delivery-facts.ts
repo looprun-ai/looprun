@@ -14,6 +14,10 @@ import type { Act, Question, QuestionClose } from '../contract/vocabulary.js';
 import { TOKEN_MARK, canonicalAmount, carriedIds, figureRuns } from '../cards/catalog.js';
 import { FINISH_TOOL } from './finish-desk.js';
 
+/** The tail of a held act's sentence once the desk's own closing report refused it:
+ *  the question is closed withdrawn and the act stands not-done/blocked. */
+export const WITHDRAWN = 'the desk withdrew it before it was put to you; nothing ran';
+
 export interface DeliveryFact {
   readonly kind: 'ask' | 'code' | 'receipt' | 'refusal' | 'closure' | 'note';
   readonly text: string;
@@ -78,6 +82,19 @@ export function factIdMisses(claimed: readonly string[], facts: readonly Deliver
   readonly string[] {
   const named = claimedIds(claimed);
   return facts.map((_, i) => factId(i)).filter(id => !named.includes(id));
+}
+
+/** The desk's claimed ids carried across a renumbering: each id names the fact the
+ *  instruction numbered under it, and follows that fact to its place in the list that
+ *  stands now — an id whose fact is gone is dropped. */
+export function remapClaimedFacts(claimed: readonly string[], before: readonly DeliveryFact[],
+                                  after: readonly DeliveryFact[]): readonly string[] {
+  return claimedIds(claimed).flatMap(id => {
+    const fact = before[Number(id.slice(1)) - 1];
+    if (fact === undefined) return [id];
+    const at = after.findIndex(f => f.kind === fact.kind && f.text === fact.text);
+    return at === -1 ? [] : [factId(at)];
+  });
 }
 
 /** Every id the finish names that this turn owes no fact for. A finish that claims an
@@ -259,7 +276,9 @@ export function assembleFacts(acts: readonly Act[], open: readonly Question[],
     // operator, spoken — and its literals (a member id, a figure, a code) are forced
     // into the delivery in whatever language the reply takes. A held act stays out:
     // its ask and code already carry the turn.
-    if (a.status === 'not-done' && a.reason !== 'held') {
+    // A withdrawn act owes no fact of its own: the desk's message IS the refusal, written
+    // before the act was ever put up, and the record line names the withdrawal.
+    if (a.status === 'not-done' && a.reason !== 'held' && !a.sentence.endsWith(`(${WITHDRAWN})`)) {
       const spoken = spokenActSentence(a.sentence);
       if (!facts.some(f => f.kind === 'refusal' && f.text === spoken)) {
         facts.push({ kind: 'refusal', text: spoken, state: 'refused' });
@@ -271,6 +290,9 @@ export function assembleFacts(acts: readonly Act[], open: readonly Question[],
     facts.push({ kind: 'code', text: q.code, state: null });
   }
   for (const c of closed) {
+    // A withdrawn question is spoken by the act it held — the refusal fact above — and
+    // never as a closure of its own.
+    if (c.why === 'withdrawn') continue;
     facts.push({ kind: 'closure', text: `Question ${c.id} closed: ${c.why}.`, state: null });
   }
   for (const n of notes) facts.push({ kind: 'note', text: n, state: null });

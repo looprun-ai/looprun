@@ -13,6 +13,7 @@
  *  the turn — a consent question raised, the retries spent — the desk is given one
  *  more step on that same prefix to write the closing reply, and the same funnel
  *  charges it. */
+import type { ConsentDesk } from './consent-desk.js';
 import type { Act, ChatOpts, Correction, FinishPayload, Msg, Question, RawCall, ReportLine,
               StepInput, ToolCard, TurnRecord, TurnReturned } from '../contract/vocabulary.js';
 import { deepFreeze } from '../contract/freeze.js';
@@ -21,7 +22,7 @@ import type { CompiledAgent } from '../cards/cards.js';
 import { CallRunner } from './call-runner.js';
 import { canonicalAmount, carriedIds, figureRuns } from '../cards/catalog.js';
 import { actOrder, assembleFacts, closeInstruction, engineLabels, factIdMisses, gateMisses,
-         isCodeShaped, unowedFactIds, withoutFactLabels } from './delivery-facts.js';
+         isCodeShaped, unowedFactIds, withoutFactLabels, WITHDRAWN, remapClaimedFacts } from './delivery-facts.js';
 import type { DeliveryFact } from './delivery-facts.js';
 import { languageReference, readProse } from './prose-reader.js';
 import { DisclosureDesk } from './disclosure-desk.js';
@@ -679,7 +680,7 @@ export class Turn {
     const notes = [...session.consent.staleAnswers(draft.userText, draft.turn),
       ...session.consent.laterTexts(draft.turn),
       ...session.consent.codeNotices(draft.userText)];
-    const facts = assembleFacts(draft.acts, open, draft.closed, notes);
+    let facts = assembleFacts(draft.acts, open, draft.closed, notes);
     // The floor speaks exactly what the turn OWES: the assembled facts, nothing else.
     // A read is not owed and never prints; a code prints inside the engine's human
     // instruction. A turn owing nothing says so.
@@ -692,7 +693,8 @@ export class Turn {
     const records = groundedRecords(operatorTexts,
       [...draft.acts, ...session.history.pastActs()], facts);
     const delivered = await this.closeStep(draft, messages, drive, closeSystem, facts,
-      records, session.history.pastActs(), operatorTexts);
+      records, session.history.pastActs(), operatorTexts, session.consent,
+      () => (facts = assembleFacts(draft.acts, session.consent.open(), draft.closed, notes)));
     // The close step's words first, then the words an unspoken read refused, then the
     // floor. A turn that wrote nothing an operator can use gets the record lines; a
     // turn that wrote a question keeps it.
@@ -704,11 +706,35 @@ export class Turn {
     return session.seal(draft);
   }
 
+  /** A held act whose closing report line reads `refused` is withdrawn: the question
+   *  closes `withdrawn`, its code licenses nothing, and the act stands on the record as
+   *  not-done/blocked with the withdrawal as its owed refusal. The operator is never
+   *  handed a code for an act the desk itself has just refused. Answers whether any
+   *  question was withdrawn. */
+  private withdrawRefusedHolds(report: readonly ReportLine[], draft: TurnDraft,
+                               consent: ConsentDesk): boolean {
+    let withdrawn = false;
+    draft.acts.forEach((act, i) => {
+      if (act.reason !== 'held' || act.questionId === null) return;
+      const refused = report.some(line => line.tool === act.call.tool
+        && line.word === 'refused'
+        && (line.target === '' || JSON.stringify(act.call.args).includes(line.target)));
+      if (!refused) return;
+      consent.close(act.questionId, 'withdrawn', draft);
+      const head = act.sentence.split(' — ')[0];
+      draft.acts[i] = { ...act, said: null, status: 'not-done', reason: 'blocked',
+        evidence: 'engine', sentence: `${head} — not-done (${WITHDRAWN})`, owed: null };
+      withdrawn = true;
+    });
+    return withdrawn;
+  }
+
   /** The close-step itself: null when the desk cannot be asked or does not pay. */
   private async closeStep(draft: TurnDraft, messages: Msg[], drive: StepInput,
                           closeSystem: string, facts: readonly DeliveryFact[],
                           records: GroundedRecords, pastActs: readonly Act[],
-                          operatorTexts: readonly string[]):
+                          operatorTexts: readonly string[], consent: ConsentDesk,
+                          factsNow: () => readonly DeliveryFact[]):
     Promise<{ readonly text: string; readonly retried: boolean } | null> {
     // A turn owing nothing has no reply for the desk to write: the floor delivers
     // and no call is spent. Every owed fact is a sentence — a world code arrives
@@ -741,9 +767,22 @@ export class Turn {
           text: this.deps.promptWriter.correction([parsed.detail]) });
         continue;
       }
-      const violations = this.replyViolations(parsed.finish, draft, pastActs, facts,
+      // The desk's own word withdraws its question: a closing report that says
+      // `refused` for the call the turn holds is the desk deciding not to put it up,
+      // and the reply carries the refusal alone — never a refusal and a code together.
+      let finishNow = parsed.finish;
+      if (this.withdrawRefusedHolds(parsed.finish.report, draft, consent)) {
+        const before = facts;
+        facts = factsNow();
+        records = groundedRecords(operatorTexts, [...draft.acts, ...pastActs], facts);
+        // The desk named the facts as the instruction numbered them; the withdrawal
+        // renumbers what survives, and its claims follow the facts they named.
+        finishNow = { ...parsed.finish,
+          facts: remapClaimedFacts(parsed.finish.facts, before, facts) };
+      }
+      const violations = this.replyViolations(finishNow, draft, pastActs, facts,
         records, false);
-      const text = this.rewrite(parsed.finish.message);
+      const text = this.rewrite(finishNow.message);
       const refusal = violations.length > 0 ? null
         : this.deliveryRefusal(text, draft, records, facts, operatorTexts);
       if (violations.length === 0 && refusal === null) {
@@ -756,7 +795,7 @@ export class Turn {
       for (const v of violations) {
         draft.corrections.push({ kind: 'redrive', guardName: v.guardName, detail: v.detail });
       }
-      this.sendBack(conversation, parsed.finish,
+      this.sendBack(conversation, finishNow,
         refusal === null ? violations.map(v => v.detail) : [refusal.sentence]);
     }
     return null;
