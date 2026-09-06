@@ -265,7 +265,7 @@ export interface GuardCensus { readonly guards: readonly InstalledGuard[];      
                                               //   the resolved limits
 export type EngineSentenceKey = 'approvalInstruction' | 'exhaustionClosure' | 'unknownStatus'
                               | 'questionExpired' | 'questionSuperseded' | 'questionDeclined'
-                              | 'deniedByGuard';
+                              | 'deniedByGuard' | 'nothingOwed';
 /** The fully-resolved wording table: every engine sentence and every user-facing
  *  status word present, defaults filled — the table never carries a hole. */
 export interface ResolvedWording {

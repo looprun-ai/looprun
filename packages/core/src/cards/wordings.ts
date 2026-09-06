@@ -22,7 +22,8 @@ const SENTENCE_PACK: Record<EngineSentenceKey, string> = {
   questionExpired: 'The approval question expired unanswered; nothing ran.',
   questionSuperseded: 'The open question was settled by the act that ran.',
   questionDeclined: 'You declined, so nothing ran.',
-  deniedByGuard: 'A rule stopped this call.'
+  deniedByGuard: 'A rule stopped this call.',
+  nothingOwed: 'Nothing here reaches what was asked, and nothing changed.'
 };
 
 /** Defaults filled, overrides applied per key; the table never carries a hole. */

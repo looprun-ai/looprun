@@ -47,7 +47,7 @@ test('a finish beside domain calls defers with earlyFinish — the call runs, th
   expect(r.closedBy).toBe('model');
 });
 
-test('an act-free exhausted turn closes with "Nothing changed." — never silence', async () => {
+test("an act-free exhausted turn closes with the engine's nothing-owed sentence — never silence", async () => {
   const model = new ScriptedModel([
     { calls: [], text: 'thinking...' },
     { calls: [], text: 'still thinking...' }
@@ -57,5 +57,5 @@ test('an act-free exhausted turn closes with "Nothing changed." — never silenc
   const r = await engine.chat('s1', 'hello');
 
   expect(r.closedBy).toBe('engine');
-  expect(r.text).toContain('Nothing changed.');
+  expect(r.text).toContain('Nothing here reaches what was asked, and nothing changed.');
 });

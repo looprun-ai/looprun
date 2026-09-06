@@ -687,8 +687,10 @@ export class Turn {
     const floor = (): string => {
       const lines = facts.map(f => f.kind === 'code'
         ? `To proceed, send just this code: ${f.text}.` : f.text);
+      // A turn owing nothing, closed by the engine, speaks the engine's own sentence for
+      // it: nothing on this surface reached what was asked, and nothing changed.
       const spoken = this.rewrite(lines.join('\n'));
-      return spoken === '' ? 'Nothing changed.' : spoken;
+      return spoken === '' ? this.deps.compiled.wording.sentence.nothingOwed : spoken;
     };
     const records = groundedRecords(operatorTexts,
       [...draft.acts, ...session.history.pastActs()], facts);

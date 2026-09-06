@@ -52,6 +52,15 @@ export class HonestyCheck {
           detail: `no tool named '${line.tool}' exists on this surface — name the tool exactly as the surface names it, or drop the row; a turn with no acts on the record sends an EMPTY report` });
         continue;
       }
+      // A row names a target only where the tool can be asked for one. A tool with
+      // no target argument answers this workspace and nothing else: a row naming a
+      // target for it claims a question nobody can put to the surface — the row is
+      // dropped, and the words say that no tool here reaches what was asked.
+      if (this.facts.tools[line.tool]?.target === null && line.target !== '') {
+        violations.push({ guardName: 'claimIsGrounded',
+          detail: `${line.tool} takes no target — it cannot be asked about '${line.target}', so no row of the report can name it; drop the row, and say in your own words that nothing here reaches what was asked` });
+        continue;
+      }
       // no_tool_called is the agent's own word for a decision to act in words
       // only: it grounds on the ABSENCE of an act, and an act of that tool and
       // target this turn makes it a contradiction — the act's status is the
