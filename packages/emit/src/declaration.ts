@@ -13,7 +13,7 @@ export interface DeclaredGuard {
   readonly factory: 'needs' | 'precondition' | 'role' | 'valueFromUser'
     | 'argMatchesFormat' | 'argForbidden' | 'maxCalls' | 'resultSatisfiesCondition' | 'mustAccountFor' | 'blockPattern'
     | 'argSatisfiesCondition' | 'valueFromUserOrRecord' | 'argMatchesRecord'
-    | 'prose' | 'deny';
+    | 'idNamedByUser' | 'prose' | 'deny';
   readonly args?: Readonly<Record<string, unknown>>;
   readonly rule?: string;
   /** The world refusal code this rule speaks for, of the act it names. A row of the seam table
@@ -125,7 +125,7 @@ export interface Declaration {
   }[];
 }
 
-const FACTORIES: ReadonlySet<DeclaredGuard['factory']> = new Set(['needs', 'precondition', 'role', 'valueFromUser', 'argMatchesFormat', 'argForbidden', 'maxCalls', 'resultSatisfiesCondition', 'mustAccountFor', 'blockPattern', 'argSatisfiesCondition', 'valueFromUserOrRecord', 'argMatchesRecord', 'prose', 'deny']);
+const FACTORIES: ReadonlySet<DeclaredGuard['factory']> = new Set(['needs', 'precondition', 'role', 'valueFromUser', 'argMatchesFormat', 'argForbidden', 'maxCalls', 'resultSatisfiesCondition', 'mustAccountFor', 'blockPattern', 'argSatisfiesCondition', 'valueFromUserOrRecord', 'argMatchesRecord', 'idNamedByUser', 'prose', 'deny']);
 const REWRITE_KINDS: ReadonlySet<DeclaredRewrite['kind']> = new Set(['maskPattern', 'purgePattern', 'swapTerms']);
 const JUDGED_FACTORIES: ReadonlySet<DeclaredJudged['factory']> = new Set(['injectionCheck']);
 const WIDE_KINDS: ReadonlySet<NonNullable<DeclaredGuard['wide']>> = new Set(['oneLawEveryAct', 'sameRefusal']);

@@ -740,6 +740,61 @@ export function valueFromUser(tool: string, arg: string): SeedGuard {
   };
 }
 
+/** THE PERSON THE OPERATOR NAMED. An identifier argument that names a row of a list read
+ *  is licensed by the operator's own words in one of two ways: the id itself is written in
+ *  a message, or the row's label is written there and names that row alone. A label found
+ *  nowhere refuses — nobody the operator named is on the list — and a label that fits more
+ *  than one row refuses too: the desk asks which, it never picks. The list is the last valid
+ *  answer of the declared read; unread, the guard refuses in words. Every comparison is a
+ *  whole string against the operator's text — no word of any language is read. */
+export function idNamedByUser(tool: string, spec: { readonly arg: string; readonly read: string;
+  readonly list: string; readonly key: string; readonly label: string }): SeedGuard {
+  const { arg, read, list, key, label } = spec;
+  const rowsOf = (answer: unknown): readonly Readonly<Record<string, unknown>>[] => {
+    const rows = walkPath(answer as Json, list);
+    return Array.isArray(rows)
+      ? rows.filter((r): r is Readonly<Record<string, unknown>> => typeof r === 'object' && r !== null)
+      : [];
+  };
+  return {
+    name: `idNamedByUser:${tool}:${arg}`,
+    rule: `Send ${tool}'s '${arg}' only for a person the user named — by id, or by a name that `
+      + `fits one row of ${read}.`,
+    tool,
+    on: 'preTool',
+    kind: 'idNamedByUser',
+    compile(home) {
+      return installedAt<CallCtx>(this, home, ctx => {
+        const raw = ctx.call.args[arg];
+        if (typeof raw !== 'string' || raw === '') return null;
+        if (ctx.userTexts.some(t => t.includes(raw))) return null;
+        const answer = ctx.reads.latest(read)?.answer;
+        if (answer === undefined) {
+          return `${read} was not read this conversation — read it before sending '${arg}'`;
+        }
+        const rows = rowsOf(answer);
+        const labelOf = (row: Readonly<Record<string, unknown>>): string | null =>
+          typeof row[label] === 'string' && row[label] !== '' ? row[label] : null;
+        const named = rows.filter(row => {
+          const text = labelOf(row);
+          return text !== null && ctx.userTexts.some(t => t.includes(text));
+        });
+        if (named.length === 0) {
+          const listed = rows.map(labelOf).filter((l): l is string => l !== null);
+          return `nobody the user named is on ${read} — say who is (${listed.join(', ')}) and ask which`;
+        }
+        if (named.length > 1) {
+          return `the name the user wrote fits ${named.length} rows of ${read} (${
+            named.map(row => `${String(row[key])}: ${labelOf(row) ?? ''}`).join(', ')}) — ask which`;
+        }
+        const chosen = named[0];
+        return chosen[key] === raw ? null
+          : `the user named ${labelOf(chosen) ?? ''} (${String(chosen[key])}), and '${arg}' carries ${raw}`;
+      });
+    }
+  };
+}
+
 /** The engine's own marker for a listed token set inside a refusal sentence. The
  *  delivery gate reads the list back through it and forces every token verbatim. */
 export const TOKEN_MARK = 'takes exactly one of: ';

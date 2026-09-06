@@ -25,7 +25,7 @@ contract:
   guards:                                # required, a sequence of mappings
     - name: read-before-cancel           # unique; the census keys on it
       acts: [cancelBooking]              # every act must exist on the surface
-      factory: onlyAfter                 # onlyAfter · precondition · role · valueFromUser ·
+      factory: onlyAfter                 # onlyAfter · precondition · role · valueFromUser · idNamedByUser ·
                                          # valueFromUserOrRecord · argMatchesRecord ·
                                          # argSatisfiesCondition · onlyAfterWhen ·
                                          # argMatchesFormat · argForbidden · cap ·

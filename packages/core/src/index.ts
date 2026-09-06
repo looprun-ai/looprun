@@ -14,6 +14,7 @@ export type {
   JudgedGuard, Limits, Disclosure, DisclosureBinding, MaskKey, Wording, PromptParts
 } from './cards/cards.js';
 export type { Precondition } from './cards/catalog.js';
+export { idNamedByUser } from './cards/catalog.js';
 export { needs, precondition, valueFromUser, resultSatisfiesCondition,
          mustAccountFor, argMatchesFormat, argForbidden, blockPattern, purgePattern, maskPattern,
          swapTerms, maxCalls, injectionCheck,

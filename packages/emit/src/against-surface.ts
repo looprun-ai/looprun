@@ -120,7 +120,7 @@ function checkJudgedActs(declaration: Declaration, facts: SurfaceFacts): readonl
  *  read declared inside a block, the way a role gate declares the roster it names people from. */
 const ACT_ARGS: Readonly<Record<string, readonly string[]>> = {
   needs: ['read'], precondition: ['read'], role: ['read', 'roster.read'],
-  valueFromUserOrRecord: ['read'], argMatchesRecord: ['read'] };
+  valueFromUserOrRecord: ['read'], argMatchesRecord: ['read'], idNamedByUser: ['read'] };
 
 /** The value a dotted argument name reaches, over the blocks a declaration nests. */
 function argAt(args: Readonly<Record<string, unknown>> | undefined, path: string): unknown {
@@ -157,6 +157,7 @@ const SCHEMA_ARGS: Readonly<Record<string, { readonly args: readonly string[];
   valueFromUser: { args: ['arg'], costs: 'the guard refuses every call of it' },
   valueFromUserOrRecord: { args: ['arg'], costs: 'the guard refuses every call of it' },
   argMatchesRecord: { args: ['arg'], costs: 'the guard refuses every call of it' },
+  idNamedByUser: { args: ['arg'], costs: 'the guard reads undefined on every call and stands aside' },
   argMatchesFormat: { args: ['arg'],
     costs: 'the guard never fires — it sits in the census as a check that decides nothing' },
   argSatisfiesCondition: { args: ['arg'],

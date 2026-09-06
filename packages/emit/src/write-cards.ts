@@ -93,6 +93,7 @@ const LAWFUL_ARGS: Readonly<Record<DeclaredGuard['factory'], readonly string[]>>
   argSatisfiesCondition: ['arg', 'is', 'in'],
   valueFromUserOrRecord: ['arg', 'read', 'at'],
   argMatchesRecord: ['arg', 'read', 'at'],
+  idNamedByUser: ['arg', 'read', 'list', 'key', 'label'],
   prose: ['why'],
   deny: []
 };
@@ -122,6 +123,7 @@ const ACT_SHAPE: Readonly<Record<DeclaredGuard['factory'], 'all' | 'first' | 'no
   argSatisfiesCondition: 'all',
   valueFromUserOrRecord: 'first',
   argMatchesRecord: 'first',
+  idNamedByUser: 'first',
   prose: 'none',
   deny: 'none'
 };
@@ -663,6 +665,8 @@ function factoryCall(guard: DeclaredGuard, facts: SurfaceFacts,
         lines: [`argForbidden(${quote(act)}, ${quote(stringArg(guard, 'arg'))})`] };
     case 'resultSatisfiesCondition':
       return { imported: 'resultSatisfiesCondition', lines: resultSatisfiesConditionLines(guard, act) };
+    case 'idNamedByUser':
+      return { imported: 'idNamedByUser', lines: [`idNamedByUser(${quote(act)}, { arg: ${quote(stringArg(guard, 'arg'))}, read: ${quote(stringArg(guard, 'read'))}, list: ${quote(stringArg(guard, 'list'))}, key: ${quote(stringArg(guard, 'key'))}, label: ${quote(stringArg(guard, 'label'))} })`] };
     case 'precondition':
       return { imported: 'precondition', lines: preconditionLines(guard, facts, siblings, authored),
         authored: typeof guard.args?.code === 'string' ? guard.args.code : null };
