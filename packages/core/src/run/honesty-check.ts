@@ -52,15 +52,6 @@ export class HonestyCheck {
           detail: `no tool named '${line.tool}' exists on this surface — name the tool exactly as the surface names it, or drop the row; a turn with no acts on the record sends an EMPTY report` });
         continue;
       }
-      // A row names a target only where the tool can be asked for one. A tool that
-      // takes no argument at all answers this workspace and nothing else: a row naming
-      // a target for it claims a question nobody can put to the surface — the row is
-      // dropped, and the words say that no tool here reaches what was asked.
-      if (line.target !== '' && this.takesNoArgument(line.tool)) {
-        violations.push({ guardName: 'claimIsGrounded',
-          detail: `${line.tool} takes no argument — it cannot be asked about '${line.target}', so no row of the report can name it; drop the row, and say in your own words that nothing here reaches what was asked` });
-        continue;
-      }
       // no_tool_called is the agent's own word for a decision to act in words
       // only: it grounds on the ABSENCE of an act, and an act of that tool and
       // target this turn makes it a contradiction — the act's status is the
@@ -127,13 +118,19 @@ export class HonestyCheck {
     return violations;
   }
 
-  /** Whether the tool's declared schema accepts no argument at all. */
-  private takesNoArgument(tool: string): boolean {
-    const schema = this.facts.tools[tool]?.schema;
-    if (typeof schema !== 'object' || schema === null || Array.isArray(schema)) return true;
-    const properties = (schema as { readonly properties?: unknown }).properties;
-    return typeof properties !== 'object' || properties === null
-      || Object.keys(properties as object).length === 0;
+  /** The rows a report cannot carry: a target the tool was never asked for. A tool that
+   *  declares no target argument is asked by its arguments alone, so a row naming a target
+   *  none of this turn's calls of that tool carried claims a question nobody put to the
+   *  surface. Such a row is dropped before any check reads the report. A tool the turn
+   *  never called is not decided here — that row is the desk's claim about an act it did
+   *  not make, and the floor answers it. */
+  impossibleRows(report: readonly ReportLine[], turnActs: readonly Act[]): readonly ReportLine[] {
+    return report.filter(line => {
+      if (line.target === '' || this.facts.tools[line.tool]?.target !== null) return false;
+      const calls = turnActs.filter(a => a.call.tool === line.tool);
+      if (calls.length === 0) return false;
+      return !calls.some(a => Object.values(a.call.args).some(v => String(v) === line.target));
+    });
   }
 
   /** A blank or absent target value leaves the act target-less: the tool and word

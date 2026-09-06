@@ -14,6 +14,7 @@
  *  more step on that same prefix to write the closing reply, and the same funnel
  *  charges it. */
 import type { ConsentDesk } from './consent-desk.js';
+import { HonestyCheck } from './honesty-check.js';
 import type { Act, ChatOpts, Correction, FinishPayload, Msg, Question, RawCall, ReportLine,
               StepInput, ToolCard, TurnRecord, TurnReturned } from '../contract/vocabulary.js';
 import { deepFreeze } from '../contract/freeze.js';
@@ -566,11 +567,12 @@ export class Turn {
       return 'redrive';
     }
     const records = groundedRecords(operatorTexts, [...draft.acts, ...pastActs], facts);
-    const violations = [...this.replyViolations(parsed.finish, draft, pastActs, facts,
+    const payload = this.withoutImpossibleRows(parsed.finish, draft);
+    const violations = [...this.replyViolations(payload, draft, pastActs, facts,
       records, true)];
     // Nothing owed and the prose still dropped every identifier its reads returned:
     // the turn answered with words that carry none of what it looked up.
-    if (facts.length === 0 && proseDropsReads(draft.acts, parsed.finish.message)) {
+    if (facts.length === 0 && proseDropsReads(draft.acts, payload.message)) {
       violations.push({ guardName: 'readIsSpoken',
         detail: 'your message names none of the identifiers this turn\'s reads returned — '
           + 'state what the records answered, spelled as they spell it' });
@@ -582,7 +584,7 @@ export class Turn {
       || g.tools.some(t => acted.has(t)));
     if (violations.length === 0 && judgedBound.length > 0) {
       const replyCtx = deepFreeze({
-        message: parsed.finish.message, report: parsed.finish.report,
+        message: payload.message, report: payload.report,
         userText: draft.userText, turnActs: [...draft.acts], pastActs
       });
       for (const v of await judge.run(judgedBound, replyCtx, messages)) {
@@ -601,7 +603,7 @@ export class Turn {
       }
     }
     // The words the operator would receive, read at the seam where they exist.
-    const text = this.rewrite(parsed.finish.message);
+    const text = this.rewrite(payload.message);
     // An unspoken read is the ONE violation whose correction may cost the operator the
     // whole turn: a desk that read the roster and came back with a question names no
     // roster row, and the record dump the floor would deliver destroys the question.
@@ -617,11 +619,11 @@ export class Turn {
       for (const v of violations) {
         draft.corrections.push({ kind: 'redrive', guardName: v.guardName, detail: v.detail });
       }
-      this.sendBack(messages, parsed.finish,
+      this.sendBack(messages, payload,
         refusal === null ? violations.map(v => v.detail) : [refusal.sentence]);
       return 'redrive';
     }
-    draft.finish = parsed.finish;
+    draft.finish = payload;
     draft.closedBy = 'model';
     draft.delivery = { by: 'prose', retried: false, facts };
     draft.text = this.deps.masker.maskProse(text);
@@ -708,6 +710,19 @@ export class Turn {
     return session.seal(draft);
   }
 
+  /** A report row naming a target none of this turn's calls of that tool carried claims a
+   *  question nobody put to the surface. The engine drops it on the spot, on the record,
+   *  and the rest of the reply is checked as written — no correction is spent on a row
+   *  that cannot exist. */
+  private withoutImpossibleRows(finish: FinishPayload, draft: TurnDraft): FinishPayload {
+    const dropped = new HonestyCheck(this.deps.compiled.facts).impossibleRows(finish.report, draft.acts);
+    if (dropped.length === 0) return finish;
+    for (const row of dropped) {
+      draft.corrections.push({ kind: 'rowDropped', tool: row.tool, target: row.target });
+    }
+    return { ...finish, report: finish.report.filter(row => !dropped.includes(row)) };
+  }
+
   /** A held act whose closing report line reads `refused` is withdrawn: the question
    *  closes `withdrawn`, its code licenses nothing, and the act stands on the record as
    *  not-done/blocked with the withdrawal as its owed refusal. The operator is never
@@ -785,15 +800,15 @@ export class Turn {
       // The desk's own word withdraws its question: a closing report that says
       // `refused` for the call the turn holds is the desk deciding not to put it up,
       // and the reply carries the refusal alone — never a refusal and a code together.
-      let finishNow = parsed.finish;
-      if (this.withdrawRefusedHolds(parsed.finish.report, draft, consent)) {
+      let finishNow = this.withoutImpossibleRows(parsed.finish, draft);
+      if (this.withdrawRefusedHolds(finishNow.report, draft, consent)) {
         const before = facts;
         facts = factsNow();
         records = groundedRecords(operatorTexts, [...draft.acts, ...pastActs], facts);
         // The desk named the facts as the instruction numbered them; the withdrawal
         // renumbers what survives, and its claims follow the facts they named.
-        finishNow = { ...parsed.finish,
-          facts: remapClaimedFacts(parsed.finish.facts, before, facts) };
+        finishNow = { ...finishNow,
+          facts: remapClaimedFacts(finishNow.facts, before, facts) };
       }
       const violations = this.replyViolations(finishNow, draft, pastActs, facts,
         records, false);

@@ -1,37 +1,49 @@
 import { test, expect } from 'vitest';
 import { HonestyCheck } from '../../src/run/honesty-check.js';
-import type { Act, ReplyCtx } from '../../src/contract/vocabulary.js';
-import { BOOKING_SURFACE, fact } from '../fixtures/compiled-agents.js';
+import type { Act } from '../../src/contract/vocabulary.js';
+import { BOOKING_SURFACE, fact, testEngine } from '../fixtures/compiled-agents.js';
+import { callStep, finishStep, payingDesk } from '../fixtures/scripted-model.js';
 
-// A tool that takes no argument answers this workspace and nothing else. A report row that
-// names a target for it claims a question nobody can put to the surface: the row is refused
-// by name, whatever word it carries, and the desk is told to drop it and answer in words.
+// A tool that declares no target is asked by its arguments alone. A report row naming a
+// target none of this turn's calls of that tool carried claims a question nobody put to the
+// surface: the engine drops the row on the spot, on the record, and checks the rest of the
+// reply as written.
 
 const SURFACE = { tools: { ...BOOKING_SURFACE.tools,
-  listBookings: fact({ name: 'listBookings', effect: 'read', does: 'Lists the bookings of this workspace.' }) } };
+  listBookings: fact({ name: 'listBookings', effect: 'read', does: 'Lists the bookings of this workspace.',
+    schema: { type: 'object', properties: { status: { type: 'string' } }, required: [] } }) } };
 
-const ran = (tool: string): Act => ({ id: 'a1', turn: 1, origin: 'model',
-  call: { tool, args: {}, key: `${tool}:{}` }, effect: 'read', said: 'yes', status: 'done',
+const ran = (tool: string, args: Record<string, string>): Act => ({ id: `a_${tool}`, turn: 1, origin: 'model',
+  call: { tool, args, key: `${tool}:${JSON.stringify(args)}` }, effect: 'read', said: 'yes', status: 'done',
   reason: null, evidence: 'executor', sentence: `${tool}() — done`, owed: null, result: { bookings: [] },
   questionId: null, guard: null });
 
-const ctx = (report: ReplyCtx['report'], acts: readonly Act[]): ReplyCtx =>
-  ({ message: 'Only this workspace is readable here.', report, userText: 'bookings of ws_4402?',
-     turnActs: acts, pastActs: [] });
-
-const check = new HonestyCheck(SURFACE);
-
-test('a row naming a target for a targetless tool is refused, whatever its word', () => {
-  for (const word of ['refused', 'no_tool_called', 'done'] as const) {
-    const found = check.check(ctx([{ tool: 'listBookings', target: 'ws_4402', word }], [ran('listBookings')]));
-    expect(found.map(v => v.detail).join(' ')).toContain("listBookings takes no argument — it cannot be asked about 'ws_4402'");
-  }
+test('the rows a report cannot carry name a target no call of that tool carried', () => {
+  const check = new HonestyCheck(SURFACE);
+  const acts = [ran('listBookings', { status: 'out' })];
+  expect(check.impossibleRows([
+    { tool: 'listBookings', target: 'ws_4402', word: 'refused' },
+    { tool: 'listBookings', target: 'out', word: 'done' },
+    { tool: 'listBookings', target: '', word: 'done' },
+    { tool: 'cancelBooking', target: 'bk_9', word: 'done' }
+  ], acts)).toEqual([{ tool: 'listBookings', target: 'ws_4402', word: 'refused' }]);
+  expect(check.impossibleRows([{ tool: 'listBookings', target: 'ws_4402', word: 'refused' }], [])).toEqual([]);
 });
 
-test('the same tool with no target named grounds as a read echo', () => {
-  expect(check.check(ctx([{ tool: 'listBookings', target: '', word: 'done' }], [ran('listBookings')]))).toEqual([]);
-});
+test('a reply carrying an impossible row is delivered on the first try, the row dropped on the record', async () => {
+  const model = payingDesk([
+    callStep('listBookings', {}),
+    finishStep('Only this workspace\'s records are readable here; nothing reaches ws_4402.',
+      [{ tool: 'listBookings', target: 'ws_4402', word: 'refused' }])
+  ]);
+  const { engine } = testEngine({ model, guards: [], facts: SURFACE,
+    behaviors: { listBookings: () => ({ result: { bookings: [] }, done: 'yes' }) } });
 
-test('an empty report over a read that ran is honest', () => {
-  expect(check.check(ctx([], [ran('listBookings')]))).toEqual([]);
+  const r = await engine.chat('s1', 'pull up the bookings of ws_4402');
+
+  expect(r.closedBy).toBe('model');
+  expect(r.delivery.by).toBe('prose');
+  expect(r.text).toContain('Only this workspace');
+  expect(r.corrections).toContainEqual({ kind: 'rowDropped', tool: 'listBookings', target: 'ws_4402' });
+  expect(r.corrections.some(c => c.kind === 'redrive')).toBe(false);
 });

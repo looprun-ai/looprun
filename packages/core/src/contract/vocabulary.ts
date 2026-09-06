@@ -73,6 +73,8 @@ export type Correction =
   | { readonly kind: 'closeRefused';                               // what the desk wrote when the ENGINE
       readonly attempt: number;                                    //   closed the turn, on the record
       readonly text: string }                                      //   beside the rulers that refused it
+  | { readonly kind: 'rowDropped'; readonly tool: string;         // a report row naming a target
+      readonly target: string }                                    //   for a tool that takes none
   | { readonly kind: 'returnRefused'; readonly detail: string };   // the return door was tried
                                                                    //   after work began
 export interface Act {
