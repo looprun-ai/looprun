@@ -21,6 +21,7 @@
     "build": "pnpm -r --if-present build",
     "typecheck": "pnpm -r --if-present typecheck",
     "lint": "pnpm -r --if-present lint",
+    "chat": "node packages/looprun/bin/looprun.mjs chat",
     "test": "pnpm -r --if-present test && pnpm gates",
     "gates": "node tests/no-external-model.test.mjs && node tests/no-secrets.test.mjs && node tests/plain-names.test.mjs && node tests/guard-priority.test.mjs && node tests/no-bench-drift.test.mjs",
     "changeset": "changeset",
