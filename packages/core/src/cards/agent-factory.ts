@@ -107,6 +107,8 @@ function compileDisclosure(disclosure: Readonly<Record<string, Disclosure>>,
   return out;
 }
 
+/** The house law that hands the hold to the engine, by the name the skill stamps on every desk. */
+const ONE_QUESTION = 'oneQuestion';
 /** What the ungoverned twin says about itself in the prompt: no call is held here. */
 const NO_HOLD_HERE = 'Nothing here holds a call: what you call runs at once, and no code is ever '
   + 'issued. Before any call that changes or moves something for good, ask the operator for '
@@ -188,7 +190,10 @@ export class AgentFactory {
     const disclosureBindings = compileDisclosure(contract?.disclosure ?? {}, lane);
     mergeNeedsRelations(disclosureBindings, contract);
 
-    const armedGuards = armed ? guards : guards.map(g => ({
+    // The house law that hands the hold to the engine — oneQuestion, by its house name — is
+    // not printed in the twin: with nothing armed it would teach a hold that never comes,
+    // beside the truth the twin states about itself.
+    const armedGuards = armed ? guards : guards.filter(g => g.name !== ONE_QUESTION).map(g => ({
       ...g,
       deny: () => null,
       ...(g.owe !== undefined ? { owe: () => null } : {}),
