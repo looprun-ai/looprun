@@ -107,6 +107,14 @@ function compileDisclosure(disclosure: Readonly<Record<string, Disclosure>>,
   return out;
 }
 
+/** What the ungoverned twin says about itself in the prompt: no call is held here. */
+const NO_HOLD_HERE = 'Nothing here holds a call: what you call runs at once, and no code is ever '
+  + 'issued. Before any call that changes or moves something for good, ask the operator for '
+  + 'their explicit confirmation in your own words, and make the call only after they gave it.';
+/** The same truth on the card of every act that changes or moves something for good. */
+const CONSENT_IN_WORDS = 'Ask the operator for explicit confirmation before this call; nothing '
+  + 'holds it for you, and it runs the moment you make it.';
+
 export class AgentFactory {
   governed(spec: AgentSpec, contract: DomainContract | undefined, facts: SurfaceFacts): CompiledAgent {
     return deepFreeze(this.compile(spec, contract, facts, true));
@@ -187,9 +195,20 @@ export class AgentFactory {
       ...(g.restate !== undefined ? { restate: () => null } : {}),
       ...(g.hold !== undefined ? { hold: () => null } : {})
     }));
+    // THE TWIN TELLS THE TRUTH ABOUT ITSELF. With nothing armed, no call is held and no
+    // code is minted, so the desk is told so, in the prompt and on every card whose act
+    // changes or moves something for good: ask in words, call only after the word.
+    const truthful: CompiledGuard[] = armed ? [] : [
+      { name: 'noHoldHere', rule: NO_HOLD_HERE, home: 'spec', on: 'reply', tools: [],
+        kind: 'prose', judged: false, installedBecause: 'the ungoverned twin', deny: () => null },
+      ...Object.values(lane.tools).filter(fact => fact.effect === 'destructive').map(fact => ({
+        name: `consentInWords:${fact.name}`, rule: CONSENT_IN_WORDS, home: 'contract' as const,
+        on: 'reply' as const, tools: [fact.name], kind: 'prose', judged: false,
+        installedBecause: 'the ungoverned twin', deny: () => null }))
+    ];
 
     return {
-      guards: armedGuards,
+      guards: [...truthful, ...armedGuards],
       // The judged pass is the desk's own purchase: a judged guard is asked only where
       // the spec declares the pass, so no card but this desk's can spend the call.
       judged: armed && spec.judgePass === true ? judged : [],
