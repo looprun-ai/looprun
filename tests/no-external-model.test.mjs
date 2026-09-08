@@ -16,7 +16,7 @@
  * Run: node tests/no-external-model.test.mjs   (part of `pnpm gates`)
  */
 import { execFileSync } from 'node:child_process';
-import { lstatSync, readFileSync } from 'node:fs';
+import { existsSync, lstatSync, readFileSync } from 'node:fs';
 import { join, relative, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -35,7 +35,10 @@ const BINARY = /\.(png|jpg|jpeg|gif|svg|ico|gguf|zip|woff2?)$/i;
 function trackedFiles() {
   return execFileSync('git', ['ls-files', '-z'], { cwd: ROOT, encoding: 'utf8' })
     .split('\0')
-    .filter((rel) => rel !== '' && !BINARY.test(rel) && lstatSync(join(ROOT, rel)).isFile());
+    // A tracked path the working tree no longer holds (a changeset `changeset version` consumed,
+    // a file deleted and not yet committed) is not a file to read.
+    .filter((rel) => rel !== '' && !BINARY.test(rel) && existsSync(join(ROOT, rel))
+      && lstatSync(join(ROOT, rel)).isFile());
 }
 
 /** Every place in one file where a provider host is something a process can reach. */
