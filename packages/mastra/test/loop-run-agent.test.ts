@@ -97,5 +97,14 @@ test('the ungoverned twin executes the destructive call with no question — by 
   expect(out.loopRun.acts[0]).toMatchObject({ call: { tool: 'cancelBooking' }, status: 'done' });
   const governed = readAgent();
   await governed.generate('is bk_9 confirmed?', { session: 'g1' });
-  expect(JSON.stringify(twin.guards())).toBe(JSON.stringify(governed.guards()));
+  // The twin's census is the governed census with two differences it states about itself:
+  // the house law that hands the hold to the engine is left out, and the twin's own truth —
+  // no call is held here — rides in its place, in the prefix and on every destructive card.
+  const names = (g: ReturnType<typeof twin.guards>): readonly string[] => g.guards.map(x => x.name);
+  const twinNames = names(twin.guards());
+  const governedNames = names(governed.guards()).filter(n => n !== 'oneQuestion');
+  expect(twinNames.filter(n => n !== 'noHoldHere' && !n.startsWith('consentInWords:')))
+    .toEqual(governedNames);
+  expect(twinNames).toContain('noHoldHere');
+  expect(twinNames).toContain('consentInWords:cancelBooking');
 });
