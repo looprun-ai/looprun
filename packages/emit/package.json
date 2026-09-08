@@ -1,6 +1,6 @@
 {
   "name": "@looprun-ai/emit",
-  "version": "0.20.0",
+  "version": "0.21.0",
   "type": "module",
   "description": "looprun emit: one YAML declaration of business sentences in, every line of a subject's TypeScript out. The emitter writes no sentence — a declaration missing a rule is an error, never a default.",
   "keywords": [

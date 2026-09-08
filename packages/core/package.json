@@ -1,6 +1,6 @@
 {
   "name": "@looprun-ai/core",
-  "version": "0.20.0",
+  "version": "0.21.0",
   "type": "module",
   "description": "looprun core: the two-card engine. An AgentSpec says how one desk behaves, a DomainContract says what the business is, and a world card declares its records under reads, writes and destructive. The engine holds every destructive call for consent, states what agreeing would do, and seals every turn into a record nobody can edit.",
   "keywords": [

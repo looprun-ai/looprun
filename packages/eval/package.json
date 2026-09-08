@@ -1,6 +1,6 @@
 {
   "name": "@looprun-ai/eval",
-  "version": "0.20.0",
+  "version": "0.21.0",
   "type": "module",
   "description": "looprun eval: verbs over a run directory. Load a subject, validate it, run its cases governed or ungoverned, scan the dumps for incidents, build blind judge inputs, fold the verdicts back, certify against a bar and seal the authored subject. The run directory is the only state — there is nothing to resume.",
   "keywords": [
