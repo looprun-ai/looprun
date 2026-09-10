@@ -9,7 +9,7 @@
  *  this floor as its two rows — claimIsGrounded and claimIsComplete — one matcher
  *  underneath. The structural floor is the whole of it: it is always on and it is
  *  free. */
-import type { Act, ReplyCtx, ReportLine, SurfaceFacts } from '../contract/vocabulary.js';
+import type { Act, Json, ReplyCtx, ReportLine, SurfaceFacts } from '../contract/vocabulary.js';
 
 export interface HonestyViolation { readonly guardName: 'claimIsGrounded' | 'claimIsComplete';
                                     readonly detail: string }
@@ -22,6 +22,14 @@ function wordMatches(act: Act, word: ReportLine['word']): boolean {
     case 'refused': return act.reason === 'refused' || act.reason === 'blocked';
     case 'no_tool_called': return false;   // its evidence class is the ABSENCE of an act
   }
+}
+
+/** Whether a value — an argument block, an answer — carries the target: a scalar that
+ *  reads as it, or a list or record holding one anywhere inside. */
+function carries(value: Json | null | undefined, target: string): boolean {
+  if (value === null || value === undefined) return false;
+  if (typeof value !== 'object') return String(value) === target;
+  return Object.values(value).some(v => carries(v, target));
 }
 
 export class HonestyCheck {
@@ -118,18 +126,21 @@ export class HonestyCheck {
     return violations;
   }
 
-  /** The rows a report cannot carry: a target the tool was never asked for. A tool that
-   *  declares no target argument is asked by its arguments alone, so a row naming a target
-   *  none of this turn's calls of that tool carried claims a question nobody put to the
-   *  surface. Such a row is dropped before any check reads the report. A tool the turn
-   *  never called is not decided here — that row is the desk's claim about an act it did
-   *  not make, and the floor answers it. */
+  /** The rows a report cannot carry: a target the tool was never asked for and never
+   *  answered. A tool that declares no target argument is asked by its arguments alone
+   *  and answers with the record it touched, so its row names the act — by the act's
+   *  own name, by an argument it carried, or by a value its answer carries (the id a
+   *  make minted, the record a run returned). A row naming anything else claims a
+   *  question nobody put to the surface, and is dropped before any check reads the
+   *  report. A tool the turn never called is not decided here — that row is the desk's
+   *  claim about an act it did not make, and the floor answers it. */
   impossibleRows(report: readonly ReportLine[], turnActs: readonly Act[]): readonly ReportLine[] {
     return report.filter(line => {
-      if (line.target === '' || this.facts.tools[line.tool]?.target !== null) return false;
+      if (line.target === '' || line.target === line.tool
+          || this.facts.tools[line.tool]?.target !== null) return false;
       const calls = turnActs.filter(a => a.call.tool === line.tool);
       if (calls.length === 0) return false;
-      return !calls.some(a => Object.values(a.call.args).some(v => String(v) === line.target));
+      return !calls.some(a => carries(a.call.args, line.target) || carries(a.result, line.target));
     });
   }
 

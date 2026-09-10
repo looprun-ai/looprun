@@ -75,10 +75,11 @@ describe('a standing sentence never reaches the operator with an unfilled slot',
     desk.commit();
   });
 
-  test('an owed text still carrying a slot never becomes a delivery fact', () => {
+  test('an owed text still carrying a slot never reaches the operator — the act speaks for itself', () => {
     const slotted = act('moveBooking', 'not-done', 'blocked',
       { kind: 'refusal', text: 'the window {args.endDate} is not readable' });
-    expect(assembleFacts([slotted], [], [], [])).toEqual([]);
+    const facts = assembleFacts([slotted], [], [], []);
+    expect(facts.map(f => [f.kind, f.text])).toEqual([['refusal', 'The moveBooking call did not run.']]);
   });
 
   test('a consumed later carrying {result.holdId} is dropped, not delivered raw', () => {

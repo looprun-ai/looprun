@@ -42,6 +42,35 @@ export function factId(index: number): string {
  *  is `head(args) — status` followed by a tail (`. TAIL`) or a detail (`(DETAIL)`);
  *  what a delivery may carry is the tail or the detail, never the line. A sentence
  *  with no log prefix is already speech and stays itself. */
+/** Whether a text still carries a slot no answer filled: an identifier path in braces —
+ *  `{result.post}` — and never a record an answer rendered as JSON, whose braces open
+ *  on a quote. */
+function hasUnfilledSlot(text: string): boolean {
+  let at = text.indexOf('{');
+  while (at !== -1) {
+    const close = text.indexOf('}', at);
+    if (close === -1) return false;
+    const inner = text.slice(at + 1, close);
+    if (inner !== '' && isSlotPath(inner)) return true;
+    at = text.indexOf('{', at + 1);
+  }
+  return false;
+}
+
+function isSlotPath(inner: string): boolean {
+  const first = inner[0];
+  const opens = (first >= 'A' && first <= 'Z') || (first >= 'a' && first <= 'z') || first === '_';
+  return opens && [...inner].every(c =>
+    (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9') || c === '_' || c === '.');
+}
+
+/** The act spoken by its head alone — the engine's own sentence for its status, with
+ *  no authored tail behind it. */
+function bareActSentence(a: Act): string {
+  const dash = a.sentence.indexOf(' — ');
+  return spokenActSentence(dash === -1 ? a.sentence : `${a.sentence.slice(0, dash)} — ${a.status}`);
+}
+
 export function spokenActSentence(sentence: string): string {
   const dash = sentence.indexOf(' — ');
   if (dash === -1 || !sentence.slice(0, dash).includes('(')) return sentence;
@@ -253,24 +282,26 @@ export function assembleFacts(acts: readonly Act[], open: readonly Question[],
   notes: readonly string[]): readonly DeliveryFact[] {
   const facts: DeliveryFact[] = [];
   for (const a of acts) {
-    // An owed text still carrying a slot has nothing true to say: it never
-    // becomes a fact — a placeholder never reaches the operator.
-    if (a.owed !== null && a.owed.text.includes('{')) continue;
-    if (a.owed !== null) {
+    // An owed text still carrying an unfilled slot has nothing true to say: a
+    // placeholder never reaches the operator, and the act speaks for itself instead.
+    const owed = a.owed !== null && hasUnfilledSlot(a.owed.text) ? null : a.owed;
+    if (owed !== null) {
       // A bare world code where an authored sentence should stand is spoken inside a
       // human sentence — the code verbatim, never alone.
-      const text = isCodeShaped(a.owed.text)
-        ? `That cannot be done — the records refuse it: ${a.owed.text.trim()}.`
-        : a.owed.text;
-      facts.push({ kind: a.owed.kind, text,
-        state: a.owed.kind === 'receipt' ? 'ran' : 'refused' });
+      const text = isCodeShaped(owed.text)
+        ? `That cannot be done — the records refuse it: ${owed.text.trim()}.`
+        : owed.text;
+      facts.push({ kind: owed.kind, text,
+        state: owed.kind === 'receipt' ? 'ran' : 'refused' });
       continue;
     }
     // A done act that changed the world is never silent: with no authored after,
     // the act's spoken sentence is the receipt — the reply may say less than the
     // record, never the opposite of it.
     if (a.status === 'done' && a.effect !== 'read') {
-      facts.push({ kind: 'receipt', text: spokenActSentence(a.sentence), state: 'ran' });
+      const spoken = spokenActSentence(a.sentence);
+      facts.push({ kind: 'receipt', state: 'ran',
+        text: hasUnfilledSlot(spoken) ? bareActSentence(a) : spoken });
     }
     // A refused act is never silent either: the rule that refused it is owed to the
     // operator, spoken — and its literals (a member id, a figure, a code) are forced
