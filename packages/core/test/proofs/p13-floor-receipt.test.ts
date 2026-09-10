@@ -45,10 +45,10 @@ const NOTHING = 'Nothing here reaches what was asked, and nothing changed.';
 
 function doneWrite(owed: Act['owed']): Act {
   return {
-    origin: 'model', call: { tool: 'rateQuote', args: { id: 'qt_1' }, key: 'k1' },
+    id: 'a1', turn: 1, origin: 'model', call: { tool: 'rateQuote', args: { id: 'qt_1' }, key: 'k1' },
     effect: 'write', said: 'yes', status: 'done', reason: null, evidence: 'executor',
-    sentence: 'rateQuote(qt_1) — done', owed, result: { quote: { id: 'qt_1', tier: 'gold' } }
-  } as Act;
+    sentence: 'rateQuote(qt_1) — done', owed, result: { quote: { id: 'qt_1', tier: 'gold' } }, questionId: null, guard: null
+  };
 }
 
 test('P13a — a receipt carrying a record rendered as JSON is a fact', () => {

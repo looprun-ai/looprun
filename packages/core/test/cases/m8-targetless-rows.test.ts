@@ -95,10 +95,10 @@ test('M8c — a target the call neither carried nor answered is still impossible
 test('M8d — impossibleRows, row by row', () => {
   const check = new HonestyCheck(factsFromWorld(QUOTES));
   const made: Act = {
-    origin: 'model', call: { tool: 'openQuote', args: { fields: { tier: 'gold' } }, key: 'k1' },
+    id: 'a1', turn: 1, origin: 'model', call: { tool: 'openQuote', args: { fields: { tier: 'gold' } }, key: 'k1' },
     effect: 'write', said: 'yes', status: 'done', reason: null, evidence: 'executor',
-    sentence: 'openQuote() — done', owed: null, result: { made: 'quotes_m1' }
-  } as Act;
+    sentence: 'openQuote() — done', owed: null, result: { made: 'quotes_m1' }, questionId: null, guard: null
+  };
   const row = (target: string): ReportLine => ({ tool: 'openQuote', target, word: 'done' });
   const dropped = (target: string) => check.impossibleRows([row(target)], [made]).length === 1;
 
