@@ -1,5 +1,17 @@
 # @looprun-ai/emit
 
+## 0.22.0
+
+### Minor Changes
+
+- Release (minor).
+
+### Patch Changes
+
+- Updated dependencies
+  - @looprun-ai/core@0.22.0
+  - @looprun-ai/eval@0.22.0
+
 ## 0.21.0
 
 ### Minor Changes

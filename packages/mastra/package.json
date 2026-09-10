@@ -1,6 +1,6 @@
 {
   "name": "@looprun-ai/mastra",
-  "version": "0.21.0",
+  "version": "0.22.0",
   "type": "module",
   "description": "looprun on Mastra: LoopRunAgent IS a @mastra/core Agent built from the two cards and a world, so `new Mastra({ agents })` and generate/stream work unchanged while every destructive call passes through consent. UngovernedAgent is the same agent with every guard hook empty — the twin a measurement compares against.",
   "keywords": [
