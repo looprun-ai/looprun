@@ -38,10 +38,6 @@ export function factId(index: number): string {
   return `F${String(index + 1)}`;
 }
 
-/** An act sentence spoken: the human content without the log prefix. The record line
- *  is `head(args) — status` followed by a tail (`. TAIL`) or a detail (`(DETAIL)`);
- *  what a delivery may carry is the tail or the detail, never the line. A sentence
- *  with no log prefix is already speech and stays itself. */
 /** Whether a text still carries a slot no answer filled: an identifier path in braces —
  *  `{result.post}` — and never a record an answer rendered as JSON, whose braces open
  *  on a quote. */
@@ -71,6 +67,10 @@ function bareActSentence(a: Act): string {
   return spokenActSentence(dash === -1 ? a.sentence : `${a.sentence.slice(0, dash)} — ${a.status}`);
 }
 
+/** An act sentence spoken: the human content without the log prefix. The record line
+ *  is `head(args) — status` followed by a tail (`. TAIL`) or a detail (`(DETAIL)`);
+ *  what a delivery may carry is the tail or the detail, never the line. A sentence
+ *  with no log prefix is already speech and stays itself. */
 export function spokenActSentence(sentence: string): string {
   const dash = sentence.indexOf(' — ');
   if (dash === -1 || !sentence.slice(0, dash).includes('(')) return sentence;
