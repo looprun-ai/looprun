@@ -210,9 +210,15 @@ export class DisclosureDesk {
   }
 
   /** Fills the {result.*} slots of an already-rendered tense with the executed
-   *  call's masked result. */
+   *  call's masked result. A sentence the answer cannot fill is silent — never an
+   *  error: the act has run, and its own receipt stands for it. */
   withResult(text: string | null, result: Json): string | null {
-    return text === null ? null : render(text, { result });
+    if (text === null) return null;
+    try {
+      return render(text, { result });
+    } catch {
+      return null;
+    }
   }
 
   /** The after-tense of an ordinary done call, rendered from its own args and
