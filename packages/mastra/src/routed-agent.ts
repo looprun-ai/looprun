@@ -15,7 +15,7 @@
  *  conversations: one session is one queue, so a second message waits for the first to
  *  seal and no history entry is ever written over. */
 import type { AgentSpec, DeclaredWorld, DomainContract, FrontDeskCfg,
-              LlmParams, ModelPort, ModelStep, ProvenanceMark, ProviderOptions,
+              LiveTool, LiveWorldCard, LlmParams, ModelPort, ModelStep, ProvenanceMark, ProviderOptions,
               StepUsage,
               TurnRecord, TurnReturned, TurnRouting } from '@looprun-ai/core';
 import { carriedIds } from '@looprun-ai/core';
@@ -191,6 +191,19 @@ export interface RoutedSubjectCfg {
   readonly providerOptions?: ProviderOptions;
 }
 
+/** The subject door over the host's own tools: the emitted specs, the shared contract, the
+ *  live card and the tools it names, and the model. There is no world to build — the records
+ *  live on the host — so every desk is handed the same live map and the same seal. */
+export interface RoutedLiveSubjectCfg {
+  readonly specs: Readonly<Record<string, AgentSpec>>;
+  readonly contract?: DomainContract;
+  readonly world: LiveWorldCard;
+  readonly live: Readonly<Record<string, LiveTool>>;
+  readonly seal?: string;
+  readonly model: LoopRunModel;
+  readonly providerOptions?: ProviderOptions;
+}
+
 interface Decision { readonly desk: string; readonly act: 'yes' | 'no' | 'unclear';
                      readonly steps: readonly ModelStep[] }
 
@@ -269,6 +282,52 @@ export class RoutedAgent {
       fallback,
       fallbackName: marked ?? FRONT_OF_HOUSE,
       router: mint({ temperature: 0 }) });
+  }
+
+  /** The live sibling of fromSubject: one desk needs no front desk; two or more are a house
+   *  whose every desk serves the host's tools through the same live map and seal. */
+  static fromLiveSubject(cfg: RoutedLiveSubjectCfg,
+                         portFactory?: (params: LlmParams) => ModelPort): RoutedAgent | LoopRunAgent {
+    const names = Object.keys(cfg.specs);
+    const common = { contract: cfg.contract, model: cfg.model, world: cfg.world, live: cfg.live,
+                     seal: cfg.seal, providerOptions: cfg.providerOptions };
+    if (names.length === 1) {
+      if (cfg.specs[names[0]].default === true) {
+        throw new CardError([{ code: 'DEFAULT_DESK_ALONE',
+          sentence: `Desk '${names[0]}' declares itself the default, and it is the only desk: `
+            + 'a lone agent has no front desk in front of it, so no message can fail to match '
+            + 'it and there is nothing to fall back from.' }]);
+      }
+      return new LoopRunAgent({ spec: cfg.specs[names[0]], ...common });
+    }
+    const description = descriptionsOf(cfg.specs);
+    const summaries = summariesOf(cfg.specs);
+    const marked = defaultOf(cfg.specs);
+    const others = (name: string): Readonly<Record<string, string>> =>
+      Object.fromEntries(names.filter(n => n !== name).map(n => [n, cfg.specs[n].description ?? '']));
+    const mint = portFactory
+      ?? ((params: LlmParams) => routerPort(cfg.model, params, cfg.providerOptions ?? {}));
+    const houseName = cfg.contract?.name ?? cfg.specs[names[0]].name;
+    const desks = Object.fromEntries(names.map(n =>
+      [n, new LoopRunAgent({ spec: { ...cfg.specs[n], teammates: others(n) }, ...common })]));
+    const fallback = marked === null
+      ? new LoopRunAgent({ spec: frontOfHouse(houseName, summaries), ...common })
+      : desks[marked];
+    return new RoutedAgent({ name: houseName, desks, description, summaries, fallback,
+      fallbackName: marked ?? FRONT_OF_HOUSE, router: mint({ temperature: 0 }) });
+  }
+
+  /** A desk of the house by name, for a turn the host pins to it. */
+  desk(name: string): LoopRunAgent {
+    const found = this.desks[name];
+    if (found === undefined) throw new Error(`no desk named '${name}' in ${this.name}`);
+    return found;
+  }
+
+  /** Every desk and the fallback constructed, once: the door a host awaits before the first
+   *  turn, so a surface the gate refuses is one error here and never a rejection nobody awaits. */
+  async settle(): Promise<void> {
+    await Promise.all([...Object.values(this.desks), this.fallback].map(d => d.settle()));
   }
 
   /** One conversation is one queue: a second message on the same session begins only

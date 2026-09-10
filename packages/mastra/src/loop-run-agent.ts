@@ -114,6 +114,13 @@ export class LoopRunAgent extends Agent {
     this.settled().engine.endSession(id);
   }
 
+  /** Construction awaited: the assembled engine, or the surface gate's refusal as a thrown
+   *  CardError — the door a host awaits before the first turn, so a refused surface is one
+   *  error here and never a rejection nobody awaits. */
+  async settle(): Promise<void> {
+    await this.ready;
+  }
+
   /** Construction is async behind the closed constructor; the synchronous doors
    *  (census, exclusions, session end) need it settled — a turn awaits it. */
   private settledValue: Ready | null = null;

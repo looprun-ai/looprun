@@ -126,18 +126,34 @@ The declared world in this tutorial keeps its records in memory. Two sibling car
 same declarations at something real, and **the cards do not change shape**:
 
 ```typescript
-const surface = mcpWorld({ reads: { … }, destructive: { … } });   // tools on an MCP server
-const surface = liveWorld({ reads: { … }, destructive: { … } });  // the host's own tools
+const surface = mcpWorld({ reads: { … }, destructive: { … } });                 // tools on an MCP server
+const surface = liveWorld({ host: 'my-api', reads: { … }, destructive: { … } }); // the host's own tools
 ```
 
 ```typescript
 new LoopRunAgent({ spec, contract, world: surface, model,
-                   mcp: { url: process.env.MCP_URL! } });
+                   mcp: { url: process.env.MCP_URL! } });          // the MCP door, from the host env
+
+new LoopRunAgent({ spec, contract, world: surface, model,
+                   live: { getGuest: { name: 'getGuest', description: 'the guest file', schema,
+                                       execute: args => crm.guest(args) },
+                           tagGuest: { name: 'tagGuest', description: 'tag a guest', schema,
+                                       attests: true, execute: args => crm.tag(args) } } });
 ```
 
-The connection details live in the host's environment, never on a card. On arrival the engine
-reconciles what it was told against what the surface actually offers, and a tool that does not
-match is excluded rather than guessed at.
+The connection details live in the host's environment, never on a card. A live tool carries its
+name, its description, its schema and its `execute`; a write that commits before it resolves says
+so with `attests: true`, and that is the only way a write is ever reported as done rather than
+unconfirmed. On arrival the engine reconciles what it was told against what the surface actually
+offers: a name the host does not serve, or a schema that differs from the one the card declares,
+refuses construction, and a tool the card never names is excluded rather than guessed at.
+
+A house of several desks over the host's tools is `RoutedAgent.fromLiveSubject({ specs, contract,
+world: surface, live, seal, model })`: every desk serves the same live map, and the desk the subject
+marks `default` — or the engine's own front of house when none is marked — takes what no desk
+matched. A host awaits `settle()` once before the first turn, so a surface the gate refuses is one
+error at the door and never a rejection of a desk no turn awaited; `desk(name)` is the desk itself,
+for a turn the host pins.
 
 ---
 
