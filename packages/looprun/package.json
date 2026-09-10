@@ -1,6 +1,6 @@
 {
   "name": "looprun",
-  "version": "0.22.0",
+  "version": "0.22.1",
   "type": "module",
   "description": "looprun — a governance layer for LLM agents on top of agent frameworks (Mastra first). Two cards say what the agent is and what the business is; a world card declares its records; every destructive call is held for consent. `import { LoopRunAgent, world } from \"looprun\"`.",
   "keywords": [

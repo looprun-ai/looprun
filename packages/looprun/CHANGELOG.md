@@ -1,5 +1,17 @@
 # looprun
 
+## 0.22.1
+
+### Patch Changes
+
+- Release (patch).
+- Updated dependencies
+  - @looprun-ai/core@0.22.1
+  - @looprun-ai/eval@0.22.1
+  - @looprun-ai/mastra@0.22.1
+  - @looprun-ai/models@0.22.1
+  - @looprun-ai/server@0.22.1
+
 ## 0.22.0
 
 ### Minor Changes

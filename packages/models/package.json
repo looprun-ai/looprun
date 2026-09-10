@@ -1,6 +1,6 @@
 {
   "name": "@looprun-ai/models",
-  "version": "0.22.0",
+  "version": "0.22.1",
   "type": "module",
   "description": "looprun model story: the validated local tiers on llama.cpp behind a ModelRuntimePort, with the measured serving flags per tier and a downloader that asks before it pulls gigabytes.",
   "keywords": [
