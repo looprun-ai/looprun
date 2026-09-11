@@ -31,3 +31,4 @@ export { ScriptedModel, payingDesk } from './run/scripted-model.js';
 export { composeWindow, readDecision } from './run/front-desk.js';
 export type { IntentAct } from './run/front-desk.js';
 export type { FrontDeskCfg } from './run/front-desk.js';
+export { ENGINE_STATUS_KEYS, ENGINE_SENTENCE_KEYS } from './cards/wordings.js';

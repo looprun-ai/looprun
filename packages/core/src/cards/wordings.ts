@@ -26,6 +26,11 @@ const SENTENCE_PACK: Record<EngineSentenceKey, string> = {
   nothingOwed: 'Nothing here reaches what was asked, and nothing changed.'
 };
 
+/** The keys a wording may override — the engine's own, so a declaration is refused on a key
+ *  nothing reads and accepted on every key something does. */
+export const ENGINE_STATUS_KEYS: readonly (Status | Reason)[] = Object.keys(STATUS_PACK) as (Status | Reason)[];
+export const ENGINE_SENTENCE_KEYS: readonly EngineSentenceKey[] = Object.keys(SENTENCE_PACK) as EngineSentenceKey[];
+
 /** Defaults filled, overrides applied per key; the table never carries a hole. */
 export function resolveWording(w: Wording | undefined): ResolvedWording {
   return {

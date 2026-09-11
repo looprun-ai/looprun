@@ -1,3 +1,4 @@
+import { ENGINE_STATUS_KEYS, ENGINE_SENTENCE_KEYS } from '@looprun-ai/core';
 /** The emitter of a subject's `cards.ts`: one declaration in, every line of the two cards out.
  *  The emitter writes the braces, the imports, the licence maps and the factory calls; every
  *  human-readable sentence in what it writes is a sentence the declaration carries. A field the
@@ -867,9 +868,8 @@ function rewriteCall(rewrite: DeclaredRewrite, at: number): string {
  *  delivered in, and the sentences the engine speaks for itself. A key outside these is a word
  *  nothing reads, so the override never reaches an operator and the declaration is refused. */
 const WORDING_KEYS: Readonly<Record<string, readonly string[]>> = {
-  status: ['done', 'not-done', 'unknown', 'held', 'refused', 'blocked'],
-  sentence: ['approvalInstruction', 'exhaustionClosure', 'unknownStatus', 'questionExpired',
-    'questionSuperseded', 'questionDeclined', 'deniedByGuard']
+  status: ENGINE_STATUS_KEYS,
+  sentence: ENGINE_SENTENCE_KEYS
 };
 
 /** One half of the wording table as the card carries it: the engine's key, and this business's
