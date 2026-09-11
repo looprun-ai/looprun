@@ -4,15 +4,15 @@ import { swapTerms } from '../../src/cards/catalog.js';
 // A declared term is a word in the operator's own script: the swap reads a word as any run
 // of letters, in any alphabet, and never as the ASCII slice of one.
 
-const swap = swapTerms({ 'peças': 'publicações', 'peça': 'publicação', briefing: 'resumo' });
+const swap = swapTerms({ 'famílias': 'grupos', 'família': 'grupo', extra: 'adicional' });
 
 test('a term carrying an accented letter is swapped whole', () => {
-  expect(swap.apply('não consigo gerar a peça agora')).toBe('não consigo gerar a publicação agora');
-  expect(swap.apply('vale planejar 4 peças por semana')).toBe('vale planejar 4 publicações por semana');
+  expect(swap.apply('a família chega às nove')).toBe('a grupo chega às nove');
+  expect(swap.apply('duas famílias no mesmo quarto')).toBe('duas grupos no mesmo quarto');
 });
 
 test('an ASCII term still swaps, and a word that merely contains a term is left alone', () => {
-  expect(swap.apply('o briefing chegou')).toBe('o resumo chegou');
-  expect(swap.apply('a cabeça e o despeçamento')).toBe('a cabeça e o despeçamento');
-  expect(swap.apply('peça-chave')).toBe('publicação-chave');
+  expect(swap.apply('uma cama extra')).toBe('uma cama adicional');
+  expect(swap.apply('o extrato e a familiaridade')).toBe('o extrato e a familiaridade');
+  expect(swap.apply('família-anfitriã')).toBe('grupo-anfitriã');
 });

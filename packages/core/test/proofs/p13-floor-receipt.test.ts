@@ -57,7 +57,7 @@ test('P13a — a receipt carrying a record rendered as JSON is a fact', () => {
 });
 
 test('P13b — a receipt the answer could not fill falls back to the act\'s own sentence', () => {
-  const facts = assembleFacts([doneWrite({ kind: 'receipt', text: 'Rated for {result.post}.' })], [], [], []);
+  const facts = assembleFacts([doneWrite({ kind: 'receipt', text: 'Rated for {result.guest}.' })], [], [], []);
   expect(facts.map(f => [f.kind, f.text])).toEqual([['receipt', 'The rateQuote call ran and took effect.']]);
 });
 

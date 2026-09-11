@@ -39,7 +39,7 @@ export function factId(index: number): string {
 }
 
 /** Whether a text still carries a slot no answer filled: an identifier path in braces —
- *  `{result.post}` — and never a record an answer rendered as JSON, whose braces open
+ *  `{result.guest}` — and never a record an answer rendered as JSON, whose braces open
  *  on a quote. */
 function hasUnfilledSlot(text: string): boolean {
   let at = text.indexOf('{');
