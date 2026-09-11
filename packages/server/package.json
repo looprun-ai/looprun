@@ -1,6 +1,6 @@
 {
   "name": "@looprun-ai/server",
-  "version": "0.22.1",
+  "version": "0.22.2",
   "type": "module",
   "description": "looprun model server: a governed agent behind an OpenAI-compatible /v1/chat/completions endpoint, so any harness that speaks the OpenAI protocol talks to it as if it were a model. One request carries one whole governed turn — guards, consent and all — and returns the final assistant message.",
   "keywords": [
