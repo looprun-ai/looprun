@@ -1001,8 +1001,10 @@ export function maskPattern(name: string, pattern: RegExp): Rewrite {
   return { name, kind: 'maskPattern', apply: text => text.replace(global, '****') };
 }
 
+/** A character a word is made of, in any script that writes words in letters: a letter is a
+ *  character with a case (ç, ã, é, ñ included), a digit, or the underscore. */
 function isIdentChar(c: string): boolean {
-  return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c === '_';
+  return (c >= '0' && c <= '9') || c === '_' || c.toLowerCase() !== c.toUpperCase();
 }
 
 /** TRANSLATES a declared term — literal, word-boundary, NO regex. */
